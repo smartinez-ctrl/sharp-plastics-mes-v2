@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sharp Plastics — Gestión v3 DUMMY</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
+<title>Sharp Plastics — Gestión</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0b0d10;--bg2:#111418;--bg3:#181c23;--bg4:#1e232d;--bg5:#252b38;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);--border3:rgba(255,255,255,0.18);--text:#e2e6f0;--text2:#7d8799;--text3:#454e60;--amber:#f5a623;--amber2:#ffc15e;--amber-bg:rgba(245,166,35,0.08);--amber-border:rgba(245,166,35,0.25);--green:#2dd4a0;--green-bg:rgba(45,212,160,0.08);--green-border:rgba(45,212,160,0.25);--blue:#4a9eff;--blue-bg:rgba(74,158,255,0.08);--blue-border:rgba(74,158,255,0.25);--red:#f87171;--red-bg:rgba(248,113,113,0.08);--red-border:rgba(248,113,113,0.25);--purple:#a78bfa;--purple-bg:rgba(167,139,250,0.08);--purple-border:rgba(167,139,250,0.25);--sidebar:220px;--topbar:52px;}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -16,7 +16,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .topbar-left{display:flex;align-items:center;gap:16px}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .user-pill{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:999px;padding:4px 12px 4px 5px}
-.user-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:#00e5a022;color:#00e5a0}
+.user-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
 .user-name{font-size:12px;color:var(--text2);font-weight:500}
 .icon-btn{background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.15s}
 .icon-btn:hover{border-color:var(--border3);color:var(--text)}
@@ -44,14 +44,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
 .stat-val{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;line-height:1;margin-bottom:5px}
 .stat-label{font-size:11px;color:var(--text2)}
-.stat-delta{font-size:10px;margin-top:4px;font-weight:600}
-.up{color:var(--green)}.down{color:var(--red)}
 .btn{border:none;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:all 0.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;padding:9px 16px}
-.btn-primary{background:var(--amber);color:#0b0d10}.btn-primary:hover{background:var(--amber2)}
-.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border2)}.btn-secondary:hover{border-color:var(--border3)}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-primary{background:var(--amber);color:#0b0d10}.btn-primary:hover:not(:disabled){background:var(--amber2)}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border2)}
 .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
 .btn-danger{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
-.btn-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
 .btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
 .btn-xs{padding:4px 9px;font-size:11px;border-radius:6px}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap}
@@ -63,7 +61,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .field{margin-bottom:12px}
 .field label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:500}
 .field input,.field select,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.15s}
-.field input:focus,.field select:focus{border-color:var(--amber)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--amber)}
 .field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237d8799' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;-webkit-appearance:none}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
@@ -74,7 +72,6 @@ thead tr{background:var(--bg3);border-bottom:1px solid var(--border2)}
 th{padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);text-align:left;white-space:nowrap}
 td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--bg3);cursor:pointer}
 .td-mono{font-family:'Space Mono',monospace;font-size:11px}
 .pipeline-card{background:var(--bg2);border:1px solid var(--border);border-left:3px solid transparent;border-radius:12px;padding:16px;margin-bottom:10px;transition:all 0.15s;cursor:pointer}
 .pipeline-card:hover{border-color:var(--border2);transform:translateY(-1px)}
@@ -82,21 +79,16 @@ tr:hover td{background:var(--bg3);cursor:pointer}
 .pipeline-card.en-prod{border-left-color:var(--blue)}
 .pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
 .pc-title{font-size:15px;font-weight:600;margin-bottom:3px}
-.pc-meta{font-size:12px;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap}
+.pc-meta{font-size:12px;color:var(--text2);display:flex;gap:10px;flex-wrap:wrap}
 .pc-financials{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:var(--bg3);border-radius:9px;padding:10px 12px;margin-bottom:10px}
 .pc-fin-item{text-align:center}
 .pc-fin-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px}
 .pc-fin-val{font-family:'Space Mono',monospace;font-size:13px;font-weight:700}
 .pc-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.divider{height:1px;background:var(--border);margin:16px 0}
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.section-label{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
-.section-label .dot{width:8px;height:8px;border-radius:50%}
 .color-block{background:var(--bg3);border:1px solid var(--border2);border-radius:11px;padding:14px;margin-bottom:10px}
 .color-block-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .color-block-title{font-size:13px;font-weight:700}
 .tinta-row-grid{display:grid;grid-template-columns:2fr 80px 100px 70px 28px;gap:7px;align-items:flex-end;margin-bottom:6px}
-.aditivo-row-grid{display:grid;grid-template-columns:2fr 80px 100px 70px 28px;gap:7px;align-items:flex-end;margin-bottom:6px}
 .cot-val{font-family:'Space Mono',monospace;font-size:12px;color:var(--amber);padding:10px 0;text-align:center}
 .del-btn{background:var(--red-bg);border:1px solid var(--red-border);border-radius:6px;color:var(--red);width:28px;height:38px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .add-line-btn{width:100%;background:transparent;border:1px dashed var(--border2);border-radius:7px;padding:7px;color:var(--text3);cursor:pointer;font-size:11px;font-family:'DM Sans',sans-serif;margin-top:4px;transition:all 0.15s}
@@ -106,16 +98,14 @@ tr:hover td{background:var(--bg3);cursor:pointer}
 .cs-row:last-child{border:none}
 .cs-label{font-size:12px;color:var(--text2)}
 .cs-val{font-family:'Space Mono',monospace;font-size:12px;font-weight:600}
-.cs-total{font-size:14px;color:var(--amber)}
-.margin-box{border-radius:10px;padding:14px;text-align:center;margin-top:12px}
 .tabs{display:flex;gap:2px;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:20px;width:fit-content;flex-wrap:wrap}
 .tab{padding:7px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);transition:all 0.15s;white-space:nowrap}
 .tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.3)}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;width:100%;max-width:680px;max-height:92vh;overflow-y:auto}
 .modal-lg{max-width:960px}
-.modal-title{font-size:17px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .modal-close{background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1}
 .modal-close:hover{color:var(--text)}
 .pdf-drop{border:2px dashed var(--border2);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s}
@@ -132,11 +122,11 @@ tr:hover td{background:var(--bg3);cursor:pointer}
 .pdf-field-val{font-size:12px;font-weight:600;color:var(--text);font-family:'Space Mono',monospace}
 .timeline-wrap{overflow-x:auto;padding-bottom:8px}
 .timeline-header{display:flex;margin-bottom:8px;padding-left:130px}
-.timeline-month{flex:1;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);text-align:center;min-width:80px}
-.timeline-row{display:flex;align-items:center;margin-bottom:8px;min-height:34px}
+.timeline-month{flex:1;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);text-align:center;min-width:60px}
+.timeline-row{display:flex;align-items:center;margin-bottom:8px;min-height:32px}
 .timeline-label{width:130px;flex-shrink:0;font-size:12px;color:var(--text2);font-weight:500;padding-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.timeline-track{flex:1;position:relative;height:28px;background:var(--bg3);border-radius:6px;overflow:hidden}
-.timeline-bar{position:absolute;height:100%;border-radius:6px;display:flex;align-items:center;padding:0 10px;font-size:10px;font-weight:600;color:#0b0d10;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timeline-track{flex:1;position:relative;height:26px;background:var(--bg3);border-radius:6px;overflow:hidden}
+.timeline-bar{position:absolute;height:100%;border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:10px;font-weight:600;color:#0b0d10;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .proj-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
 .proj-month{font-size:13px;font-weight:600;min-width:80px}
 .proj-bar-wrap{flex:1;background:var(--bg4);border-radius:4px;height:8px;overflow:hidden}
@@ -144,18 +134,12 @@ tr:hover td{background:var(--bg3);cursor:pointer}
 .proj-val{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--amber);min-width:100px;text-align:right}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:11px 18px;font-size:12px;color:var(--text);z-index:400;opacity:0;transition:all 0.3s;pointer-events:none;transform:translateY(8px)}
 .toast.show{opacity:1;transform:translateY(0)}
+.loading{text-align:center;padding:40px;color:var(--text3)}
+.loading-spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--amber);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
 .mobile-menu-btn{display:none;background:transparent;border:1px solid var(--border2);border-radius:7px;color:var(--text2);padding:6px 9px;cursor:pointer;font-size:15px}
-@media(max-width:768px){
-  .sidebar{transform:translateX(-100%)}
-  .sidebar.open{transform:translateX(0)}
-  .main{margin-left:0;padding:16px}
-  .stats-row{grid-template-columns:1fr 1fr}
-  .field-row-3,.field-row-4{grid-template-columns:1fr 1fr}
-  .tinta-row-grid,.aditivo-row-grid{grid-template-columns:1fr 1fr 1fr}
-  .mobile-menu-btn{display:flex}
-  .pc-financials{grid-template-columns:1fr 1fr}
-}
+@media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0;padding:16px}.stats-row{grid-template-columns:1fr 1fr}.field-row-3,.field-row-4{grid-template-columns:1fr 1fr}.tinta-row-grid{grid-template-columns:1fr 1fr 1fr}.mobile-menu-btn{display:flex}.pc-financials{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -164,13 +148,13 @@ tr:hover td{background:var(--bg3);cursor:pointer}
   <div class="topbar-left">
     <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
     <div class="logo">SHARP <b>//</b> PLASTICS <b>MES</b></div>
-    <div class="version-tag">GESTIÓN v3 — DUMMY</div>
+    <div class="version-tag">GESTIÓN</div>
   </div>
   <div class="topbar-right">
     <div style="font-size:11px;color:var(--text3);font-family:'Space Mono',monospace" id="clock"></div>
-    <button class="icon-btn prod" onclick="toast('→ Abriendo producción...')">▶ Producción</button>
-    <div class="user-pill"><div class="user-av">MA</div><span class="user-name">Master</span></div>
-    <button class="icon-btn">Salir</button>
+    <button class="icon-btn prod" id="btn-produccion" onclick="irAProduccion()" style="display:none">▶ Producción</button>
+    <div class="user-pill"><div class="user-av" id="gest-av">—</div><span class="user-name" id="gest-name">—</span></div>
+    <button class="icon-btn" onclick="cerrarSesion()">Salir</button>
   </div>
 </div>
 
@@ -178,454 +162,181 @@ tr:hover td{background:var(--bg3);cursor:pointer}
 <div class="sidebar" id="sidebar">
   <div class="nav-section">
     <div class="nav-label">Principal</div>
-    <div class="nav-item active" onclick="showPage('pipeline',this)"><span class="nav-icon">📋</span>Pipeline<span class="nav-badge">4</span></div>
-    <div class="nav-item" onclick="showPage('cotizador',this)"><span class="nav-icon">🧮</span>Cotizador</div>
-    <div class="nav-item" onclick="showPage('proyeccion',this)"><span class="nav-icon">📈</span>Proyección</div>
+    <div class="nav-item active" id="nav-pipeline" onclick="showPage('pipeline',this)"><span class="nav-icon">📋</span>Pipeline<span class="nav-badge" id="badge-pipeline">0</span></div>
+    <div class="nav-item" id="nav-cotizador" onclick="showPage('cotizador',this)"><span class="nav-icon">🧮</span>Cotizador</div>
+    <div class="nav-item" id="nav-proyeccion" onclick="showPage('proyeccion',this)"><span class="nav-icon">📈</span>Proyección</div>
   </div>
-  <div class="nav-section">
+  <div class="nav-section" id="nav-admin-section">
     <div class="nav-label">Administración</div>
-    <div class="nav-item" onclick="showPage('catalogos',this)"><span class="nav-icon">⚙️</span>Catálogos</div>
-    <div class="nav-item" onclick="showPage('usuarios',this)"><span class="nav-icon">👥</span>Usuarios</div>
+    <div class="nav-item" id="nav-catalogos" onclick="showPage('catalogos',this)"><span class="nav-icon">⚙️</span>Catálogos</div>
+    <div class="nav-item" id="nav-usuarios" onclick="showPage('usuarios',this)"><span class="nav-icon">👥</span>Usuarios</div>
   </div>
-  <div class="sidebar-bottom"><div class="sidebar-ver">v3.0 — dummy</div></div>
+  <div class="sidebar-bottom"><div class="sidebar-ver">v2.0</div></div>
 </div>
 
 <div class="main">
 
-<!-- ══ PIPELINE ══ -->
+<!-- PIPELINE -->
 <div id="page-pipeline" class="page active">
   <div class="ph-row">
-    <div><div class="page-title">Pipeline de pedidos</div><div class="page-sub">4 activos · Clic en un pedido para ver detalle completo</div></div>
+    <div><div class="page-title">Pipeline de pedidos</div><div class="page-sub" id="pipeline-sub">Cargando...</div></div>
     <div class="page-actions">
       <button class="btn btn-secondary btn-sm" onclick="openModal('modal-import')">📄 Importar PDFs</button>
-      <button class="btn btn-primary btn-sm" onclick="openModal('modal-pedido-nuevo')">+ Nuevo pedido</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirNuevoPedido()">+ Nuevo pedido</button>
     </div>
   </div>
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-val" style="color:var(--amber)">4</div><div class="stat-label">Pedidos activos</div><div class="stat-delta up">↑ 1 esta semana</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--green)">2,520</div><div class="stat-label">Piezas en pipeline</div><div class="stat-delta up">↑ 505 nuevas</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--green)">$18,714</div><div class="stat-label">Venta total pipeline</div><div class="stat-delta up">↑ 12% vs mes anterior</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--green)">68.6%</div><div class="stat-label">Margen promedio</div><div class="stat-delta up">↑ 2.1% vs mes anterior</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--amber)" id="st-activos">—</div><div class="stat-label">Pedidos activos</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)" id="st-piezas">—</div><div class="stat-label">Piezas en pipeline</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)" id="st-venta">—</div><div class="stat-label">Venta total pipeline</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)" id="st-margen">—</div><div class="stat-label">Margen promedio</div></div>
   </div>
-
   <div class="card">
     <div class="card-title">Activos</div>
-
-    <div class="pipeline-card urgent" onclick="openModal('modal-pedido-detalle')">
-      <div class="pc-top">
-        <div><div class="pc-title">Strictly E-Bikes — 600ml</div><div class="pc-meta"><span>🔢 PO-875517473</span><span>📦 505 pzas</span><span>🎨 2 colores</span><span>📅 Entrega: 15 May</span><span>🕐 Inicio: 1 May · 8h est.</span></div></div>
-        <span class="badge badge-red">Urgente</span>
-      </div>
-      <div class="pc-financials">
-        <div class="pc-fin-item"><div class="pc-fin-label">Venta cliente</div><div class="pc-fin-val" style="color:var(--green)">$5,172</div></div>
-        <div class="pc-fin-item"><div class="pc-fin-label">Costo interno</div><div class="pc-fin-val" style="color:var(--red)">$4,234</div></div>
-        <div class="pc-fin-item"><div class="pc-fin-label">Margen</div><div class="pc-fin-val" style="color:var(--green)">18.1%</div></div>
-      </div>
-      <div class="pc-actions">
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('modal-import')">📄 PDFs</button>
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();toast('PDF cliente generado')">📤 PDF cliente</button>
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();toast('PDF interno generado')">📊 PDF interno</button>
-        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation()">🗑</button>
-      </div>
-    </div>
-
-    <div class="pipeline-card en-prod" onclick="openModal('modal-pedido-detalle')">
-      <div class="pc-top">
-        <div><div class="pc-title">Trail Series — 700ml</div><div class="pc-meta"><span>🔢 PO-874100221</span><span>📦 1,000 pzas</span><span>🎨 3 colores</span><span>📅 Entrega: 22 May</span><span>🕐 Inicio: 5 May · 14h est.</span></div></div>
-        <span class="badge badge-blue">En producción</span>
-      </div>
-      <div class="pc-financials">
-        <div class="pc-fin-item"><div class="pc-fin-label">Venta cliente</div><div class="pc-fin-val" style="color:var(--green)">$9,630</div></div>
-        <div class="pc-fin-item"><div class="pc-fin-label">Costo interno</div><div class="pc-fin-val" style="color:var(--red)">$7,100</div></div>
-        <div class="pc-fin-item"><div class="pc-fin-label">Margen</div><div class="pc-fin-val" style="color:var(--green)">26.3%</div></div>
-      </div>
-      <div class="pc-actions">
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('modal-import')">📄 PDFs</button>
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();toast('PDF cliente generado')">📤 PDF cliente</button>
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();toast('PDF interno generado')">📊 PDF interno</button>
-        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation()">🗑</button>
-      </div>
-    </div>
-
-    <div class="pipeline-card" onclick="openModal('modal-pedido-detalle')">
-      <div class="pc-top">
-        <div><div class="pc-title">Summit Series — 500ml</div><div class="pc-meta"><span>🔢 PO-873009911</span><span>📦 750 pzas</span><span>🎨 1 color</span><span>📅 Entrega: 1 Jun</span><span style="color:var(--text3)">🕐 Sin fecha inicio</span></div></div>
-        <span class="badge badge-amber">Pendiente</span>
-      </div>
-      <div class="pc-financials">
-        <div class="pc-fin-item"><div class="pc-fin-label">Venta cliente</div><div class="pc-fin-val" style="color:var(--text3)">Sin cotizar</div></div>
-        <div class="pc-fin-item"><div class="pc-fin-label">Costo interno</div><div class="pc-fin-val" style="color:var(--text3)">—</div></div>
-        <div class="pc-fin-item"><div class="pc-fin-label">Margen</div><div class="pc-fin-val" style="color:var(--text3)">—</div></div>
-      </div>
-      <div class="pc-actions">
-        <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();showPage('cotizador',document.querySelectorAll('.nav-item')[1])">🧮 Cotizar</button>
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('modal-import')">📄 PDFs</button>
-        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation()">🗑</button>
-      </div>
-    </div>
+    <div id="pipeline-activos"><div class="loading"><div class="loading-spinner"></div></div></div>
   </div>
-
   <div class="card">
     <div class="card-title">Completados recientes</div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Sub-cliente</th><th>PO</th><th>Cap.</th><th>Piezas</th><th>Venta</th><th>Costo</th><th>Margen</th><th>Cierre</th><th>Estado</th></tr></thead>
-      <tbody>
-        <tr onclick="openModal('modal-pedido-detalle')"><td>Winter Series</td><td class="td-mono">PO-871200033</td><td>700ml</td><td>800</td><td class="td-mono" style="color:var(--green)">$4,920</td><td class="td-mono">$3,100</td><td class="td-mono" style="color:var(--green)">37%</td><td>28 Abr</td><td><span class="badge badge-green">Completado</span></td></tr>
-        <tr onclick="openModal('modal-pedido-detalle')"><td>Enduro Pack</td><td class="td-mono">PO-870900011</td><td>600ml</td><td>500</td><td class="td-mono" style="color:var(--green)">$2,825</td><td class="td-mono">$1,890</td><td class="td-mono" style="color:var(--green)">33%</td><td>20 Abr</td><td><span class="badge badge-green">Entregado</span></td></tr>
-      </tbody>
+      <thead><tr><th>Sub-cliente</th><th>PO</th><th>Cap.</th><th>Piezas</th><th>Venta</th><th>Margen</th><th>Cierre</th><th>Estado</th><th></th></tr></thead>
+      <tbody id="pipeline-completados"><tr><td colspan="9" class="loading">Cargando...</td></tr></tbody>
     </table></div>
   </div>
 </div>
 
-<!-- ══ COTIZADOR ══ -->
+<!-- COTIZADOR -->
 <div id="page-cotizador" class="page">
   <div class="ph-row">
-    <div><div class="page-title">Cotizador</div><div class="page-sub">Calcula costo interno y precio de venta al cliente</div></div>
+    <div><div class="page-title">Cotizador</div><div class="page-sub">Costo interno y precio de venta al cliente</div></div>
     <div class="page-actions">
       <button class="btn btn-ghost btn-sm" onclick="limpiarCotizador()">🗑 Limpiar</button>
       <button class="btn btn-secondary btn-sm" onclick="openModal('modal-import')">📄 Importar PDFs</button>
-      <button class="btn btn-ghost btn-sm" onclick="toast('PDF cliente generado')">📤 PDF cliente</button>
-      <button class="btn btn-primary btn-sm" onclick="toast('Cotización guardada en pipeline ✓')">💾 Guardar al pipeline</button>
+      <button class="btn btn-ghost btn-sm" onclick="toast('PDF cliente — próximamente')">📤 PDF cliente</button>
+      <button class="btn btn-primary btn-sm" onclick="guardarCotizacion()">💾 Guardar al pipeline</button>
     </div>
   </div>
-
-  <div style="display:grid;grid-template-columns:1fr 310px;gap:16px;align-items:start">
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start">
     <div>
-      <!-- Datos generales -->
       <div class="card">
         <div class="card-title">Datos del pedido</div>
-        <div class="field-row"><div class="field"><label>Cliente</label><select><option value="">Seleccionar...</option><option>MountainFlow</option></select></div><div class="field"><label>Sub-cliente</label><input type="text" id="cot-subcli" placeholder="Ej: Strictly E-Bikes"></div></div>
+        <div class="field-row">
+          <div class="field"><label>Cliente</label><select id="cot-cliente"><option value="">Seleccionar...</option></select></div>
+          <div class="field"><label>Sub-cliente</label><input type="text" id="cot-subcli" placeholder="Ej: Strictly E-Bikes"></div>
+        </div>
         <div class="field-row-3">
           <div class="field"><label>PO #</label><input type="text" id="cot-po" placeholder="875517473"></div>
-          <div class="field"><label>Capacidad</label><select id="cot-cap"><option value="">—</option><option>500ml</option><option>600ml</option><option>700ml</option></select></div>
-          <div class="field"><label>Piezas</label><input type="number" id="cot-piezas" placeholder="505" oninput="calcVenta()"></div>
+          <div class="field"><label>Capacidad</label><select id="cot-cap" onchange="calcCotizador()"><option value="">—</option><option value="500">500ml</option><option value="600">600ml</option><option value="700">700ml</option></select></div>
+          <div class="field"><label>Piezas</label><input type="number" id="cot-piezas" placeholder="505" oninput="calcCotizador()"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Colores de impresión</label><input type="number" id="cot-colores" placeholder="2" oninput="calcVenta();renderColorBlocks()"></div>
-          <div class="field"><label>Fecha de entrega</label><input type="date"></div>
+          <div class="field"><label>Colores</label><input type="number" id="cot-colores" placeholder="2" min="1" max="4" oninput="calcCotizador();renderColorBlocks()"></div>
+          <div class="field"><label>Fecha de entrega</label><input type="date" id="cot-fecha"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Color botella</label><input type="text" placeholder="Black"></div>
-          <div class="field"><label>Color tapa</label><input type="text" placeholder="348 C"></div>
+          <div class="field"><label>Color botella</label><input type="text" id="cot-col-bot" placeholder="Black"></div>
+          <div class="field"><label>Color tapa</label><input type="text" id="cot-col-tap" placeholder="348 C"></div>
         </div>
-        <div class="field"><label>Dirección de envío</label><input type="text" placeholder="683 N Washington St..."></div>
-        <div class="field"><label>Notas / Packaging</label><textarea rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none" placeholder="Instrucciones de empaque..."></textarea></div>
+        <div class="field"><label>Dirección de envío</label><input type="text" id="cot-envio"></div>
+        <div class="field"><label>Notas / Packaging</label><textarea id="cot-notas" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none"></textarea></div>
       </div>
-
-      <!-- SECCIÓN INTERNA -->
       <div class="card" style="border-color:var(--red-border)">
-        <div class="section-header">
-          <div class="section-label"><div class="dot" style="background:var(--red)"></div>Costo interno — Fórmula de tintas por color</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--red)"></div>
+          <div style="font-size:12px;font-weight:700">Costo interno — Fórmula de tintas por color</div>
         </div>
-        <div id="color-blocks">
-          <!-- Color 1 -->
-          <div class="color-block">
-            <div class="color-block-header">
-              <div class="color-block-title">🎨 Color 1</div>
-              <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--amber)">Total: $451.42</div>
-            </div>
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Tintas base</div>
-            <div class="tinta-row-grid">
-              <div class="field" style="margin:0"><label style="font-size:10px">Tinta</label><select><option>Multiplack Base MM095 — Rodatec</option></select></div>
-              <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="85" style="text-align:center"></div>
-              <div class="field" style="margin:0"><label style="font-size:10px">$/kg c/IVA</label><input type="number" value="2215.60" style="text-align:center;font-size:11px"></div>
-              <div class="cot-val">$188.33</div>
-              <button class="del-btn">✕</button>
-            </div>
-            <div class="tinta-row-grid">
-              <div class="field" style="margin:0"><select><option>Multiplack Blanco Opaco — Rodatec</option></select></div>
-              <div class="field" style="margin:0"><input type="number" value="40" style="text-align:center"></div>
-              <div class="field" style="margin:0"><input type="number" value="6577.20" style="text-align:center;font-size:11px"></div>
-              <div class="cot-val">$263.09</div>
-              <button class="del-btn">✕</button>
-            </div>
-            <button class="add-line-btn">+ Agregar tinta base</button>
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin:10px 0 6px">Aditivos</div>
-            <div class="aditivo-row-grid">
-              <div class="field" style="margin:0"><label style="font-size:10px">Aditivo</label><select><option>Promotor de Adherencia R-12</option></select></div>
-              <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="6.25" style="text-align:center"></div>
-              <div class="field" style="margin:0"><label style="font-size:10px">$/kg c/IVA</label><input type="number" value="939.60" style="text-align:center;font-size:11px"></div>
-              <div class="cot-val">$5.87</div>
-              <button class="del-btn">✕</button>
-            </div>
-            <div style="font-size:10px;color:var(--text3);padding:4px 0">Total gramos: 125g · Aditivos sobre total de gramos</div>
-            <button class="add-line-btn">+ Agregar aditivo</button>
-          </div>
-
-          <!-- Color 2 -->
-          <div class="color-block">
-            <div class="color-block-header">
-              <div class="color-block-title">🎨 Color 2</div>
-              <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--amber)">Total: $310.15</div>
-            </div>
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Tintas base</div>
-            <div class="tinta-row-grid">
-              <div class="field" style="margin:0"><label style="font-size:10px">Tinta</label><select><option>Multiplack Base MM095 — Rodatec</option></select></div>
-              <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="60" style="text-align:center"></div>
-              <div class="field" style="margin:0"><label style="font-size:10px">$/kg c/IVA</label><input type="number" value="2215.60" style="text-align:center;font-size:11px"></div>
-              <div class="cot-val">$132.94</div>
-              <button class="del-btn">✕</button>
-            </div>
-            <button class="add-line-btn">+ Agregar tinta base</button>
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin:10px 0 6px">Aditivos</div>
-            <button class="add-line-btn">+ Agregar aditivo</button>
-          </div>
-        </div>
-
-        <!-- Mano de obra -->
-        <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:4px">
-          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Mano de obra (auto)</div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Color 1 — $2.20 × 505 pzas</span><span class="mono" style="font-size:12px;color:var(--amber)">$1,111.00</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Color 2 — $2.10 × 505 pzas</span><span class="mono" style="font-size:12px;color:var(--amber)">$1,060.50</span></div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-weight:600"><span style="font-size:12px">Subtotal mano de obra</span><span class="mono" style="font-size:13px;color:var(--amber)">$2,171.50</span></div>
-        </div>
-
-        <!-- Pantallas, positivos, empaque -->
-        <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:8px">
-          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Pantallas, positivos y empaque</div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas (2 × $500)</span><span class="mono" style="font-size:12px;color:var(--amber)">$1,000.00</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Positivos (2 × $230)</span><span class="mono" style="font-size:12px;color:var(--amber)">$460.00</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Papel empaque ($0.15 × 505)</span><span class="mono" style="font-size:12px;color:var(--amber)">$75.75</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Tag/etiqueta ($0.15 × 505)</span><span class="mono" style="font-size:12px;color:var(--amber)">$75.75</span></div>
-        </div>
+        <div id="color-blocks"><div style="font-size:12px;color:var(--text3);padding:10px">Especifica el número de colores arriba</div></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:4px" id="mdo-interno"></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:8px" id="pant-interno"></div>
       </div>
-
-      <!-- SECCIÓN EXTERNA -->
       <div class="card" style="border-color:var(--green-border)">
-        <div class="section-header">
-          <div class="section-label"><div class="dot" style="background:var(--green)"></div>Precio de venta al cliente</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+          <div style="font-size:12px;font-weight:700">Precio de venta al cliente</div>
         </div>
-
-        <div class="field-row" style="margin-bottom:14px">
+        <div class="field-row">
           <div class="field"><label>Corrida botellas</label>
-            <select id="cot-corrida-bot" onchange="calcVenta()">
+            <select id="cot-corrida-bot" onchange="calcCotizador()">
               <option value="">Seleccionar...</option>
               <option value="run500">Run 500 pzas</option>
               <option value="stock2500">Stock / +2500 pzas</option>
             </select>
           </div>
-          <div class="field"><label>¿Lleva color?</label>
-            <select id="cot-color-bot" onchange="calcVenta()">
-              <option value="color">Con color</option>
-              <option value="nocolor">Sin color</option>
+          <div class="field"><label>¿Con color?</label>
+            <select id="cot-color-bot" onchange="calcCotizador()">
+              <option value="true">Con color</option><option value="false">Sin color</option>
             </select>
           </div>
         </div>
-
-        <div class="field-row" style="margin-bottom:14px">
+        <div class="field-row">
           <div class="field"><label>Corrida tapas</label>
-            <select id="cot-corrida-tap" onchange="calcVenta()">
+            <select id="cot-corrida-tap" onchange="calcCotizador()">
               <option value="">Seleccionar...</option>
-              <option value="500">500 pzas</option>
-              <option value="1000">1,000 pzas</option>
-              <option value="2500">2,500 pzas</option>
-              <option value="5000">5,000 pzas</option>
+              <option value="500">500 pzas</option><option value="1000">1,000 pzas</option>
+              <option value="2500">2,500 pzas</option><option value="5000">5,000 pzas</option>
             </select>
           </div>
           <div class="field"><label>¿Tapa con color?</label>
-            <select id="cot-color-tap" onchange="calcVenta()">
-              <option value="color">Con color</option>
-              <option value="nocolor">Sin color</option>
+            <select id="cot-color-tap" onchange="calcCotizador()">
+              <option value="true">Con color</option><option value="false">Sin color</option>
             </select>
           </div>
         </div>
-
-        <div style="background:var(--bg3);border-radius:10px;padding:14px" id="venta-desglose">
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Botellas (505 × $5.65)</span><span class="mono" style="font-size:12px;color:var(--green)">$2,852.25</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tapas (505 × $6.41)</span><span class="mono" style="font-size:12px;color:var(--green)">$3,227.05</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tintas ($4.00 × 505)</span><span class="mono" style="font-size:12px;color:var(--green)">$2,020.00</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas + positivos (2 × $1,160)</span><span class="mono" style="font-size:12px;color:var(--green)">$2,320.00</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Mano de obra (2 col × 505 pzas)</span><span class="mono" style="font-size:12px;color:var(--green)">$2,171.50</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Papel empaque ($0.15 × 505)</span><span class="mono" style="font-size:12px;color:var(--green)">$75.75</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Tag/etiqueta ($0.15 × 505)</span><span class="mono" style="font-size:12px;color:var(--green)">$75.75</span></div>
-        </div>
+        <div id="venta-desglose" style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:4px"></div>
       </div>
     </div>
-
-    <!-- PANEL RESUMEN STICKY -->
     <div style="position:sticky;top:70px">
-      <div class="card">
-        <div class="card-title">Resumen — Costo interno</div>
-        <div class="cost-summary">
-          <div class="cs-row"><span class="cs-label">Tintas e insumos</span><span class="cs-val">$761.57</span></div>
-          <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val">$2,171.50</span></div>
-          <div class="cs-row"><span class="cs-label">Pantallas</span><span class="cs-val">$1,000.00</span></div>
-          <div class="cs-row"><span class="cs-label">Positivos</span><span class="cs-val">$460.00</span></div>
-          <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val">$151.50</span></div>
-          <div class="cs-row" style="padding-top:8px"><span style="font-weight:700;font-size:13px">Total costo</span><span class="cs-val" style="color:var(--red);font-size:14px">$4,544.57</span></div>
-          <div class="cs-row"><span class="cs-label">Costo/pieza</span><span class="cs-val" style="color:var(--blue)">$9.00</span></div>
-        </div>
-        <div class="divider"></div>
-        <div class="card-title">Precio de venta al cliente</div>
-        <div class="cost-summary">
-          <div class="cs-row"><span class="cs-label">Botellas</span><span class="cs-val" style="color:var(--green)">$2,852.25</span></div>
-          <div class="cs-row"><span class="cs-label">Tapas</span><span class="cs-val" style="color:var(--green)">$3,227.05</span></div>
-          <div class="cs-row"><span class="cs-label">Tintas</span><span class="cs-val" style="color:var(--green)">$2,020.00</span></div>
-          <div class="cs-row"><span class="cs-label">Pantallas + positivos</span><span class="cs-val" style="color:var(--green)">$2,320.00</span></div>
-          <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val" style="color:var(--green)">$2,171.50</span></div>
-          <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val" style="color:var(--green)">$151.50</span></div>
-          <div class="cs-row" style="padding-top:8px"><span style="font-weight:700;font-size:13px">Total venta</span><span class="cs-val" style="color:var(--green);font-size:14px">$12,742.30</span></div>
-          <div class="cs-row"><span class="cs-label">Precio unitario</span><span class="cs-val" style="color:var(--amber)">$25.23</span></div>
-        </div>
-        <div class="margin-box" style="background:var(--green-bg);border:1px solid var(--green-border)">
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Margen de utilidad</div>
-          <div class="mono" style="font-size:28px;font-weight:700;color:var(--green)">64.3%</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:2px">Utilidad: $8,197.73</div>
-        </div>
+      <div class="card" id="panel-resumen">
+        <div style="text-align:center;padding:20px;color:var(--text3)">Llena los datos para ver el resumen</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ══ PROYECCIÓN ══ -->
+<!-- PROYECCIÓN -->
 <div id="page-proyeccion" class="page">
-  <div class="ph-row"><div><div class="page-title">Proyección de flujo</div><div class="page-sub">Basada en fechas de inicio y tiempos estimados del pipeline</div></div></div>
+  <div class="ph-row"><div><div class="page-title">Proyección de flujo</div><div class="page-sub">Basada en fechas de inicio y tiempos estimados</div></div></div>
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-val" style="color:var(--green)">$18,714</div><div class="stat-label">Venta proyectada Mayo</div><div class="stat-delta up">↑ 18% vs Abril</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--amber)">$28,100</div><div class="stat-label">Venta proyectada Junio</div><div class="stat-delta up">↑ 50% vs Mayo</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--blue)">$12,841</div><div class="stat-label">Utilidad proyectada Mayo</div><div class="stat-delta up">68.6% margen</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--purple)">2,520</div><div class="stat-label">Piezas en pipeline</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)" id="proy-mes1-val">—</div><div class="stat-label" id="proy-mes1-label">Este mes</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--amber)" id="proy-mes2-val">—</div><div class="stat-label" id="proy-mes2-label">Próximo mes</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--blue)" id="proy-util-val">—</div><div class="stat-label">Utilidad proyectada</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--purple)" id="proy-pzas-val">—</div><div class="stat-label">Piezas en pipeline</div></div>
   </div>
-  <div class="card">
-    <div class="card-title">Timeline — generado desde fecha inicio + horas estimadas del pipeline</div>
-    <div class="timeline-wrap">
-      <div class="timeline-header"><div class="timeline-month">1 May</div><div class="timeline-month">8 May</div><div class="timeline-month">15 May</div><div class="timeline-month">22 May</div><div class="timeline-month">1 Jun</div><div class="timeline-month">8 Jun</div><div class="timeline-month">15 Jun</div></div>
-      <div class="timeline-row"><div class="timeline-label">Strictly E-Bikes</div><div class="timeline-track"><div class="timeline-bar" style="left:0%;width:28%;background:var(--red)">505 pzas · 2 col · 8h</div></div></div>
-      <div class="timeline-row"><div class="timeline-label">Trail Series</div><div class="timeline-track"><div class="timeline-bar" style="left:7%;width:35%;background:var(--blue)">1,000 pzas · 3 col · 14h</div></div></div>
-      <div class="timeline-row"><div class="timeline-label">Summit Series</div><div class="timeline-track"><div class="timeline-bar" style="left:20%;width:30%;background:var(--text3)">750 pzas · 1 col · sin fecha</div></div></div>
-      <div class="timeline-row"><div class="timeline-label">Gravel Pro</div><div class="timeline-track"><div class="timeline-bar" style="left:45%;width:28%;background:var(--green)">265 pzas · 2 col · 6h</div></div></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Proyección de ventas</div>
-    <div class="proj-card"><div class="proj-month">Abril 2026</div><div class="proj-bar-wrap"><div class="proj-bar" style="width:45%;background:var(--text3)"></div></div><div class="proj-val" style="color:var(--text2)">$15,870</div></div>
-    <div class="proj-card"><div class="proj-month">Mayo 2026</div><div class="proj-bar-wrap"><div class="proj-bar" style="width:67%"></div></div><div class="proj-val">$18,714</div></div>
-    <div class="proj-card"><div class="proj-month">Junio 2026</div><div class="proj-bar-wrap"><div class="proj-bar" style="width:100%;background:var(--green)"></div></div><div class="proj-val" style="color:var(--green)">$28,100</div></div>
-  </div>
+  <div class="card"><div class="card-title">Timeline de producción</div><div id="timeline-container"><div class="loading">Cargando...</div></div></div>
+  <div class="card"><div class="card-title">Proyección de ventas por mes</div><div id="proyeccion-barras"><div class="loading">Calculando...</div></div></div>
 </div>
 
-<!-- ══ CATÁLOGOS ══ -->
+<!-- CATÁLOGOS -->
 <div id="page-catalogos" class="page">
   <div class="ph-row"><div><div class="page-title">Catálogos</div><div class="page-sub">Administra todos los insumos y tarifas</div></div></div>
   <div class="tabs" id="cat-tabs">
-    <div class="tab active" onclick="switchTab('ct-tintas',this,'cat-tabs')">Tintas</div>
-    <div class="tab" onclick="switchTab('ct-aditivos',this,'cat-tabs')">Aditivos</div>
-    <div class="tab" onclick="switchTab('ct-pantallas',this,'cat-tabs')">Pantallas</div>
-    <div class="tab" onclick="switchTab('ct-positivos',this,'cat-tabs')">Positivos</div>
-    <div class="tab" onclick="switchTab('ct-mdo',this,'cat-tabs')">Mano de obra</div>
-    <div class="tab" onclick="switchTab('ct-precios',this,'cat-tabs')">Precios venta</div>
-    <div class="tab" onclick="switchTab('ct-clientes',this,'cat-tabs')">Clientes</div>
-    <div class="tab" onclick="switchTab('ct-maquinas',this,'cat-tabs')">Máquinas</div>
+    <div class="tab active" onclick="switchCatTab('ct-tintas',this)">Tintas</div>
+    <div class="tab" onclick="switchCatTab('ct-aditivos',this)">Aditivos</div>
+    <div class="tab" onclick="switchCatTab('ct-pantallas',this)">Pantallas</div>
+    <div class="tab" onclick="switchCatTab('ct-positivos',this)">Positivos</div>
+    <div class="tab" onclick="switchCatTab('ct-mdo',this)">Mano de obra</div>
+    <div class="tab" onclick="switchCatTab('ct-precios',this)">Precios venta</div>
+    <div class="tab" onclick="switchCatTab('ct-clientes',this)">Clientes</div>
+    <div class="tab" onclick="switchCatTab('ct-maquinas',this)">Máquinas</div>
   </div>
-  <div id="ct-tintas">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:12px;color:var(--text2)">14 tintas registradas</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="toast('Subir factura PDF...')">📄 Importar factura PDF</button>
-        <button class="btn btn-primary btn-sm">+ Agregar tinta</button>
-      </div>
-    </div>
-    <div class="table-wrap"><table><thead><tr><th>SKU</th><th>Nombre</th><th>Proveedor</th><th>$/kg c/IVA</th><th>Stock (kg)</th><th></th></tr></thead><tbody>
-      <tr><td class="td-mono">MM095</td><td>Multiplack Base MM095</td><td>Rodatec</td><td class="td-mono">$2,215.60</td><td>12.5 kg</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-      <tr><td class="td-mono">MM435</td><td>Multiplack Amarillo Medio</td><td>Rodatec</td><td class="td-mono">$2,818.80</td><td>8.2 kg</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-      <tr><td class="td-mono">MPK1436</td><td>Multiplack Blanco Opaco</td><td>Rodatec</td><td class="td-mono">$6,577.20</td><td>5.0 kg</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-      <tr><td class="td-mono">NOR-4000K</td><td>Jet Black</td><td>Norcote</td><td class="td-mono">$2,204.00</td><td>3.8 kg</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-    </tbody></table></div>
-  </div>
-  <div id="ct-aditivos" style="display:none">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar aditivo</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Proveedor</th><th>$/kg c/IVA</th><th></th></tr></thead><tbody>
-      <tr><td>Promotor de Adherencia R-12</td><td>Rodatec</td><td class="td-mono">$939.60</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-      <tr><td>Retardante UV</td><td>Rodatec</td><td class="td-mono">—</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-      <tr><td>Catalizador</td><td>Norcote</td><td class="td-mono">—</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-    </tbody></table></div>
-  </div>
-  <div id="ct-pantallas" style="display:none">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Código</th><th>Medidas</th><th>Tipo</th><th>Costo interno</th><th></th></tr></thead><tbody>
-      <tr><td class="td-mono">PNT-220x90</td><td>220mm × 90mm</td><td>UV</td><td class="td-mono">$500.00</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-    </tbody></table></div>
-  </div>
-  <div id="ct-positivos" style="display:none">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Costo interno</th><th></th></tr></thead><tbody>
-      <tr><td class="td-mono">POS-001</td><td>Positivo estándar UV</td><td class="td-mono">$230.00</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-    </tbody></table></div>
-  </div>
-  <div id="ct-mdo" style="display:none">
-    <div class="card">
-      <div class="card-title">Tarifa escalonada mano de obra ($/pieza)</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-        <div style="background:var(--bg3);border-radius:9px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Color 1</div><input type="number" value="2.20" style="background:transparent;border:none;color:var(--amber);font-family:'Space Mono',monospace;font-size:20px;font-weight:700;text-align:center;width:100%;outline:none"></div>
-        <div style="background:var(--bg3);border-radius:9px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Color 2</div><input type="number" value="2.10" style="background:transparent;border:none;color:var(--amber);font-family:'Space Mono',monospace;font-size:20px;font-weight:700;text-align:center;width:100%;outline:none"></div>
-        <div style="background:var(--bg3);border-radius:9px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Color 3</div><input type="number" value="2.00" style="background:transparent;border:none;color:var(--amber);font-family:'Space Mono',monospace;font-size:20px;font-weight:700;text-align:center;width:100%;outline:none"></div>
-        <div style="background:var(--bg3);border-radius:9px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Color 4</div><input type="number" value="1.90" style="background:transparent;border:none;color:var(--amber);font-family:'Space Mono',monospace;font-size:20px;font-weight:700;text-align:center;width:100%;outline:none"></div>
-      </div>
-    </div>
-    <div class="table-wrap"><table><thead><tr><th>Concepto</th><th>Unidad</th><th>Costo</th><th></th></tr></thead><tbody>
-      <tr><td>Papel empaque</td><td>Por pieza</td><td class="td-mono">$0.15</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-      <tr><td>Tag / hangtag / etiqueta</td><td>Por pieza</td><td class="td-mono">$0.15</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-    </tbody></table></div>
-  </div>
-  <div id="ct-precios" style="display:none">
-    <div style="margin-bottom:12px;font-size:12px;color:var(--text2)">Precios de venta editables. Clic en un valor para modificarlo.</div>
-    <div class="card"><div class="card-title">Botellas — 500ml</div>
-      <div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>
-        <tr><td>Run 500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$4.85</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.15</td></tr>
-        <tr><td>Stock / +2500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$2.55</td><td class="td-mono" contenteditable style="color:var(--amber)">$2.85</td></tr>
-      </tbody></table></div>
-    </div>
-    <div class="card"><div class="card-title">Botellas — 600ml</div>
-      <div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>
-        <tr><td>Run 500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.35</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.65</td></tr>
-        <tr><td>Stock / +2500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.05</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.35</td></tr>
-      </tbody></table></div>
-    </div>
-    <div class="card"><div class="card-title">Botellas — 700ml</div>
-      <div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>
-        <tr><td>Run 500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.85</td><td class="td-mono" contenteditable style="color:var(--amber)">$6.15</td></tr>
-        <tr><td>Stock / +2500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.55</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.85</td></tr>
-      </tbody></table></div>
-    </div>
-    <div class="card"><div class="card-title">Tapas</div>
-      <div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>
-        <tr><td>500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$6.31</td><td class="td-mono" contenteditable style="color:var(--amber)">$6.41</td></tr>
-        <tr><td>1,000 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.30</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.40</td></tr>
-        <tr><td>2,500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$4.50</td><td class="td-mono" contenteditable style="color:var(--amber)">$4.60</td></tr>
-        <tr><td>5,000 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.91</td><td class="td-mono" contenteditable style="color:var(--amber)">$4.01</td></tr>
-      </tbody></table></div>
-    </div>
-    <div class="card"><div class="card-title">Tarifas fijas venta</div>
-      <div class="field-row-3">
-        <div class="field"><label>Tintas (fijo por botella)</label><input type="number" value="4.00" style="font-size:18px;font-weight:700;text-align:center;color:var(--amber)"></div>
-        <div class="field"><label>Pantallas + positivos (por color)</label><input type="number" value="1160.00" style="font-size:18px;font-weight:700;text-align:center;color:var(--amber)"></div>
-        <div class="field"><label>Papel empaque (por pieza)</label><input type="number" value="0.15" style="font-size:18px;font-weight:700;text-align:center;color:var(--amber)"></div>
-      </div>
-    </div>
-  </div>
-  <div id="ct-clientes" style="display:none">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar cliente</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Dirección</th><th>Contacto</th><th></th></tr></thead><tbody>
-      <tr><td><b>MountainFlow</b></td><td>201 Main St, Suite 303, Carbondale, CO 81623</td><td>—</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-    </tbody></table></div>
-  </div>
-  <div id="ct-maquinas" style="display:none">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar máquina</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Estado</th><th></th></tr></thead><tbody>
-      <tr><td>Shuttle</td><td>Serigrafía UV</td><td><span class="badge badge-green">Activa</span></td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-      <tr><td>Dubuit</td><td>Serigrafía UV</td><td><span class="badge badge-green">Activa</span></td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
-    </tbody></table></div>
-  </div>
+  <div id="ct-tintas"><div class="loading"><div class="loading-spinner"></div></div></div>
+  <div id="ct-aditivos" style="display:none"></div>
+  <div id="ct-pantallas" style="display:none"></div>
+  <div id="ct-positivos" style="display:none"></div>
+  <div id="ct-mdo" style="display:none"></div>
+  <div id="ct-precios" style="display:none"></div>
+  <div id="ct-clientes" style="display:none"></div>
+  <div id="ct-maquinas" style="display:none"></div>
 </div>
 
-<!-- ══ USUARIOS ══ -->
+<!-- USUARIOS -->
 <div id="page-usuarios" class="page">
-  <div class="ph-row"><div><div class="page-title">Usuarios</div><div class="page-sub">Gestiona accesos y PINs</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openModal('modal-usuario')">+ Nuevo usuario</button></div></div>
-  <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Rol</th><th>Color</th><th>PIN</th><th>Estado</th><th></th></tr></thead><tbody>
-    <tr><td><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:#f5a62322;color:#f5a623;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">ED</div>Edgar</div></td><td><span class="badge badge-amber">Supervisor</span></td><td><div style="width:20px;height:20px;border-radius:4px;background:#f5a623;border:1px solid var(--border2)"></div></td><td class="td-mono">••••</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-ghost btn-xs" onclick="openModal('modal-usuario')">✏️</button></td></tr>
-    <tr><td><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:#34d39922;color:#34d399;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">BE</div>Bety</div></td><td><span class="badge badge-blue">Operador</span></td><td><div style="width:20px;height:20px;border-radius:4px;background:#34d399;border:1px solid var(--border2)"></div></td><td class="td-mono">••••</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-ghost btn-xs" onclick="openModal('modal-usuario')">✏️</button></td></tr>
-    <tr><td><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:#00e5a022;color:#00e5a0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">MA</div>Master</div></td><td><span class="badge badge-green">Administrador</span></td><td><div style="width:20px;height:20px;border-radius:4px;background:#00e5a0;border:1px solid var(--border2)"></div></td><td class="td-mono">••••</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-ghost btn-xs" onclick="openModal('modal-usuario')">✏️</button></td></tr>
-  </tbody></table></div>
+  <div class="ph-row"><div><div class="page-title">Usuarios</div><div class="page-sub">Gestiona accesos y PINs</div></div>
+    <div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openModalUsuario(null)">+ Nuevo usuario</button></div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Nombre</th><th>Rol</th><th>Color</th><th>PIN</th><th>Estado</th><th></th></tr></thead>
+    <tbody id="usuarios-tbody"><tr><td colspan="6" class="loading">Cargando...</td></tr></tbody>
+  </table></div>
 </div>
 
 </div></div>
@@ -633,145 +344,127 @@ tr:hover td{background:var(--bg3);cursor:pointer}
 <!-- MODAL IMPORTAR PDFs -->
 <div class="modal-overlay" id="modal-import">
   <div class="modal">
-    <div class="modal-title">Importar pedido desde PDFs <button class="modal-close" onclick="closeModal('modal-import')">×</button></div>
+    <div class="modal-title">Importar pedido desde PDFs <button class="modal-close" onclick="closeModal('modal-import');resetImport()">×</button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">PDF 1 — Purchase Order</div>
-        <div class="pdf-drop" id="drop1" onclick="simulatePDF('drop1')"><div class="pdf-drop-icon">📄</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">MF-...-Order_Form.pdf</div></div>
+        <div class="pdf-drop" id="drop1" onclick="document.getElementById('file-po').click()">
+          <div class="pdf-drop-icon">📄</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">MF-...-Order_Form.pdf</div>
+        </div>
+        <input type="file" id="file-po" accept="application/pdf" style="display:none" onchange="handlePDF('po',this)">
       </div>
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">PDF 2 — Mock Up / Colores</div>
-        <div class="pdf-drop" id="drop2" onclick="simulatePDF('drop2')"><div class="pdf-drop-icon">🎨</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">..._V2.pdf</div></div>
+        <div class="pdf-drop" id="drop2" onclick="document.getElementById('file-mockup').click()">
+          <div class="pdf-drop-icon">🎨</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">..._V2.pdf</div>
+        </div>
+        <input type="file" id="file-mockup" accept="application/pdf" style="display:none" onchange="handlePDF('mockup',this)">
       </div>
     </div>
-    <div id="pdf-result" style="display:none;margin-top:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✓ Claude extrajo los siguientes datos</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="pdf-preview">
-          <div class="pdf-preview-title">📄 Purchase Order</div>
-          <div class="pdf-field"><span class="pdf-field-key">Sub-cliente</span><span class="pdf-field-val">Strictly E-Bikes</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">PO #</span><span class="pdf-field-val">875517473</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Capacidad</span><span class="pdf-field-val">600ml</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Piezas</span><span class="pdf-field-val">505</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Fecha</span><span class="pdf-field-val">25 Mar 2026</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Envío a</span><span class="pdf-field-val">Alexandria, VA</span></div>
-        </div>
-        <div class="pdf-preview">
-          <div class="pdf-preview-title">🎨 Mock Up</div>
-          <div class="pdf-field"><span class="pdf-field-key">Botella</span><span class="pdf-field-val">Black</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Tapa</span><span class="pdf-field-val">348 C</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Boquilla</span><span class="pdf-field-val">Clear</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Tinta #1</span><span class="pdf-field-val">348 C</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Tinta #2</span><span class="pdf-field-val">White</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Colores</span><span class="pdf-field-val">2 → 2 pantallas</span></div>
-        </div>
-      </div>
-    </div>
+    <div id="pdf-processing" style="display:none;text-align:center;padding:20px;color:var(--text2)"><div class="loading-spinner"></div><br>Claude está analizando los PDFs...</div>
+    <div id="pdf-result" style="display:none;margin-top:14px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-      <button class="btn btn-ghost" onclick="closeModal('modal-import')">Cancelar</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-import');showPage('cotizador',document.querySelectorAll('.nav-item')[1]);toast('Datos cargados en cotizador ✓')">→ Ir a cotizador</button>
-      <button class="btn btn-primary" onclick="closeModal('modal-import');toast('Pedido guardado en pipeline ✓')">Guardar en pipeline</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-import');resetImport()">Cancelar</button>
+      <button class="btn btn-secondary" id="btn-import-cotizar" style="display:none" onclick="importarACotizador()">→ Ir a cotizador</button>
+      <button class="btn btn-primary" id="btn-import-guardar" style="display:none" onclick="importarAPipeline()">Guardar en pipeline</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL NUEVO PEDIDO (en blanco) -->
-<div class="modal-overlay" id="modal-pedido-nuevo">
+<!-- MODAL PEDIDO -->
+<div class="modal-overlay" id="modal-pedido">
   <div class="modal modal-lg">
-    <div class="modal-title">Nuevo pedido <button class="modal-close" onclick="closeModal('modal-pedido-nuevo')">×</button></div>
+    <div class="modal-title"><div id="modal-pedido-titulo">Nuevo pedido</div><button class="modal-close" onclick="closeModal('modal-pedido')">×</button></div>
     <div class="card" style="margin-bottom:12px">
       <div class="card-title">Datos generales</div>
-      <div class="field-row"><div class="field"><label>Cliente</label><select><option value="">Seleccionar...</option><option>MountainFlow</option></select></div><div class="field"><label>Sub-cliente</label><input type="text" placeholder="Ej: Strictly E-Bikes"></div></div>
-      <div class="field-row-3"><div class="field"><label>PO #</label><input type="text" placeholder="875517473"></div><div class="field"><label>Capacidad</label><select><option value="">—</option><option>500ml</option><option>600ml</option><option>700ml</option></select></div><div class="field"><label>Piezas</label><input type="number" placeholder="505"></div></div>
-      <div class="field-row"><div class="field"><label>Colores</label><input type="number" placeholder="2"></div><div class="field"><label>Fecha de entrega</label><input type="date"></div></div>
-      <div class="field-row"><div class="field"><label>Fecha inicio estimada</label><input type="date"></div><div class="field"><label>Tiempo estimado (horas)</label><input type="number" placeholder="8"></div></div>
-      <div class="field"><label>Dirección de envío</label><input type="text" placeholder="683 N Washington St, Alexandria, VA 22314"></div>
-      <div class="field"><label>Notas / Packaging</label><textarea rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none" placeholder="Instrucciones de empaque..."></textarea></div>
-      <div class="field"><label>Estado</label><select><option>Pendiente</option><option>En producción</option><option>Completado</option><option>Entregado</option></select></div>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-ghost" onclick="closeModal('modal-pedido-nuevo')">Cancelar</button>
-      <button class="btn btn-secondary" onclick="closeModal('modal-pedido-nuevo');showPage('cotizador',document.querySelectorAll('.nav-item')[1]);toast('Pedido creado → ir a cotizar')">Guardar y cotizar</button>
-      <button class="btn btn-primary" onclick="closeModal('modal-pedido-nuevo');toast('Pedido guardado ✓')">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL DETALLE PEDIDO -->
-<div class="modal-overlay" id="modal-pedido-detalle">
-  <div class="modal modal-lg">
-    <div class="modal-title">
-      <div style="display:flex;align-items:center;gap:10px">Strictly E-Bikes — 600ml <span class="badge badge-red">Urgente</span></div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="toast('Datos limpiados')">🗑 Limpiar</button>
-        <button class="modal-close" onclick="closeModal('modal-pedido-detalle')">×</button>
+      <div class="field-row">
+        <div class="field"><label>Cliente</label><select id="mp-cliente"><option value="">Seleccionar...</option></select></div>
+        <div class="field"><label>Sub-cliente</label><input type="text" id="mp-subcli"></div>
+      </div>
+      <div class="field-row-3">
+        <div class="field"><label>PO #</label><input type="text" id="mp-po"></div>
+        <div class="field"><label>Capacidad</label><select id="mp-cap"><option value="">—</option><option value="500">500ml</option><option value="600">600ml</option><option value="700">700ml</option></select></div>
+        <div class="field"><label>Piezas</label><input type="number" id="mp-piezas"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Colores</label><input type="number" id="mp-colores"></div>
+        <div class="field"><label>Fecha de entrega</label><input type="date" id="mp-fecha-entrega"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Fecha inicio estimada</label><input type="date" id="mp-fecha-inicio"></div>
+        <div class="field"><label>Tiempo estimado (horas)</label><input type="number" id="mp-horas"></div>
+      </div>
+      <div class="field-row-3">
+        <div class="field"><label>Color botella</label><input type="text" id="mp-col-bot"></div>
+        <div class="field"><label>Color tapa</label><input type="text" id="mp-col-tap"></div>
+        <div class="field"><label>Boquilla</label><input type="text" id="mp-col-boq"></div>
+      </div>
+      <div class="field"><label>Dirección de envío</label><input type="text" id="mp-envio"></div>
+      <div class="field"><label>Notas / Packaging</label><textarea id="mp-notas" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none"></textarea></div>
+      <div class="field"><label>Estado</label>
+        <select id="mp-estado">
+          <option value="Pendiente">Pendiente</option>
+          <option value="En producción">En producción</option>
+          <option value="Completado">Completado</option>
+          <option value="Entregado">Entregado</option>
+          <option value="Cancelado">Cancelado</option>
+        </select>
       </div>
     </div>
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-title">Datos generales</div>
-      <div class="field-row"><div class="field"><label>Cliente</label><select><option>MountainFlow</option></select></div><div class="field"><label>Sub-cliente</label><input type="text" value="Strictly E-Bikes"></div></div>
-      <div class="field-row-3"><div class="field"><label>PO #</label><input type="text" value="875517473"></div><div class="field"><label>Capacidad</label><select><option>600ml</option></select></div><div class="field"><label>Piezas</label><input type="number" value="505"></div></div>
-      <div class="field-row"><div class="field"><label>Colores</label><input type="number" value="2"></div><div class="field"><label>Fecha de entrega</label><input type="date" value="2026-05-15"></div></div>
-      <div class="field-row"><div class="field"><label>Fecha inicio estimada</label><input type="date" value="2026-05-01"></div><div class="field"><label>Tiempo estimado (horas)</label><input type="number" value="8"></div></div>
-      <div class="field-row"><div class="field"><label>Tinta #1</label><input type="text" value="348 C"></div><div class="field"><label>Tinta #2</label><input type="text" value="White"></div></div>
-      <div class="field-row-3"><div class="field"><label>Color botella</label><input type="text" value="Black"></div><div class="field"><label>Color tapa</label><input type="text" value="348 C"></div><div class="field"><label>Boquilla</label><input type="text" value="Clear"></div></div>
-      <div class="field"><label>Dirección de envío</label><input type="text" value="683 N Washington St, Alexandria, VA 22314"></div>
-      <div class="field"><label>Notas / Packaging</label><textarea rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none">No plastic bags, wrap in Paper, ADD mountainFLOW HANGTAG</textarea></div>
-      <div class="field"><label>Estado</label><select><option>Pendiente</option><option>En producción</option><option>Completado</option><option>Entregado</option></select></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div class="card" style="margin:0">
-        <div class="card-title">Costo interno</div>
-        <div class="cs-row"><span class="cs-label">Tintas e insumos</span><span class="cs-val">$761.57</span></div>
-        <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val">$2,171.50</span></div>
-        <div class="cs-row"><span class="cs-label">Pantallas (2 × $500)</span><span class="cs-val">$1,000.00</span></div>
-        <div class="cs-row"><span class="cs-label">Positivos (2 × $230)</span><span class="cs-val">$460.00</span></div>
-        <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val">$151.50</span></div>
-        <div class="cs-row" style="padding-top:8px"><span style="font-weight:700">Total costo</span><span class="cs-val" style="color:var(--red);font-size:14px">$4,544.57</span></div>
-        <div class="cs-row"><span class="cs-label">Costo/pieza</span><span class="cs-val" style="color:var(--blue)">$9.00</span></div>
-      </div>
-      <div class="card" style="margin:0">
-        <div class="card-title">Venta al cliente</div>
-        <div class="cs-row"><span class="cs-label">Botellas (505 × $5.65)</span><span class="cs-val" style="color:var(--green)">$2,852.25</span></div>
-        <div class="cs-row"><span class="cs-label">Tapas (505 × $6.41)</span><span class="cs-val" style="color:var(--green)">$3,227.05</span></div>
-        <div class="cs-row"><span class="cs-label">Tintas ($4.00 × 505)</span><span class="cs-val" style="color:var(--green)">$2,020.00</span></div>
-        <div class="cs-row"><span class="cs-label">Pantallas+positivos (2 × $1,160)</span><span class="cs-val" style="color:var(--green)">$2,320.00</span></div>
-        <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val" style="color:var(--green)">$2,171.50</span></div>
-        <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val" style="color:var(--green)">$151.50</span></div>
-        <div class="cs-row" style="padding-top:8px"><span style="font-weight:700">Total venta</span><span class="cs-val" style="color:var(--green);font-size:14px">$12,742.30</span></div>
-        <div class="margin-box" style="background:var(--green-bg);border:1px solid var(--green-border)">
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px">Margen</div>
-          <div class="mono" style="font-size:22px;font-weight:700;color:var(--green)">64.3%</div>
-        </div>
-      </div>
-    </div>
+    <div id="mp-cotizacion-resumen" style="display:none"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
-      <button class="btn btn-ghost" onclick="closeModal('modal-pedido-detalle')">Cancelar</button>
-      <button class="btn btn-secondary" onclick="toast('PDF interno generado')">📊 PDF interno</button>
-      <button class="btn btn-secondary" onclick="toast('PDF cliente generado')">📤 PDF cliente</button>
-      <button class="btn btn-primary" onclick="closeModal('modal-pedido-detalle');toast('Pedido actualizado ✓')">💾 Guardar cambios</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-pedido')">Cancelar</button>
+      <button class="btn btn-secondary" id="btn-mp-pdf-interno" style="display:none" onclick="toast('PDF interno — próximamente')">📊 PDF interno</button>
+      <button class="btn btn-secondary" id="btn-mp-pdf-cliente" style="display:none" onclick="toast('PDF cliente — próximamente')">📤 PDF cliente</button>
+      <button class="btn btn-primary" onclick="guardarPedido()">💾 Guardar</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL USUARIO -->
 <div class="modal-overlay" id="modal-usuario">
-  <div class="modal" style="max-width:400px">
-    <div class="modal-title">Nuevo / Editar usuario <button class="modal-close" onclick="closeModal('modal-usuario')">×</button></div>
-    <div class="field"><label>Nombre</label><input type="text" placeholder="Nombre completo"></div>
-    <div class="field"><label>Rol</label><select><option>supervisor</option><option>operador</option><option>master</option><option>facturacion</option></select></div>
-    <div class="field"><label>Color identificador</label><input type="color" value="#f5a623" style="height:40px;padding:4px;width:100%"></div>
-    <div class="field"><label>PIN (4 dígitos)</label><input type="password" maxlength="4" placeholder="••••" inputmode="numeric"></div>
-    <div class="field"><label>Estado</label><select><option>Activo</option><option>Inactivo</option></select></div>
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title"><span id="modal-usuario-titulo">Nuevo usuario</span><button class="modal-close" onclick="closeModal('modal-usuario')">×</button></div>
+    <div class="field"><label>Nombre</label><input type="text" id="mu-nombre"></div>
+    <div class="field"><label>Rol</label>
+      <select id="mu-rol">
+        <option value="supervisor">Supervisor</option>
+        <option value="operador">Operador</option>
+        <option value="master">Master (Administrador)</option>
+        <option value="facturacion">Facturación</option>
+      </select>
+    </div>
+    <div class="field"><label>Color identificador</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="color" id="mu-color" value="#f5a623" style="width:50px;height:40px;padding:4px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer">
+        <input type="text" id="mu-color-hex" value="#f5a623" style="flex:1">
+      </div>
+    </div>
+    <div class="field"><label>PIN (4 dígitos)</label><input type="password" id="mu-pin" maxlength="4" placeholder="••••" inputmode="numeric"></div>
+    <div class="field"><label>Estado</label><select id="mu-activo"><option value="true">Activo</option><option value="false">Inactivo</option></select></div>
+    <input type="hidden" id="mu-id">
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-ghost" onclick="closeModal('modal-usuario')">Cancelar</button>
-      <button class="btn btn-primary" onclick="closeModal('modal-usuario');toast('Usuario guardado ✓')">Guardar</button>
+      <button class="btn btn-primary" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CATÁLOGO -->
+<div class="modal-overlay" id="modal-catalogo">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title"><span id="modal-cat-titulo">Editar</span><button class="modal-close" onclick="closeModal('modal-catalogo')">×</button></div>
+    <div id="modal-cat-body"></div>
+    <input type="hidden" id="modal-cat-tabla">
+    <input type="hidden" id="modal-cat-id">
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-catalogo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCatalogoItem()">Guardar</button>
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast-el"></div>
-
 <script>
 const SB_URL='https://ozibjgsxyzdbporcarwv.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
