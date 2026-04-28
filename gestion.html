@@ -69,7 +69,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </div>
     <div class="field-row-3">
       <div class="field"><label>PO / No. orden</label><input type="text" id="np-po" placeholder="PO-2025-001"></div>
-      <div class="field"><label>Talla (ml)</label><input type="number" id="np-talla" placeholder="600" inputmode="numeric"></div>
+      <div class="field"><label>Capacidad (ml)</label><input type="number" id="np-capacidad" placeholder="600" inputmode="numeric"></div>
       <div class="field"><label>Piezas</label><input type="number" id="np-piezas" placeholder="1000" inputmode="numeric"></div>
     </div>
     <div class="field-row">
@@ -133,7 +133,7 @@ async function loadPipeline(){
     el.innerHTML=rows.map(p=>`
       <div class="pipeline-row">
         <div>
-          <div style="font-size:14px;font-weight:600;margin-bottom:3px">${p.sub_cliente||p.cliente} — ${p.talla}ml</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:3px">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
           <div style="font-size:12px;color:var(--text2)">${p.po} · ${(p.piezas||0).toLocaleString()} pzas · ${p.colores||0} colores${p.fecha_entrega?' · Entrega: '+p.fecha_entrega:''}</div>
           ${p.notas?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${p.notas}</div>`:''}
         </div>
@@ -153,7 +153,7 @@ async function agregarPedido(){
     cliente,
     sub_cliente:document.getElementById('np-subcliente').value.trim()||null,
     po,
-    talla:parseInt(document.getElementById('np-talla').value)||null,
+    capacidad:parseInt(document.getElementById('np-capacidad').value)||null,
     piezas:parseInt(document.getElementById('np-piezas').value)||0,
     colores:parseInt(document.getElementById('np-colores').value)||0,
     fecha_entrega:document.getElementById('np-fecha').value||null,
@@ -163,7 +163,7 @@ async function agregarPedido(){
   try{
     await sbPost('pipeline_mf',data);
     toast('Pedido agregado ✓');
-    ['np-cliente','np-subcliente','np-po','np-talla','np-piezas','np-colores','np-fecha','np-notas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['np-cliente','np-subcliente','np-po','np-capacidad','np-piezas','np-colores','np-fecha','np-notas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     loadPipeline();
   }catch(e){toast('Error: '+e.message);}
 }

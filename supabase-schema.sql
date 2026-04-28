@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS pipeline_mf (
   cliente TEXT NOT NULL,
   sub_cliente TEXT,
   po TEXT NOT NULL,
-  talla INTEGER,
+  capacidad INTEGER,
   piezas INTEGER DEFAULT 0,
   colores INTEGER DEFAULT 0,
   tintas_info JSONB DEFAULT '[]',

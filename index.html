@@ -803,7 +803,7 @@ async function renderDashboard(){
           :`<div style="background:var(--green);color:#0d0f12;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer" onclick="goNuevaOrden(${i})">▶ Iniciar</div>`;
         return `<div class="card" style="margin-bottom:10px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <div style="font-size:15px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.talla}ml</div>
+            <div style="font-size:15px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
             <div class="badge ${p.estado==='En producción'?'badge-blue':'badge-amber'}">${p.estado}</div>
           </div>
           <div style="font-size:12px;color:var(--text2);margin-bottom:10px">${p.po} · ${(p.piezas||0).toLocaleString()} pzas · ${p.colores||0} colores</div>
@@ -815,7 +815,7 @@ async function renderDashboard(){
       html+='<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin:16px 0 8px">Completados</div>';
       html+=completados.map(p=>`<div class="card" style="opacity:0.65;margin-bottom:8px">
         <div style="display:flex;align-items:center;justify-content:space-between">
-          <div><div style="font-size:13px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.talla}ml</div>
+          <div><div style="font-size:13px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
           <div style="font-size:11px;color:var(--text2);margin-top:2px">${p.po} · ${(p.piezas||0).toLocaleString()} pzas</div></div>
           <div class="badge badge-green">${p.estado}</div>
         </div>
@@ -837,7 +837,7 @@ function goNuevaOrden(idx){
     S.orden.cliente=p.sub_cliente||p.cliente||'';
     S.orden.op=p.po||'';
     S.orden.pzas=p.piezas||0;
-    S.orden.producto=p.talla?'Botella MF '+p.talla+'ml':'';
+    S.orden.producto=p.capacidad?'Botella MF '+p.capacidad+'ml':'';
     S.pipelineId=p.id||null;
     if(p.tintas_info&&p.tintas_info.length)
       S.orden.colores=p.tintas_info.map(t=>({nombre:t.nombre||t.pantone||'Color',pantone:t.pantone||''}));
