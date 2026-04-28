@@ -734,6 +734,7 @@ function checkPin(){
   S.user=S.pinTarget;
   const rol=S.user.role;
   if(rol==='master'||rol==='facturacion'){
+    sessionStorage.setItem('sp_user',JSON.stringify({id:S.user.id,nombre:S.user.name,rol:S.user.role,color:S.user.color}));
     window.location.href='gestion.html';
     return;
   }
