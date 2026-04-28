@@ -3,181 +3,1446 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sharp Plastics — Gestión</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<title>Sharp Plastics — Gestión v3 DUMMY</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0d0f12;--bg2:#13161b;--bg3:#1a1e26;--bg4:#222733;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#e8eaf0;--text2:#8890a4;--text3:#50596a;--amber:#f5a623;--amber-bg:rgba(245,166,35,0.1);--amber-border:rgba(245,166,35,0.3);--green:#34d399;--green-bg:rgba(52,211,153,0.1);--green-border:rgba(52,211,153,0.3);--blue:#4a9eff;--blue-bg:rgba(74,158,255,0.1);--blue-border:rgba(74,158,255,0.3);--red:#f87171;--red-bg:rgba(248,113,113,0.1);--red-border:rgba(248,113,113,0.3);--r:12px;--r-lg:16px;}
+:root{--bg:#0b0d10;--bg2:#111418;--bg3:#181c23;--bg4:#1e232d;--bg5:#252b38;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);--border3:rgba(255,255,255,0.18);--text:#e2e6f0;--text2:#7d8799;--text3:#454e60;--amber:#f5a623;--amber2:#ffc15e;--amber-bg:rgba(245,166,35,0.08);--amber-border:rgba(245,166,35,0.25);--green:#2dd4a0;--green-bg:rgba(45,212,160,0.08);--green-border:rgba(45,212,160,0.25);--blue:#4a9eff;--blue-bg:rgba(74,158,255,0.08);--blue-border:rgba(74,158,255,0.25);--red:#f87171;--red-bg:rgba(248,113,113,0.08);--red-border:rgba(248,113,113,0.25);--purple:#a78bfa;--purple-bg:rgba(167,139,250,0.08);--purple-border:rgba(167,139,250,0.25);--sidebar:220px;--topbar:52px;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
-.logo{font-family:'Space Mono',monospace;font-size:11px;color:var(--text2);letter-spacing:0.08em}
-.logo span{color:var(--amber)}
-.main{max-width:900px;margin:0 auto;padding:24px 20px}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;margin-bottom:16px}
-.card-title{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:16px}
-.field{margin-bottom:12px}
-.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:500}
-.field input,.field select,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none}
-.field input:focus,.field select:focus{border-color:var(--amber)}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.btn{border:none;border-radius:var(--r);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:opacity 0.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;font-size:14px}
-.btn:active{opacity:0.75}
-.btn-primary{background:var(--amber);color:#0d0f12}
-.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);padding:6px 12px;font-size:12px}
-.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);padding:8px 14px;font-size:12px}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase}
+.mono{font-family:'Space Mono',monospace}
+.topbar{height:var(--topbar);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:fixed;top:0;left:0;right:0;z-index:100}
+.logo{font-family:'Space Mono',monospace;font-size:12px;color:var(--text2);letter-spacing:0.1em}.logo b{color:var(--amber)}
+.version-tag{font-size:10px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);border-radius:4px;padding:2px 7px;font-weight:600}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.user-pill{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:999px;padding:4px 12px 4px 5px}
+.user-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:#00e5a022;color:#00e5a0}
+.user-name{font-size:12px;color:var(--text2);font-weight:500}
+.icon-btn{background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 12px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.15s}
+.icon-btn:hover{border-color:var(--border3);color:var(--text)}
+.icon-btn.prod{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.layout{display:flex;margin-top:var(--topbar);min-height:calc(100vh - var(--topbar))}
+.sidebar{width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);position:fixed;top:var(--topbar);bottom:0;left:0;overflow-y:auto;display:flex;flex-direction:column;padding:16px 0;z-index:99;transition:transform 0.25s}
+.nav-section{padding:0 12px;margin-bottom:4px}
+.nav-label{font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);padding:8px 8px 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:all 0.15s;color:var(--text2);font-size:13px;font-weight:500}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.nav-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:10px;font-weight:700;background:var(--amber);color:#0b0d10;border-radius:999px;padding:1px 6px}
+.sidebar-bottom{margin-top:auto;padding:12px}
+.sidebar-ver{font-size:10px;color:var(--text3);text-align:center;font-family:'Space Mono',monospace;padding:8px}
+.main{margin-left:var(--sidebar);flex:1;padding:24px}
+.page{display:none}.page.active{display:block}
+.ph-row{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text2)}
+.page-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:14px}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+.stat-val{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;line-height:1;margin-bottom:5px}
+.stat-label{font-size:11px;color:var(--text2)}
+.stat-delta{font-size:10px;margin-top:4px;font-weight:600}
+.up{color:var(--green)}.down{color:var(--red)}
+.btn{border:none;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:all 0.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;padding:9px 16px}
+.btn-primary{background:var(--amber);color:#0b0d10}.btn-primary:hover{background:var(--amber2)}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border2)}.btn-secondary:hover{border-color:var(--border3)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.btn-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+.btn-xs{padding:4px 9px;font-size:11px;border-radius:6px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap}
 .badge-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
 .badge-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
 .badge-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
 .badge-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
-.pipeline-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 18px;font-size:12px;color:var(--text);z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
-.toast.show{opacity:1}
-.user-chip{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:4px 12px 4px 4px;font-size:12px;color:var(--text2)}
-.user-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+.badge-purple{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.field input,.field select,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.15s}
+.field input:focus,.field select:focus{border-color:var(--amber)}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237d8799' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;-webkit-appearance:none}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.field-row-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg3);border-bottom:1px solid var(--border2)}
+th{padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);text-align:left;white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3);cursor:pointer}
+.td-mono{font-family:'Space Mono',monospace;font-size:11px}
+.pipeline-card{background:var(--bg2);border:1px solid var(--border);border-left:3px solid transparent;border-radius:12px;padding:16px;margin-bottom:10px;transition:all 0.15s;cursor:pointer}
+.pipeline-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.pipeline-card.urgent{border-left-color:var(--red)}
+.pipeline-card.en-prod{border-left-color:var(--blue)}
+.pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.pc-title{font-size:15px;font-weight:600;margin-bottom:3px}
+.pc-meta{font-size:12px;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap}
+.pc-financials{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:var(--bg3);border-radius:9px;padding:10px 12px;margin-bottom:10px}
+.pc-fin-item{text-align:center}
+.pc-fin-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px}
+.pc-fin-val{font-family:'Space Mono',monospace;font-size:13px;font-weight:700}
+.pc-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-label{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+.section-label .dot{width:8px;height:8px;border-radius:50%}
+.color-block{background:var(--bg3);border:1px solid var(--border2);border-radius:11px;padding:14px;margin-bottom:10px}
+.color-block-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.color-block-title{font-size:13px;font-weight:700}
+.tinta-row-grid{display:grid;grid-template-columns:2fr 80px 100px 70px 28px;gap:7px;align-items:flex-end;margin-bottom:6px}
+.aditivo-row-grid{display:grid;grid-template-columns:2fr 80px 100px 70px 28px;gap:7px;align-items:flex-end;margin-bottom:6px}
+.cot-val{font-family:'Space Mono',monospace;font-size:12px;color:var(--amber);padding:10px 0;text-align:center}
+.del-btn{background:var(--red-bg);border:1px solid var(--red-border);border-radius:6px;color:var(--red);width:28px;height:38px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.add-line-btn{width:100%;background:transparent;border:1px dashed var(--border2);border-radius:7px;padding:7px;color:var(--text3);cursor:pointer;font-size:11px;font-family:'DM Sans',sans-serif;margin-top:4px;transition:all 0.15s}
+.add-line-btn:hover{border-color:var(--amber-border);color:var(--amber)}
+.cost-summary{background:var(--bg3);border-radius:12px;padding:16px}
+.cs-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.cs-row:last-child{border:none}
+.cs-label{font-size:12px;color:var(--text2)}
+.cs-val{font-family:'Space Mono',monospace;font-size:12px;font-weight:600}
+.cs-total{font-size:14px;color:var(--amber)}
+.margin-box{border-radius:10px;padding:14px;text-align:center;margin-top:12px}
+.tabs{display:flex;gap:2px;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:20px;width:fit-content;flex-wrap:wrap}
+.tab{padding:7px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);transition:all 0.15s;white-space:nowrap}
+.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto}
+.modal-lg{max-width:960px}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+.modal-close{background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1}
+.modal-close:hover{color:var(--text)}
+.pdf-drop{border:2px dashed var(--border2);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s}
+.pdf-drop:hover{border-color:var(--amber-border);background:var(--amber-bg)}
+.pdf-drop.done{border-color:var(--green-border);background:var(--green-bg);border-style:solid}
+.pdf-drop-icon{font-size:26px;margin-bottom:6px}
+.pdf-drop-text{font-size:13px;color:var(--text2)}
+.pdf-drop-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.pdf-preview{background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-top:10px}
+.pdf-preview-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+.pdf-field{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.pdf-field:last-child{border:none}
+.pdf-field-key{font-size:11px;color:var(--text2)}
+.pdf-field-val{font-size:12px;font-weight:600;color:var(--text);font-family:'Space Mono',monospace}
+.timeline-wrap{overflow-x:auto;padding-bottom:8px}
+.timeline-header{display:flex;margin-bottom:8px;padding-left:130px}
+.timeline-month{flex:1;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);text-align:center;min-width:80px}
+.timeline-row{display:flex;align-items:center;margin-bottom:8px;min-height:34px}
+.timeline-label{width:130px;flex-shrink:0;font-size:12px;color:var(--text2);font-weight:500;padding-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timeline-track{flex:1;position:relative;height:28px;background:var(--bg3);border-radius:6px;overflow:hidden}
+.timeline-bar{position:absolute;height:100%;border-radius:6px;display:flex;align-items:center;padding:0 10px;font-size:10px;font-weight:600;color:#0b0d10;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.proj-month{font-size:13px;font-weight:600;min-width:80px}
+.proj-bar-wrap{flex:1;background:var(--bg4);border-radius:4px;height:8px;overflow:hidden}
+.proj-bar{height:100%;border-radius:4px;background:var(--amber)}
+.proj-val{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--amber);min-width:100px;text-align:right}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:11px 18px;font-size:12px;color:var(--text);z-index:400;opacity:0;transition:all 0.3s;pointer-events:none;transform:translateY(8px)}
+.toast.show{opacity:1;transform:translateY(0)}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
+.mobile-menu-btn{display:none;background:transparent;border:1px solid var(--border2);border-radius:7px;color:var(--text2);padding:6px 9px;cursor:pointer;font-size:15px}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0;padding:16px}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .field-row-3,.field-row-4{grid-template-columns:1fr 1fr}
+  .tinta-row-grid,.aditivo-row-grid{grid-template-columns:1fr 1fr 1fr}
+  .mobile-menu-btn{display:flex}
+  .pc-financials{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>
+
 <div class="topbar">
-  <div class="logo">MES <span>//</span> Gestión</div>
-  <div style="display:flex;align-items:center;gap:10px">
-    <div class="user-chip" id="user-chip-gest">
-      <div class="user-av" id="gest-av" style="background:#00e5a022;color:#00e5a0">MA</div>
-      <span id="gest-name">—</span>
-    </div>
-    <button class="btn btn-ghost" onclick="cerrarSesion()">Salir</button>
+  <div class="topbar-left">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+    <div class="logo">SHARP <b>//</b> PLASTICS <b>MES</b></div>
+    <div class="version-tag">GESTIÓN v3 — DUMMY</div>
   </div>
+  <div class="topbar-right">
+    <div style="font-size:11px;color:var(--text3);font-family:'Space Mono',monospace" id="clock"></div>
+    <button class="icon-btn prod" onclick="toast('→ Abriendo producción...')">▶ Producción</button>
+    <div class="user-pill"><div class="user-av">MA</div><span class="user-name">Master</span></div>
+    <button class="icon-btn">Salir</button>
+  </div>
+</div>
+
+<div class="layout">
+<div class="sidebar" id="sidebar">
+  <div class="nav-section">
+    <div class="nav-label">Principal</div>
+    <div class="nav-item active" onclick="showPage('pipeline',this)"><span class="nav-icon">📋</span>Pipeline<span class="nav-badge">4</span></div>
+    <div class="nav-item" onclick="showPage('cotizador',this)"><span class="nav-icon">🧮</span>Cotizador</div>
+    <div class="nav-item" onclick="showPage('proyeccion',this)"><span class="nav-icon">📈</span>Proyección</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Administración</div>
+    <div class="nav-item" onclick="showPage('catalogos',this)"><span class="nav-icon">⚙️</span>Catálogos</div>
+    <div class="nav-item" onclick="showPage('usuarios',this)"><span class="nav-icon">👥</span>Usuarios</div>
+  </div>
+  <div class="sidebar-bottom"><div class="sidebar-ver">v3.0 — dummy</div></div>
 </div>
 
 <div class="main">
-  <!-- PIPELINE -->
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div class="card-title" style="margin:0">Pipeline de pedidos</div>
-      <button class="btn btn-ghost" onclick="loadPipeline()">↺ Actualizar</button>
+
+<!-- ══ PIPELINE ══ -->
+<div id="page-pipeline" class="page active">
+  <div class="ph-row">
+    <div><div class="page-title">Pipeline de pedidos</div><div class="page-sub">4 activos · Clic en un pedido para ver detalle completo</div></div>
+    <div class="page-actions">
+      <button class="btn btn-secondary btn-sm" onclick="openModal('modal-import')">📄 Importar PDFs</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-pedido-nuevo')">+ Nuevo pedido</button>
     </div>
-    <div id="pipeline-list"><div style="text-align:center;padding:30px;color:var(--text3)">Cargando...</div></div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" style="color:var(--amber)">4</div><div class="stat-label">Pedidos activos</div><div class="stat-delta up">↑ 1 esta semana</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">2,520</div><div class="stat-label">Piezas en pipeline</div><div class="stat-delta up">↑ 505 nuevas</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">$18,714</div><div class="stat-label">Venta total pipeline</div><div class="stat-delta up">↑ 12% vs mes anterior</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">68.6%</div><div class="stat-label">Margen promedio</div><div class="stat-delta up">↑ 2.1% vs mes anterior</div></div>
   </div>
 
-  <!-- NUEVO PEDIDO -->
-  <div class="card" id="card-nuevo-pedido">
-    <div class="card-title">Agregar pedido al pipeline</div>
-    <div class="field-row">
-      <div class="field"><label>Cliente</label><input type="text" id="np-cliente" placeholder="Ej: MountainFlow"></div>
-      <div class="field"><label>Sub-cliente (opcional)</label><input type="text" id="np-subcliente" placeholder="Ej: Trail Series"></div>
+  <div class="card">
+    <div class="card-title">Activos</div>
+
+    <div class="pipeline-card urgent" onclick="openModal('modal-pedido-detalle')">
+      <div class="pc-top">
+        <div><div class="pc-title">Strictly E-Bikes — 600ml</div><div class="pc-meta"><span>🔢 PO-875517473</span><span>📦 505 pzas</span><span>🎨 2 colores</span><span>📅 Entrega: 15 May</span><span>🕐 Inicio: 1 May · 8h est.</span></div></div>
+        <span class="badge badge-red">Urgente</span>
+      </div>
+      <div class="pc-financials">
+        <div class="pc-fin-item"><div class="pc-fin-label">Venta cliente</div><div class="pc-fin-val" style="color:var(--green)">$5,172</div></div>
+        <div class="pc-fin-item"><div class="pc-fin-label">Costo interno</div><div class="pc-fin-val" style="color:var(--red)">$4,234</div></div>
+        <div class="pc-fin-item"><div class="pc-fin-label">Margen</div><div class="pc-fin-val" style="color:var(--green)">18.1%</div></div>
+      </div>
+      <div class="pc-actions">
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('modal-import')">📄 PDFs</button>
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();toast('PDF cliente generado')">📤 PDF cliente</button>
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();toast('PDF interno generado')">📊 PDF interno</button>
+        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation()">🗑</button>
+      </div>
     </div>
-    <div class="field-row-3">
-      <div class="field"><label>PO / No. orden</label><input type="text" id="np-po" placeholder="PO-2025-001"></div>
-      <div class="field"><label>Capacidad (ml)</label><input type="number" id="np-capacidad" placeholder="600" inputmode="numeric"></div>
-      <div class="field"><label>Piezas</label><input type="number" id="np-piezas" placeholder="1000" inputmode="numeric"></div>
+
+    <div class="pipeline-card en-prod" onclick="openModal('modal-pedido-detalle')">
+      <div class="pc-top">
+        <div><div class="pc-title">Trail Series — 700ml</div><div class="pc-meta"><span>🔢 PO-874100221</span><span>📦 1,000 pzas</span><span>🎨 3 colores</span><span>📅 Entrega: 22 May</span><span>🕐 Inicio: 5 May · 14h est.</span></div></div>
+        <span class="badge badge-blue">En producción</span>
+      </div>
+      <div class="pc-financials">
+        <div class="pc-fin-item"><div class="pc-fin-label">Venta cliente</div><div class="pc-fin-val" style="color:var(--green)">$9,630</div></div>
+        <div class="pc-fin-item"><div class="pc-fin-label">Costo interno</div><div class="pc-fin-val" style="color:var(--red)">$7,100</div></div>
+        <div class="pc-fin-item"><div class="pc-fin-label">Margen</div><div class="pc-fin-val" style="color:var(--green)">26.3%</div></div>
+      </div>
+      <div class="pc-actions">
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('modal-import')">📄 PDFs</button>
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();toast('PDF cliente generado')">📤 PDF cliente</button>
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();toast('PDF interno generado')">📊 PDF interno</button>
+        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation()">🗑</button>
+      </div>
     </div>
-    <div class="field-row">
-      <div class="field"><label>Colores</label><input type="number" id="np-colores" placeholder="2" inputmode="numeric"></div>
-      <div class="field"><label>Fecha de entrega</label><input type="date" id="np-fecha"></div>
+
+    <div class="pipeline-card" onclick="openModal('modal-pedido-detalle')">
+      <div class="pc-top">
+        <div><div class="pc-title">Summit Series — 500ml</div><div class="pc-meta"><span>🔢 PO-873009911</span><span>📦 750 pzas</span><span>🎨 1 color</span><span>📅 Entrega: 1 Jun</span><span style="color:var(--text3)">🕐 Sin fecha inicio</span></div></div>
+        <span class="badge badge-amber">Pendiente</span>
+      </div>
+      <div class="pc-financials">
+        <div class="pc-fin-item"><div class="pc-fin-label">Venta cliente</div><div class="pc-fin-val" style="color:var(--text3)">Sin cotizar</div></div>
+        <div class="pc-fin-item"><div class="pc-fin-label">Costo interno</div><div class="pc-fin-val" style="color:var(--text3)">—</div></div>
+        <div class="pc-fin-item"><div class="pc-fin-label">Margen</div><div class="pc-fin-val" style="color:var(--text3)">—</div></div>
+      </div>
+      <div class="pc-actions">
+        <button class="btn btn-primary btn-xs" onclick="event.stopPropagation();showPage('cotizador',document.querySelectorAll('.nav-item')[1])">🧮 Cotizar</button>
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('modal-import')">📄 PDFs</button>
+        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation()">🗑</button>
+      </div>
     </div>
-    <div class="field"><label>Notas</label><textarea id="np-notas" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none" placeholder="Instrucciones especiales..."></textarea></div>
-    <button class="btn btn-primary" onclick="agregarPedido()" style="width:100%">+ Agregar al pipeline</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Completados recientes</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Sub-cliente</th><th>PO</th><th>Cap.</th><th>Piezas</th><th>Venta</th><th>Costo</th><th>Margen</th><th>Cierre</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr onclick="openModal('modal-pedido-detalle')"><td>Winter Series</td><td class="td-mono">PO-871200033</td><td>700ml</td><td>800</td><td class="td-mono" style="color:var(--green)">$4,920</td><td class="td-mono">$3,100</td><td class="td-mono" style="color:var(--green)">37%</td><td>28 Abr</td><td><span class="badge badge-green">Completado</span></td></tr>
+        <tr onclick="openModal('modal-pedido-detalle')"><td>Enduro Pack</td><td class="td-mono">PO-870900011</td><td>600ml</td><td>500</td><td class="td-mono" style="color:var(--green)">$2,825</td><td class="td-mono">$1,890</td><td class="td-mono" style="color:var(--green)">33%</td><td>20 Abr</td><td><span class="badge badge-green">Entregado</span></td></tr>
+      </tbody>
+    </table></div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- ══ COTIZADOR ══ -->
+<div id="page-cotizador" class="page">
+  <div class="ph-row">
+    <div><div class="page-title">Cotizador</div><div class="page-sub">Calcula costo interno y precio de venta al cliente</div></div>
+    <div class="page-actions">
+      <button class="btn btn-ghost btn-sm" onclick="limpiarCotizador()">🗑 Limpiar</button>
+      <button class="btn btn-secondary btn-sm" onclick="openModal('modal-import')">📄 Importar PDFs</button>
+      <button class="btn btn-ghost btn-sm" onclick="toast('PDF cliente generado')">📤 PDF cliente</button>
+      <button class="btn btn-primary btn-sm" onclick="toast('Cotización guardada en pipeline ✓')">💾 Guardar al pipeline</button>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 310px;gap:16px;align-items:start">
+    <div>
+      <!-- Datos generales -->
+      <div class="card">
+        <div class="card-title">Datos del pedido</div>
+        <div class="field-row"><div class="field"><label>Cliente</label><select><option value="">Seleccionar...</option><option>MountainFlow</option></select></div><div class="field"><label>Sub-cliente</label><input type="text" id="cot-subcli" placeholder="Ej: Strictly E-Bikes"></div></div>
+        <div class="field-row-3">
+          <div class="field"><label>PO #</label><input type="text" id="cot-po" placeholder="875517473"></div>
+          <div class="field"><label>Capacidad</label><select id="cot-cap"><option value="">—</option><option>500ml</option><option>600ml</option><option>700ml</option></select></div>
+          <div class="field"><label>Piezas</label><input type="number" id="cot-piezas" placeholder="505" oninput="calcVenta()"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Colores de impresión</label><input type="number" id="cot-colores" placeholder="2" oninput="calcVenta();renderColorBlocks()"></div>
+          <div class="field"><label>Fecha de entrega</label><input type="date"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Color botella</label><input type="text" placeholder="Black"></div>
+          <div class="field"><label>Color tapa</label><input type="text" placeholder="348 C"></div>
+        </div>
+        <div class="field"><label>Dirección de envío</label><input type="text" placeholder="683 N Washington St..."></div>
+        <div class="field"><label>Notas / Packaging</label><textarea rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none" placeholder="Instrucciones de empaque..."></textarea></div>
+      </div>
+
+      <!-- SECCIÓN INTERNA -->
+      <div class="card" style="border-color:var(--red-border)">
+        <div class="section-header">
+          <div class="section-label"><div class="dot" style="background:var(--red)"></div>Costo interno — Fórmula de tintas por color</div>
+        </div>
+        <div id="color-blocks">
+          <!-- Color 1 -->
+          <div class="color-block">
+            <div class="color-block-header">
+              <div class="color-block-title">🎨 Color 1</div>
+              <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--amber)">Total: $451.42</div>
+            </div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Tintas base</div>
+            <div class="tinta-row-grid">
+              <div class="field" style="margin:0"><label style="font-size:10px">Tinta</label><select><option>Multiplack Base MM095 — Rodatec</option></select></div>
+              <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="85" style="text-align:center"></div>
+              <div class="field" style="margin:0"><label style="font-size:10px">$/kg c/IVA</label><input type="number" value="2215.60" style="text-align:center;font-size:11px"></div>
+              <div class="cot-val">$188.33</div>
+              <button class="del-btn">✕</button>
+            </div>
+            <div class="tinta-row-grid">
+              <div class="field" style="margin:0"><select><option>Multiplack Blanco Opaco — Rodatec</option></select></div>
+              <div class="field" style="margin:0"><input type="number" value="40" style="text-align:center"></div>
+              <div class="field" style="margin:0"><input type="number" value="6577.20" style="text-align:center;font-size:11px"></div>
+              <div class="cot-val">$263.09</div>
+              <button class="del-btn">✕</button>
+            </div>
+            <button class="add-line-btn">+ Agregar tinta base</button>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin:10px 0 6px">Aditivos</div>
+            <div class="aditivo-row-grid">
+              <div class="field" style="margin:0"><label style="font-size:10px">Aditivo</label><select><option>Promotor de Adherencia R-12</option></select></div>
+              <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="6.25" style="text-align:center"></div>
+              <div class="field" style="margin:0"><label style="font-size:10px">$/kg c/IVA</label><input type="number" value="939.60" style="text-align:center;font-size:11px"></div>
+              <div class="cot-val">$5.87</div>
+              <button class="del-btn">✕</button>
+            </div>
+            <div style="font-size:10px;color:var(--text3);padding:4px 0">Total gramos: 125g · Aditivos sobre total de gramos</div>
+            <button class="add-line-btn">+ Agregar aditivo</button>
+          </div>
+
+          <!-- Color 2 -->
+          <div class="color-block">
+            <div class="color-block-header">
+              <div class="color-block-title">🎨 Color 2</div>
+              <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--amber)">Total: $310.15</div>
+            </div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Tintas base</div>
+            <div class="tinta-row-grid">
+              <div class="field" style="margin:0"><label style="font-size:10px">Tinta</label><select><option>Multiplack Base MM095 — Rodatec</option></select></div>
+              <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="60" style="text-align:center"></div>
+              <div class="field" style="margin:0"><label style="font-size:10px">$/kg c/IVA</label><input type="number" value="2215.60" style="text-align:center;font-size:11px"></div>
+              <div class="cot-val">$132.94</div>
+              <button class="del-btn">✕</button>
+            </div>
+            <button class="add-line-btn">+ Agregar tinta base</button>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin:10px 0 6px">Aditivos</div>
+            <button class="add-line-btn">+ Agregar aditivo</button>
+          </div>
+        </div>
+
+        <!-- Mano de obra -->
+        <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Mano de obra (auto)</div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Color 1 — $2.20 × 505 pzas</span><span class="mono" style="font-size:12px;color:var(--amber)">$1,111.00</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Color 2 — $2.10 × 505 pzas</span><span class="mono" style="font-size:12px;color:var(--amber)">$1,060.50</span></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0 0;font-weight:600"><span style="font-size:12px">Subtotal mano de obra</span><span class="mono" style="font-size:13px;color:var(--amber)">$2,171.50</span></div>
+        </div>
+
+        <!-- Pantallas, positivos, empaque -->
+        <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:8px">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Pantallas, positivos y empaque</div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas (2 × $500)</span><span class="mono" style="font-size:12px;color:var(--amber)">$1,000.00</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Positivos (2 × $230)</span><span class="mono" style="font-size:12px;color:var(--amber)">$460.00</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Papel empaque ($0.15 × 505)</span><span class="mono" style="font-size:12px;color:var(--amber)">$75.75</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Tag/etiqueta ($0.15 × 505)</span><span class="mono" style="font-size:12px;color:var(--amber)">$75.75</span></div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN EXTERNA -->
+      <div class="card" style="border-color:var(--green-border)">
+        <div class="section-header">
+          <div class="section-label"><div class="dot" style="background:var(--green)"></div>Precio de venta al cliente</div>
+        </div>
+
+        <div class="field-row" style="margin-bottom:14px">
+          <div class="field"><label>Corrida botellas</label>
+            <select id="cot-corrida-bot" onchange="calcVenta()">
+              <option value="">Seleccionar...</option>
+              <option value="run500">Run 500 pzas</option>
+              <option value="stock2500">Stock / +2500 pzas</option>
+            </select>
+          </div>
+          <div class="field"><label>¿Lleva color?</label>
+            <select id="cot-color-bot" onchange="calcVenta()">
+              <option value="color">Con color</option>
+              <option value="nocolor">Sin color</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row" style="margin-bottom:14px">
+          <div class="field"><label>Corrida tapas</label>
+            <select id="cot-corrida-tap" onchange="calcVenta()">
+              <option value="">Seleccionar...</option>
+              <option value="500">500 pzas</option>
+              <option value="1000">1,000 pzas</option>
+              <option value="2500">2,500 pzas</option>
+              <option value="5000">5,000 pzas</option>
+            </select>
+          </div>
+          <div class="field"><label>¿Tapa con color?</label>
+            <select id="cot-color-tap" onchange="calcVenta()">
+              <option value="color">Con color</option>
+              <option value="nocolor">Sin color</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="background:var(--bg3);border-radius:10px;padding:14px" id="venta-desglose">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Botellas (505 × $5.65)</span><span class="mono" style="font-size:12px;color:var(--green)">$2,852.25</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tapas (505 × $6.41)</span><span class="mono" style="font-size:12px;color:var(--green)">$3,227.05</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tintas ($4.00 × 505)</span><span class="mono" style="font-size:12px;color:var(--green)">$2,020.00</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas + positivos (2 × $1,160)</span><span class="mono" style="font-size:12px;color:var(--green)">$2,320.00</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Mano de obra (2 col × 505 pzas)</span><span class="mono" style="font-size:12px;color:var(--green)">$2,171.50</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Papel empaque ($0.15 × 505)</span><span class="mono" style="font-size:12px;color:var(--green)">$75.75</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Tag/etiqueta ($0.15 × 505)</span><span class="mono" style="font-size:12px;color:var(--green)">$75.75</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL RESUMEN STICKY -->
+    <div style="position:sticky;top:70px">
+      <div class="card">
+        <div class="card-title">Resumen — Costo interno</div>
+        <div class="cost-summary">
+          <div class="cs-row"><span class="cs-label">Tintas e insumos</span><span class="cs-val">$761.57</span></div>
+          <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val">$2,171.50</span></div>
+          <div class="cs-row"><span class="cs-label">Pantallas</span><span class="cs-val">$1,000.00</span></div>
+          <div class="cs-row"><span class="cs-label">Positivos</span><span class="cs-val">$460.00</span></div>
+          <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val">$151.50</span></div>
+          <div class="cs-row" style="padding-top:8px"><span style="font-weight:700;font-size:13px">Total costo</span><span class="cs-val" style="color:var(--red);font-size:14px">$4,544.57</span></div>
+          <div class="cs-row"><span class="cs-label">Costo/pieza</span><span class="cs-val" style="color:var(--blue)">$9.00</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="card-title">Precio de venta al cliente</div>
+        <div class="cost-summary">
+          <div class="cs-row"><span class="cs-label">Botellas</span><span class="cs-val" style="color:var(--green)">$2,852.25</span></div>
+          <div class="cs-row"><span class="cs-label">Tapas</span><span class="cs-val" style="color:var(--green)">$3,227.05</span></div>
+          <div class="cs-row"><span class="cs-label">Tintas</span><span class="cs-val" style="color:var(--green)">$2,020.00</span></div>
+          <div class="cs-row"><span class="cs-label">Pantallas + positivos</span><span class="cs-val" style="color:var(--green)">$2,320.00</span></div>
+          <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val" style="color:var(--green)">$2,171.50</span></div>
+          <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val" style="color:var(--green)">$151.50</span></div>
+          <div class="cs-row" style="padding-top:8px"><span style="font-weight:700;font-size:13px">Total venta</span><span class="cs-val" style="color:var(--green);font-size:14px">$12,742.30</span></div>
+          <div class="cs-row"><span class="cs-label">Precio unitario</span><span class="cs-val" style="color:var(--amber)">$25.23</span></div>
+        </div>
+        <div class="margin-box" style="background:var(--green-bg);border:1px solid var(--green-border)">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Margen de utilidad</div>
+          <div class="mono" style="font-size:28px;font-weight:700;color:var(--green)">64.3%</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">Utilidad: $8,197.73</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PROYECCIÓN ══ -->
+<div id="page-proyeccion" class="page">
+  <div class="ph-row"><div><div class="page-title">Proyección de flujo</div><div class="page-sub">Basada en fechas de inicio y tiempos estimados del pipeline</div></div></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">$18,714</div><div class="stat-label">Venta proyectada Mayo</div><div class="stat-delta up">↑ 18% vs Abril</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--amber)">$28,100</div><div class="stat-label">Venta proyectada Junio</div><div class="stat-delta up">↑ 50% vs Mayo</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--blue)">$12,841</div><div class="stat-label">Utilidad proyectada Mayo</div><div class="stat-delta up">68.6% margen</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--purple)">2,520</div><div class="stat-label">Piezas en pipeline</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Timeline — generado desde fecha inicio + horas estimadas del pipeline</div>
+    <div class="timeline-wrap">
+      <div class="timeline-header"><div class="timeline-month">1 May</div><div class="timeline-month">8 May</div><div class="timeline-month">15 May</div><div class="timeline-month">22 May</div><div class="timeline-month">1 Jun</div><div class="timeline-month">8 Jun</div><div class="timeline-month">15 Jun</div></div>
+      <div class="timeline-row"><div class="timeline-label">Strictly E-Bikes</div><div class="timeline-track"><div class="timeline-bar" style="left:0%;width:28%;background:var(--red)">505 pzas · 2 col · 8h</div></div></div>
+      <div class="timeline-row"><div class="timeline-label">Trail Series</div><div class="timeline-track"><div class="timeline-bar" style="left:7%;width:35%;background:var(--blue)">1,000 pzas · 3 col · 14h</div></div></div>
+      <div class="timeline-row"><div class="timeline-label">Summit Series</div><div class="timeline-track"><div class="timeline-bar" style="left:20%;width:30%;background:var(--text3)">750 pzas · 1 col · sin fecha</div></div></div>
+      <div class="timeline-row"><div class="timeline-label">Gravel Pro</div><div class="timeline-track"><div class="timeline-bar" style="left:45%;width:28%;background:var(--green)">265 pzas · 2 col · 6h</div></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Proyección de ventas</div>
+    <div class="proj-card"><div class="proj-month">Abril 2026</div><div class="proj-bar-wrap"><div class="proj-bar" style="width:45%;background:var(--text3)"></div></div><div class="proj-val" style="color:var(--text2)">$15,870</div></div>
+    <div class="proj-card"><div class="proj-month">Mayo 2026</div><div class="proj-bar-wrap"><div class="proj-bar" style="width:67%"></div></div><div class="proj-val">$18,714</div></div>
+    <div class="proj-card"><div class="proj-month">Junio 2026</div><div class="proj-bar-wrap"><div class="proj-bar" style="width:100%;background:var(--green)"></div></div><div class="proj-val" style="color:var(--green)">$28,100</div></div>
+  </div>
+</div>
+
+<!-- ══ CATÁLOGOS ══ -->
+<div id="page-catalogos" class="page">
+  <div class="ph-row"><div><div class="page-title">Catálogos</div><div class="page-sub">Administra todos los insumos y tarifas</div></div></div>
+  <div class="tabs" id="cat-tabs">
+    <div class="tab active" onclick="switchTab('ct-tintas',this,'cat-tabs')">Tintas</div>
+    <div class="tab" onclick="switchTab('ct-aditivos',this,'cat-tabs')">Aditivos</div>
+    <div class="tab" onclick="switchTab('ct-pantallas',this,'cat-tabs')">Pantallas</div>
+    <div class="tab" onclick="switchTab('ct-positivos',this,'cat-tabs')">Positivos</div>
+    <div class="tab" onclick="switchTab('ct-mdo',this,'cat-tabs')">Mano de obra</div>
+    <div class="tab" onclick="switchTab('ct-precios',this,'cat-tabs')">Precios venta</div>
+    <div class="tab" onclick="switchTab('ct-clientes',this,'cat-tabs')">Clientes</div>
+    <div class="tab" onclick="switchTab('ct-maquinas',this,'cat-tabs')">Máquinas</div>
+  </div>
+  <div id="ct-tintas">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text2)">14 tintas registradas</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="toast('Subir factura PDF...')">📄 Importar factura PDF</button>
+        <button class="btn btn-primary btn-sm">+ Agregar tinta</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>SKU</th><th>Nombre</th><th>Proveedor</th><th>$/kg c/IVA</th><th>Stock (kg)</th><th></th></tr></thead><tbody>
+      <tr><td class="td-mono">MM095</td><td>Multiplack Base MM095</td><td>Rodatec</td><td class="td-mono">$2,215.60</td><td>12.5 kg</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+      <tr><td class="td-mono">MM435</td><td>Multiplack Amarillo Medio</td><td>Rodatec</td><td class="td-mono">$2,818.80</td><td>8.2 kg</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+      <tr><td class="td-mono">MPK1436</td><td>Multiplack Blanco Opaco</td><td>Rodatec</td><td class="td-mono">$6,577.20</td><td>5.0 kg</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+      <tr><td class="td-mono">NOR-4000K</td><td>Jet Black</td><td>Norcote</td><td class="td-mono">$2,204.00</td><td>3.8 kg</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+    </tbody></table></div>
+  </div>
+  <div id="ct-aditivos" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar aditivo</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Proveedor</th><th>$/kg c/IVA</th><th></th></tr></thead><tbody>
+      <tr><td>Promotor de Adherencia R-12</td><td>Rodatec</td><td class="td-mono">$939.60</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+      <tr><td>Retardante UV</td><td>Rodatec</td><td class="td-mono">—</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+      <tr><td>Catalizador</td><td>Norcote</td><td class="td-mono">—</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+    </tbody></table></div>
+  </div>
+  <div id="ct-pantallas" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Código</th><th>Medidas</th><th>Tipo</th><th>Costo interno</th><th></th></tr></thead><tbody>
+      <tr><td class="td-mono">PNT-220x90</td><td>220mm × 90mm</td><td>UV</td><td class="td-mono">$500.00</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+    </tbody></table></div>
+  </div>
+  <div id="ct-positivos" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Costo interno</th><th></th></tr></thead><tbody>
+      <tr><td class="td-mono">POS-001</td><td>Positivo estándar UV</td><td class="td-mono">$230.00</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+    </tbody></table></div>
+  </div>
+  <div id="ct-mdo" style="display:none">
+    <div class="card">
+      <div class="card-title">Tarifa escalonada mano de obra ($/pieza)</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        <div style="background:var(--bg3);border-radius:9px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Color 1</div><input type="number" value="2.20" style="background:transparent;border:none;color:var(--amber);font-family:'Space Mono',monospace;font-size:20px;font-weight:700;text-align:center;width:100%;outline:none"></div>
+        <div style="background:var(--bg3);border-radius:9px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Color 2</div><input type="number" value="2.10" style="background:transparent;border:none;color:var(--amber);font-family:'Space Mono',monospace;font-size:20px;font-weight:700;text-align:center;width:100%;outline:none"></div>
+        <div style="background:var(--bg3);border-radius:9px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Color 3</div><input type="number" value="2.00" style="background:transparent;border:none;color:var(--amber);font-family:'Space Mono',monospace;font-size:20px;font-weight:700;text-align:center;width:100%;outline:none"></div>
+        <div style="background:var(--bg3);border-radius:9px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Color 4</div><input type="number" value="1.90" style="background:transparent;border:none;color:var(--amber);font-family:'Space Mono',monospace;font-size:20px;font-weight:700;text-align:center;width:100%;outline:none"></div>
+      </div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Concepto</th><th>Unidad</th><th>Costo</th><th></th></tr></thead><tbody>
+      <tr><td>Papel empaque</td><td>Por pieza</td><td class="td-mono">$0.15</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+      <tr><td>Tag / hangtag / etiqueta</td><td>Por pieza</td><td class="td-mono">$0.15</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+    </tbody></table></div>
+  </div>
+  <div id="ct-precios" style="display:none">
+    <div style="margin-bottom:12px;font-size:12px;color:var(--text2)">Precios de venta editables. Clic en un valor para modificarlo.</div>
+    <div class="card"><div class="card-title">Botellas — 500ml</div>
+      <div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>
+        <tr><td>Run 500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$4.85</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.15</td></tr>
+        <tr><td>Stock / +2500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$2.55</td><td class="td-mono" contenteditable style="color:var(--amber)">$2.85</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="card"><div class="card-title">Botellas — 600ml</div>
+      <div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>
+        <tr><td>Run 500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.35</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.65</td></tr>
+        <tr><td>Stock / +2500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.05</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.35</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="card"><div class="card-title">Botellas — 700ml</div>
+      <div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>
+        <tr><td>Run 500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.85</td><td class="td-mono" contenteditable style="color:var(--amber)">$6.15</td></tr>
+        <tr><td>Stock / +2500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.55</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.85</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="card"><div class="card-title">Tapas</div>
+      <div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>
+        <tr><td>500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$6.31</td><td class="td-mono" contenteditable style="color:var(--amber)">$6.41</td></tr>
+        <tr><td>1,000 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.30</td><td class="td-mono" contenteditable style="color:var(--amber)">$5.40</td></tr>
+        <tr><td>2,500 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$4.50</td><td class="td-mono" contenteditable style="color:var(--amber)">$4.60</td></tr>
+        <tr><td>5,000 pzas</td><td class="td-mono" contenteditable style="color:var(--amber)">$3.91</td><td class="td-mono" contenteditable style="color:var(--amber)">$4.01</td></tr>
+      </tbody></table></div>
+    </div>
+    <div class="card"><div class="card-title">Tarifas fijas venta</div>
+      <div class="field-row-3">
+        <div class="field"><label>Tintas (fijo por botella)</label><input type="number" value="4.00" style="font-size:18px;font-weight:700;text-align:center;color:var(--amber)"></div>
+        <div class="field"><label>Pantallas + positivos (por color)</label><input type="number" value="1160.00" style="font-size:18px;font-weight:700;text-align:center;color:var(--amber)"></div>
+        <div class="field"><label>Papel empaque (por pieza)</label><input type="number" value="0.15" style="font-size:18px;font-weight:700;text-align:center;color:var(--amber)"></div>
+      </div>
+    </div>
+  </div>
+  <div id="ct-clientes" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar cliente</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Dirección</th><th>Contacto</th><th></th></tr></thead><tbody>
+      <tr><td><b>MountainFlow</b></td><td>201 Main St, Suite 303, Carbondale, CO 81623</td><td>—</td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+    </tbody></table></div>
+  </div>
+  <div id="ct-maquinas" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm">+ Agregar máquina</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Estado</th><th></th></tr></thead><tbody>
+      <tr><td>Shuttle</td><td>Serigrafía UV</td><td><span class="badge badge-green">Activa</span></td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+      <tr><td>Dubuit</td><td>Serigrafía UV</td><td><span class="badge badge-green">Activa</span></td><td><button class="btn btn-ghost btn-xs">✏️</button></td></tr>
+    </tbody></table></div>
+  </div>
+</div>
+
+<!-- ══ USUARIOS ══ -->
+<div id="page-usuarios" class="page">
+  <div class="ph-row"><div><div class="page-title">Usuarios</div><div class="page-sub">Gestiona accesos y PINs</div></div><div class="page-actions"><button class="btn btn-primary btn-sm" onclick="openModal('modal-usuario')">+ Nuevo usuario</button></div></div>
+  <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Rol</th><th>Color</th><th>PIN</th><th>Estado</th><th></th></tr></thead><tbody>
+    <tr><td><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:#f5a62322;color:#f5a623;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">ED</div>Edgar</div></td><td><span class="badge badge-amber">Supervisor</span></td><td><div style="width:20px;height:20px;border-radius:4px;background:#f5a623;border:1px solid var(--border2)"></div></td><td class="td-mono">••••</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-ghost btn-xs" onclick="openModal('modal-usuario')">✏️</button></td></tr>
+    <tr><td><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:#34d39922;color:#34d399;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">BE</div>Bety</div></td><td><span class="badge badge-blue">Operador</span></td><td><div style="width:20px;height:20px;border-radius:4px;background:#34d399;border:1px solid var(--border2)"></div></td><td class="td-mono">••••</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-ghost btn-xs" onclick="openModal('modal-usuario')">✏️</button></td></tr>
+    <tr><td><div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:50%;background:#00e5a022;color:#00e5a0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">MA</div>Master</div></td><td><span class="badge badge-green">Administrador</span></td><td><div style="width:20px;height:20px;border-radius:4px;background:#00e5a0;border:1px solid var(--border2)"></div></td><td class="td-mono">••••</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-ghost btn-xs" onclick="openModal('modal-usuario')">✏️</button></td></tr>
+  </tbody></table></div>
+</div>
+
+</div></div>
+
+<!-- MODAL IMPORTAR PDFs -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal">
+    <div class="modal-title">Importar pedido desde PDFs <button class="modal-close" onclick="closeModal('modal-import')">×</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">PDF 1 — Purchase Order</div>
+        <div class="pdf-drop" id="drop1" onclick="simulatePDF('drop1')"><div class="pdf-drop-icon">📄</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">MF-...-Order_Form.pdf</div></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">PDF 2 — Mock Up / Colores</div>
+        <div class="pdf-drop" id="drop2" onclick="simulatePDF('drop2')"><div class="pdf-drop-icon">🎨</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">..._V2.pdf</div></div>
+      </div>
+    </div>
+    <div id="pdf-result" style="display:none;margin-top:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✓ Claude extrajo los siguientes datos</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="pdf-preview">
+          <div class="pdf-preview-title">📄 Purchase Order</div>
+          <div class="pdf-field"><span class="pdf-field-key">Sub-cliente</span><span class="pdf-field-val">Strictly E-Bikes</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">PO #</span><span class="pdf-field-val">875517473</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Capacidad</span><span class="pdf-field-val">600ml</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Piezas</span><span class="pdf-field-val">505</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Fecha</span><span class="pdf-field-val">25 Mar 2026</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Envío a</span><span class="pdf-field-val">Alexandria, VA</span></div>
+        </div>
+        <div class="pdf-preview">
+          <div class="pdf-preview-title">🎨 Mock Up</div>
+          <div class="pdf-field"><span class="pdf-field-key">Botella</span><span class="pdf-field-val">Black</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tapa</span><span class="pdf-field-val">348 C</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Boquilla</span><span class="pdf-field-val">Clear</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tinta #1</span><span class="pdf-field-val">348 C</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tinta #2</span><span class="pdf-field-val">White</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Colores</span><span class="pdf-field-val">2 → 2 pantallas</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-import')">Cancelar</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-import');showPage('cotizador',document.querySelectorAll('.nav-item')[1]);toast('Datos cargados en cotizador ✓')">→ Ir a cotizador</button>
+      <button class="btn btn-primary" onclick="closeModal('modal-import');toast('Pedido guardado en pipeline ✓')">Guardar en pipeline</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO PEDIDO (en blanco) -->
+<div class="modal-overlay" id="modal-pedido-nuevo">
+  <div class="modal modal-lg">
+    <div class="modal-title">Nuevo pedido <button class="modal-close" onclick="closeModal('modal-pedido-nuevo')">×</button></div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Datos generales</div>
+      <div class="field-row"><div class="field"><label>Cliente</label><select><option value="">Seleccionar...</option><option>MountainFlow</option></select></div><div class="field"><label>Sub-cliente</label><input type="text" placeholder="Ej: Strictly E-Bikes"></div></div>
+      <div class="field-row-3"><div class="field"><label>PO #</label><input type="text" placeholder="875517473"></div><div class="field"><label>Capacidad</label><select><option value="">—</option><option>500ml</option><option>600ml</option><option>700ml</option></select></div><div class="field"><label>Piezas</label><input type="number" placeholder="505"></div></div>
+      <div class="field-row"><div class="field"><label>Colores</label><input type="number" placeholder="2"></div><div class="field"><label>Fecha de entrega</label><input type="date"></div></div>
+      <div class="field-row"><div class="field"><label>Fecha inicio estimada</label><input type="date"></div><div class="field"><label>Tiempo estimado (horas)</label><input type="number" placeholder="8"></div></div>
+      <div class="field"><label>Dirección de envío</label><input type="text" placeholder="683 N Washington St, Alexandria, VA 22314"></div>
+      <div class="field"><label>Notas / Packaging</label><textarea rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none" placeholder="Instrucciones de empaque..."></textarea></div>
+      <div class="field"><label>Estado</label><select><option>Pendiente</option><option>En producción</option><option>Completado</option><option>Entregado</option></select></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pedido-nuevo')">Cancelar</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-pedido-nuevo');showPage('cotizador',document.querySelectorAll('.nav-item')[1]);toast('Pedido creado → ir a cotizar')">Guardar y cotizar</button>
+      <button class="btn btn-primary" onclick="closeModal('modal-pedido-nuevo');toast('Pedido guardado ✓')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE PEDIDO -->
+<div class="modal-overlay" id="modal-pedido-detalle">
+  <div class="modal modal-lg">
+    <div class="modal-title">
+      <div style="display:flex;align-items:center;gap:10px">Strictly E-Bikes — 600ml <span class="badge badge-red">Urgente</span></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="toast('Datos limpiados')">🗑 Limpiar</button>
+        <button class="modal-close" onclick="closeModal('modal-pedido-detalle')">×</button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Datos generales</div>
+      <div class="field-row"><div class="field"><label>Cliente</label><select><option>MountainFlow</option></select></div><div class="field"><label>Sub-cliente</label><input type="text" value="Strictly E-Bikes"></div></div>
+      <div class="field-row-3"><div class="field"><label>PO #</label><input type="text" value="875517473"></div><div class="field"><label>Capacidad</label><select><option>600ml</option></select></div><div class="field"><label>Piezas</label><input type="number" value="505"></div></div>
+      <div class="field-row"><div class="field"><label>Colores</label><input type="number" value="2"></div><div class="field"><label>Fecha de entrega</label><input type="date" value="2026-05-15"></div></div>
+      <div class="field-row"><div class="field"><label>Fecha inicio estimada</label><input type="date" value="2026-05-01"></div><div class="field"><label>Tiempo estimado (horas)</label><input type="number" value="8"></div></div>
+      <div class="field-row"><div class="field"><label>Tinta #1</label><input type="text" value="348 C"></div><div class="field"><label>Tinta #2</label><input type="text" value="White"></div></div>
+      <div class="field-row-3"><div class="field"><label>Color botella</label><input type="text" value="Black"></div><div class="field"><label>Color tapa</label><input type="text" value="348 C"></div><div class="field"><label>Boquilla</label><input type="text" value="Clear"></div></div>
+      <div class="field"><label>Dirección de envío</label><input type="text" value="683 N Washington St, Alexandria, VA 22314"></div>
+      <div class="field"><label>Notas / Packaging</label><textarea rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none">No plastic bags, wrap in Paper, ADD mountainFLOW HANGTAG</textarea></div>
+      <div class="field"><label>Estado</label><select><option>Pendiente</option><option>En producción</option><option>Completado</option><option>Entregado</option></select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="card" style="margin:0">
+        <div class="card-title">Costo interno</div>
+        <div class="cs-row"><span class="cs-label">Tintas e insumos</span><span class="cs-val">$761.57</span></div>
+        <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val">$2,171.50</span></div>
+        <div class="cs-row"><span class="cs-label">Pantallas (2 × $500)</span><span class="cs-val">$1,000.00</span></div>
+        <div class="cs-row"><span class="cs-label">Positivos (2 × $230)</span><span class="cs-val">$460.00</span></div>
+        <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val">$151.50</span></div>
+        <div class="cs-row" style="padding-top:8px"><span style="font-weight:700">Total costo</span><span class="cs-val" style="color:var(--red);font-size:14px">$4,544.57</span></div>
+        <div class="cs-row"><span class="cs-label">Costo/pieza</span><span class="cs-val" style="color:var(--blue)">$9.00</span></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-title">Venta al cliente</div>
+        <div class="cs-row"><span class="cs-label">Botellas (505 × $5.65)</span><span class="cs-val" style="color:var(--green)">$2,852.25</span></div>
+        <div class="cs-row"><span class="cs-label">Tapas (505 × $6.41)</span><span class="cs-val" style="color:var(--green)">$3,227.05</span></div>
+        <div class="cs-row"><span class="cs-label">Tintas ($4.00 × 505)</span><span class="cs-val" style="color:var(--green)">$2,020.00</span></div>
+        <div class="cs-row"><span class="cs-label">Pantallas+positivos (2 × $1,160)</span><span class="cs-val" style="color:var(--green)">$2,320.00</span></div>
+        <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val" style="color:var(--green)">$2,171.50</span></div>
+        <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val" style="color:var(--green)">$151.50</span></div>
+        <div class="cs-row" style="padding-top:8px"><span style="font-weight:700">Total venta</span><span class="cs-val" style="color:var(--green);font-size:14px">$12,742.30</span></div>
+        <div class="margin-box" style="background:var(--green-bg);border:1px solid var(--green-border)">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px">Margen</div>
+          <div class="mono" style="font-size:22px;font-weight:700;color:var(--green)">64.3%</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pedido-detalle')">Cancelar</button>
+      <button class="btn btn-secondary" onclick="toast('PDF interno generado')">📊 PDF interno</button>
+      <button class="btn btn-secondary" onclick="toast('PDF cliente generado')">📤 PDF cliente</button>
+      <button class="btn btn-primary" onclick="closeModal('modal-pedido-detalle');toast('Pedido actualizado ✓')">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL USUARIO -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">Nuevo / Editar usuario <button class="modal-close" onclick="closeModal('modal-usuario')">×</button></div>
+    <div class="field"><label>Nombre</label><input type="text" placeholder="Nombre completo"></div>
+    <div class="field"><label>Rol</label><select><option>supervisor</option><option>operador</option><option>master</option><option>facturacion</option></select></div>
+    <div class="field"><label>Color identificador</label><input type="color" value="#f5a623" style="height:40px;padding:4px;width:100%"></div>
+    <div class="field"><label>PIN (4 dígitos)</label><input type="password" maxlength="4" placeholder="••••" inputmode="numeric"></div>
+    <div class="field"><label>Estado</label><select><option>Activo</option><option>Inactivo</option></select></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-usuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="closeModal('modal-usuario');toast('Usuario guardado ✓')">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast-el"></div>
 
 <script>
 const SB_URL='https://ozibjgsxyzdbporcarwv.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
 const SB_H={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
-async function sbGet(t,q){const r=await fetch(SB_URL+'/rest/v1/'+t+(q?'?'+q:''),{headers:SB_H});if(!r.ok)throw new Error(await r.text());return r.json();}
-async function sbPost(t,d){const h={...SB_H,'Prefer':'return=representation'};const r=await fetch(SB_URL+'/rest/v1/'+t,{method:'POST',headers:h,body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();}
-async function sbDelete(t,f){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+f,{method:'DELETE',headers:SB_H});if(!r.ok)throw new Error(await r.text());}
-async function sbPatch(t,d,f){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+f,{method:'PATCH',headers:{...SB_H,'Prefer':'return=representation'},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbGet(t,q=''){const r=await fetch(`${SB_URL}/rest/v1/${t}${q?'?'+q:''}`,{headers:SB_H});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbPost(t,d){const r=await fetch(`${SB_URL}/rest/v1/${t}`,{method:'POST',headers:{...SB_H,'Prefer':'return=representation'},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbPatch(t,d,q){const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,{method:'PATCH',headers:{...SB_H,'Prefer':'return=representation'},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbDelete(t,q){const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,{method:'DELETE',headers:SB_H});if(!r.ok)throw new Error(await r.text());}
 
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+const USER=JSON.parse(sessionStorage.getItem('sp_user')||'null');
+if(!USER||!(USER.rol==='master'||USER.rol==='facturacion')){window.location.href='index.html';}
 
-// Verificar sesión
-const userSess=JSON.parse(sessionStorage.getItem('sp_user')||'null');
-if(!userSess||!(userSess.rol==='master'||userSess.rol==='facturacion')){
-  window.location.href='index.html';
-}
-if(userSess){
-  document.getElementById('gest-name').textContent=userSess.nombre;
-  const av=document.getElementById('gest-av');
-  av.textContent=userSess.nombre.slice(0,2).toUpperCase();
-  av.style.background=userSess.color+'22';
-  av.style.color=userSess.color;
-  // Facturación no puede agregar pedidos
-  if(userSess.rol==='facturacion'){
-    document.getElementById('card-nuevo-pedido').style.display='none';
-  }
-}
-
+function irAProduccion(){window.open('index.html','_blank');}
 function cerrarSesion(){sessionStorage.removeItem('sp_user');window.location.href='index.html';}
 
-const ESTADO_BADGE={
-  'Pendiente':'badge-amber',
-  'En producción':'badge-blue',
-  'Completado':'badge-green',
-  'Entregado':'badge-green',
-  'Cancelado':'badge-red',
-};
-
-async function loadPipeline(){
-  const el=document.getElementById('pipeline-list');
-  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Cargando...</div>';
-  try{
-    const rows=await sbGet('pipeline_mf','order=created_at.desc');
-    if(!rows.length){
-      el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Sin pedidos aún</div>';
-      return;
-    }
-    el.innerHTML=rows.map(p=>`
-      <div class="pipeline-row">
-        <div>
-          <div style="font-size:14px;font-weight:600;margin-bottom:3px">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
-          <div style="font-size:12px;color:var(--text2)">${p.po} · ${(p.piezas||0).toLocaleString()} pzas · ${p.colores||0} colores${p.fecha_entrega?' · Entrega: '+p.fecha_entrega:''}</div>
-          ${p.notas?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${p.notas}</div>`:''}
-        </div>
-        <div class="badge ${ESTADO_BADGE[p.estado]||'badge-amber'}">${p.estado}</div>
-        ${userSess&&userSess.rol==='master'?`<button class="btn btn-danger" onclick="eliminarPedido('${p.id}')">Eliminar</button>`:'<div></div>'}
-      </div>`).join('');
-  }catch(e){
-    el.innerHTML=`<div style="text-align:center;padding:20px;color:var(--red)">Error: ${e.message}</div>`;
-  }
+if(USER){
+  const av=document.getElementById('gest-av');
+  av.textContent=USER.nombre.slice(0,2).toUpperCase();
+  av.style.background=(USER.color||'#00e5a0')+'22';
+  av.style.color=USER.color||'#00e5a0';
+  document.getElementById('gest-name').textContent=USER.nombre;
+  if(USER.rol==='master')document.getElementById('btn-produccion').style.display='';
+  if(USER.rol==='facturacion')document.getElementById('nav-admin-section').style.display='none';
 }
 
-async function agregarPedido(){
-  const cliente=document.getElementById('np-cliente').value.trim();
-  const po=document.getElementById('np-po').value.trim();
-  if(!cliente||!po){toast('Cliente y PO son requeridos');return;}
+function mxn(n){return'$'+(parseFloat(n)||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function toast(msg,type=''){const t=document.getElementById('toast-el');t.textContent=msg;t.style.borderColor=type==='err'?'var(--red-border)':type==='ok'?'var(--green-border)':'var(--border2)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
+setInterval(()=>{const el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});},1000);
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
+
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(window.innerWidth<=768)document.getElementById('sidebar').classList.remove('open');
+  if(id==='proyeccion')renderProyeccion();
+  if(id==='catalogos')loadCatalogTab('ct-tintas');
+  if(id==='usuarios')loadUsuarios();
+}
+
+function switchCatTab(id,el){
+  ['ct-tintas','ct-aditivos','ct-pantallas','ct-positivos','ct-mdo','ct-precios','ct-clientes','ct-maquinas'].forEach(t=>{const e=document.getElementById(t);if(e)e.style.display='none';});
+  document.getElementById(id).style.display='';
+  document.querySelectorAll('#cat-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  loadCatalogTab(id);
+}
+
+const BADGE_MAP={'Pendiente':'badge-amber','En producción':'badge-blue','Completado':'badge-green','Entregado':'badge-green','Cancelado':'badge-red'};
+let CAT={tintas:[],aditivos:[],clientes:[],tarifas_mdo:[],precios_venta:[],tarifas_fijas:{}};
+let PIPELINE=[];
+let COT_COLORES=[];
+
+async function loadCatalogos(){
+  const [tintas,aditivos,clientes,tarifas_mdo,precios_venta,tarifas_fijas]=await Promise.all([
+    sbGet('tintas','activo=eq.true&order=proveedor.asc,nombre.asc'),
+    sbGet('aditivos','activo=eq.true&order=nombre.asc'),
+    sbGet('clientes','activo=eq.true&order=nombre.asc'),
+    sbGet('tarifas_mdo','order=num_color.asc'),
+    sbGet('precios_venta','order=tipo.asc,capacidad_ml.asc,corrida.asc'),
+    sbGet('tarifas_fijas'),
+  ]);
+  CAT={tintas,aditivos,clientes,tarifas_mdo,precios_venta,tarifas_fijas:{}};
+  tarifas_fijas.forEach(t=>CAT.tarifas_fijas[t.concepto]=parseFloat(t.valor));
+  const opts=clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  ['cot-cliente','mp-cliente'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Seleccionar...</option>'+opts;});
+}
+
+async function loadPipeline(){
+  try{
+    PIPELINE=await sbGet('pipeline_mf','order=created_at.desc');
+    renderPipeline();
+  }catch(e){document.getElementById('pipeline-activos').innerHTML=`<div style="color:var(--red);padding:20px">Error: ${e.message}</div>`;}
+}
+
+function renderPipeline(){
+  const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
+  const completados=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado');
+  document.getElementById('badge-pipeline').textContent=activos.length;
+  document.getElementById('pipeline-sub').textContent=`${activos.length} activos · ${completados.length} completados`;
+  document.getElementById('st-activos').textContent=activos.length;
+  document.getElementById('st-piezas').textContent=activos.reduce((s,p)=>s+(p.piezas||0),0).toLocaleString();
+  const vTotal=activos.reduce((s,p)=>s+(p.venta_total||0),0);
+  const cTotal=activos.reduce((s,p)=>s+(p.costo_total||0),0);
+  const mProm=vTotal>0?((vTotal-cTotal)/vTotal*100):0;
+  document.getElementById('st-venta').textContent=vTotal>0?mxn(vTotal):'—';
+  document.getElementById('st-margen').textContent=mProm>0?mProm.toFixed(1)+'%':'—';
+
+  document.getElementById('pipeline-activos').innerHTML=activos.length?activos.map(p=>{
+    const isUrgent=p.fecha_entrega&&(new Date(p.fecha_entrega+'T12:00:00')-new Date())<4*24*60*60*1000;
+    const tv=p.venta_total>0,tc=p.costo_total>0;
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')">
+      <div class="pc-top">
+        <div><div class="pc-title">${p.sub_cliente||p.cliente||'Sin nombre'} — ${p.capacidad?p.capacidad+'ml':'—'}</div>
+        <div class="pc-meta"><span>🔢 ${p.po||'—'}</span><span>📦 ${(p.piezas||0).toLocaleString()} pzas</span><span>🎨 ${p.colores||0} col</span>${p.fecha_entrega?`<span>📅 ${new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>`:''}${p.fecha_inicio?`<span>🕐 ${new Date(p.fecha_inicio+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}${p.horas_estimadas?' · '+p.horas_estimadas+'h':''}</span>`:'<span style="color:var(--text3)">🕐 Sin fecha</span>'}</div></div>
+        <span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}">${isUrgent&&p.estado==='Pendiente'?'Urgente':p.estado}</span>
+      </div>
+      <div class="pc-financials">
+        <div class="pc-fin-item"><div class="pc-fin-label">Venta</div><div class="pc-fin-val" style="color:${tv?'var(--green)':'var(--text3)'}">${tv?mxn(p.venta_total):'Sin cotizar'}</div></div>
+        <div class="pc-fin-item"><div class="pc-fin-label">Costo</div><div class="pc-fin-val" style="color:${tc?'var(--red)':'var(--text3)'}">${tc?mxn(p.costo_total):'—'}</div></div>
+        <div class="pc-fin-item"><div class="pc-fin-label">Margen</div><div class="pc-fin-val" style="color:${p.margen>0?'var(--green)':'var(--text3)'}">${p.margen>0?p.margen.toFixed(1)+'%':'—'}</div></div>
+      </div>
+      <div class="pc-actions">
+        ${!tv?`<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();abrirCotizadorConPedido('${p.id}')">🧮 Cotizar</button>`:''}
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('modal-import')">📄 PDFs</button>
+        ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();eliminarPedido('${p.id}')">🗑</button>`:''}
+      </div>
+    </div>`;
+  }).join(''):'<div style="text-align:center;padding:30px;color:var(--text3)">Sin pedidos activos.</div>';
+
+  document.getElementById('pipeline-completados').innerHTML=completados.length?completados.slice(0,10).map(p=>`
+    <tr style="cursor:pointer" onclick="abrirDetallePedido('${p.id}')">
+      <td>${p.sub_cliente||p.cliente||'—'}</td><td class="td-mono">${p.po||'—'}</td>
+      <td>${p.capacidad?p.capacidad+'ml':'—'}</td><td>${(p.piezas||0).toLocaleString()}</td>
+      <td class="td-mono" style="color:var(--green)">${p.venta_total?mxn(p.venta_total):'—'}</td>
+      <td class="td-mono" style="color:var(--green)">${p.margen?p.margen.toFixed(1)+'%':'—'}</td>
+      <td>${p.updated_at?new Date(p.updated_at).toLocaleDateString('es-MX',{day:'numeric',month:'short'}):'—'}</td>
+      <td><span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}">${p.estado}</span></td>
+      <td>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();eliminarPedido('${p.id}')">🗑</button>`:''}</td>
+    </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">Sin completados</td></tr>';
+}
+
+function abrirNuevoPedido(){
+  document.getElementById('modal-pedido-titulo').textContent='Nuevo pedido';
+  ['mp-po','mp-subcli','mp-envio','mp-notas','mp-col-bot','mp-col-tap','mp-col-boq'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['mp-piezas','mp-colores','mp-horas','mp-cap','mp-cliente','mp-fecha-entrega','mp-fecha-inicio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('mp-estado').value='Pendiente';
+  document.getElementById('mp-cotizacion-resumen').style.display='none';
+  document.getElementById('btn-mp-pdf-interno').style.display='none';
+  document.getElementById('btn-mp-pdf-cliente').style.display='none';
+  document.getElementById('modal-pedido').dataset.id='';
+  openModal('modal-pedido');
+}
+
+async function abrirDetallePedido(id){
+  const p=PIPELINE.find(x=>x.id===id);if(!p)return;
+  document.getElementById('modal-pedido-titulo').textContent=`${p.sub_cliente||p.cliente||'Pedido'} — ${p.capacidad?p.capacidad+'ml':''}`;
+  const flds={'mp-subcli':p.sub_cliente,'mp-po':p.po,'mp-cap':p.capacidad,'mp-piezas':p.piezas,'mp-colores':p.colores,'mp-fecha-entrega':p.fecha_entrega,'mp-fecha-inicio':p.fecha_inicio,'mp-horas':p.horas_estimadas,'mp-col-bot':p.color_botella,'mp-col-tap':p.color_tapa,'mp-col-boq':p.color_boquilla,'mp-envio':p.direccion_envio,'mp-notas':p.notas,'mp-estado':p.estado||'Pendiente'};
+  Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
+  document.getElementById('modal-pedido').dataset.id=id;
+  const resumen=document.getElementById('mp-cotizacion-resumen');
+  if(p.venta_total>0||p.costo_total>0){
+    resumen.style.display='';
+    resumen.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="card" style="margin:0"><div class="card-title">Costo interno</div>
+        <div class="cs-row"><span class="cs-label">Total</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--red)">${mxn(p.costo_total)}</span></div>
+        <div class="cs-row"><span class="cs-label">Por pieza</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--blue)">${p.piezas?mxn(p.costo_total/p.piezas):'—'}</span></div>
+      </div>
+      <div class="card" style="margin:0"><div class="card-title">Venta al cliente</div>
+        <div class="cs-row"><span class="cs-label">Total</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--green)">${mxn(p.venta_total)}</span></div>
+        <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:9px;padding:10px;text-align:center;margin-top:10px">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;margin-bottom:3px">Margen</div>
+          <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:var(--green)">${(p.margen||0).toFixed(1)}%</div>
+        </div>
+      </div></div>`;
+    document.getElementById('btn-mp-pdf-interno').style.display='';
+    document.getElementById('btn-mp-pdf-cliente').style.display='';
+  } else {
+    resumen.style.display='none';
+  }
+  openModal('modal-pedido');
+}
+
+async function guardarPedido(){
+  const id=document.getElementById('modal-pedido').dataset.id;
   const data={
-    cliente,
-    sub_cliente:document.getElementById('np-subcliente').value.trim()||null,
-    po,
-    capacidad:parseInt(document.getElementById('np-capacidad').value)||null,
-    piezas:parseInt(document.getElementById('np-piezas').value)||0,
-    colores:parseInt(document.getElementById('np-colores').value)||0,
-    fecha_entrega:document.getElementById('np-fecha').value||null,
-    notas:document.getElementById('np-notas').value.trim()||null,
-    estado:'Pendiente',
+    cliente:document.getElementById('mp-cliente').options[document.getElementById('mp-cliente').selectedIndex]?.text||'',
+    sub_cliente:document.getElementById('mp-subcli').value||null,po:document.getElementById('mp-po').value||null,
+    capacidad:parseInt(document.getElementById('mp-cap').value)||null,piezas:parseInt(document.getElementById('mp-piezas').value)||0,
+    colores:parseInt(document.getElementById('mp-colores').value)||0,fecha_entrega:document.getElementById('mp-fecha-entrega').value||null,
+    fecha_inicio:document.getElementById('mp-fecha-inicio').value||null,horas_estimadas:parseFloat(document.getElementById('mp-horas').value)||null,
+    color_botella:document.getElementById('mp-col-bot').value||null,color_tapa:document.getElementById('mp-col-tap').value||null,
+    color_boquilla:document.getElementById('mp-col-boq').value||null,direccion_envio:document.getElementById('mp-envio').value||null,
+    notas:document.getElementById('mp-notas').value||null,estado:document.getElementById('mp-estado').value,
   };
   try{
-    await sbPost('pipeline_mf',data);
-    toast('Pedido agregado ✓');
-    ['np-cliente','np-subcliente','np-po','np-capacidad','np-piezas','np-colores','np-fecha','np-notas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    loadPipeline();
-  }catch(e){toast('Error: '+e.message);}
+    if(id)await sbPatch('pipeline_mf',data,`id=eq.${id}`);else await sbPost('pipeline_mf',data);
+    toast(id?'Actualizado ✓':'Creado ✓','ok');closeModal('modal-pedido');await loadPipeline();
+  }catch(e){toast('Error: '+e.message,'err');}
 }
 
 async function eliminarPedido(id){
-  if(!confirm('¿Eliminar este pedido del pipeline?'))return;
-  try{
-    await sbDelete('pipeline_mf','id=eq.'+id);
-    toast('Pedido eliminado');
-    loadPipeline();
-  }catch(e){toast('Error: '+e.message);}
+  if(!confirm('¿Eliminar este pedido?'))return;
+  try{await sbDelete('pipeline_mf',`id=eq.${id}`);toast('Eliminado','ok');await loadPipeline();}
+  catch(e){toast('Error: '+e.message,'err');}
 }
 
-loadPipeline();
+// IMPORTAR PDFs
+let pdfData={po:null,mockup:null};
+function resetImport(){
+  pdfData={po:null,mockup:null};
+  document.getElementById('drop1').classList.remove('done');
+  document.getElementById('drop1').innerHTML='<div class="pdf-drop-icon">📄</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">MF-...-Order_Form.pdf</div>';
+  document.getElementById('drop2').classList.remove('done');
+  document.getElementById('drop2').innerHTML='<div class="pdf-drop-icon">🎨</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">..._V2.pdf</div>';
+  document.getElementById('pdf-processing').style.display='none';
+  document.getElementById('pdf-result').style.display='none';
+  document.getElementById('btn-import-cotizar').style.display='none';
+  document.getElementById('btn-import-guardar').style.display='none';
+  document.getElementById('file-po').value='';document.getElementById('file-mockup').value='';
+}
+
+function handlePDF(tipo,input){
+  if(!input.files||!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    const b64=e.target.result.split(',')[1];
+    const dropEl=document.getElementById(tipo==='po'?'drop1':'drop2');
+    dropEl.classList.add('done');
+    dropEl.innerHTML=`<div class="pdf-drop-icon">✅</div><div class="pdf-drop-text" style="color:var(--green)">${input.files[0].name}</div>`;
+    pdfData[tipo]=b64;
+    if(pdfData.po&&pdfData.mockup)await procesarPDFs();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+async function procesarPDFs(){
+  document.getElementById('pdf-processing').style.display='block';
+  document.getElementById('pdf-result').style.display='none';
+  try{
+    const prompt='Analiza estos dos PDFs y extrae la información en este JSON exacto sin texto adicional:\n{"sub_cliente":"nombre bajo Ship To primera línea","po":"solo el número final del PO#","capacidad":600,"piezas":505,"fecha_pedido":"2026-03-25","direccion_envio":"dirección completa bajo Ship To","color_botella":"valor de BOTTLE:","color_tapa":"valor de TOP:","color_boquilla":"valor de MOUTHPIECE:","tintas":["348 C","White"],"num_colores":2}';
+    const response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfData.po}},{type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfData.mockup}},{type:'text',text:prompt}]}]})});
+    const data=await response.json();
+    const extracted=JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
+    window._importedData=extracted;
+    document.getElementById('pdf-result').innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✓ Datos extraídos por Claude</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="pdf-preview"><div class="pdf-preview-title">📄 Purchase Order</div>
+        <div class="pdf-field"><span class="pdf-field-key">Sub-cliente</span><span class="pdf-field-val">${extracted.sub_cliente||'—'}</span></div>
+        <div class="pdf-field"><span class="pdf-field-key">PO #</span><span class="pdf-field-val">${extracted.po||'—'}</span></div>
+        <div class="pdf-field"><span class="pdf-field-key">Capacidad</span><span class="pdf-field-val">${extracted.capacidad?extracted.capacidad+'ml':'—'}</span></div>
+        <div class="pdf-field"><span class="pdf-field-key">Piezas</span><span class="pdf-field-val">${extracted.piezas||'—'}</span></div>
+        <div class="pdf-field"><span class="pdf-field-key">Fecha</span><span class="pdf-field-val">${extracted.fecha_pedido||'—'}</span></div>
+        <div class="pdf-field"><span class="pdf-field-key">Envío a</span><span class="pdf-field-val" style="font-size:10px">${extracted.direccion_envio||'—'}</span></div>
+      </div>
+      <div class="pdf-preview"><div class="pdf-preview-title">🎨 Mock Up</div>
+        <div class="pdf-field"><span class="pdf-field-key">Botella</span><span class="pdf-field-val">${extracted.color_botella||'—'}</span></div>
+        <div class="pdf-field"><span class="pdf-field-key">Tapa</span><span class="pdf-field-val">${extracted.color_tapa||'—'}</span></div>
+        <div class="pdf-field"><span class="pdf-field-key">Boquilla</span><span class="pdf-field-val">${extracted.color_boquilla||'—'}</span></div>
+        ${(extracted.tintas||[]).map((t,i)=>`<div class="pdf-field"><span class="pdf-field-key">Tinta #${i+1}</span><span class="pdf-field-val">${t}</span></div>`).join('')}
+        <div class="pdf-field"><span class="pdf-field-key">Colores</span><span class="pdf-field-val">${extracted.num_colores||'—'} → ${extracted.num_colores||0} pantallas</span></div>
+      </div></div>`;
+    document.getElementById('pdf-result').style.display='block';
+    document.getElementById('btn-import-cotizar').style.display='';
+    document.getElementById('btn-import-guardar').style.display='';
+  }catch(e){
+    document.getElementById('pdf-result').innerHTML=`<div style="color:var(--red);padding:10px">Error: ${e.message}</div>`;
+    document.getElementById('pdf-result').style.display='block';
+  }
+  document.getElementById('pdf-processing').style.display='none';
+}
+
+async function importarAPipeline(){
+  const d=window._importedData;if(!d)return;
+  try{
+    await sbPost('pipeline_mf',{cliente:'MountainFlow',sub_cliente:d.sub_cliente||null,po:d.po||null,capacidad:d.capacidad||null,piezas:d.piezas||0,colores:d.num_colores||0,color_botella:d.color_botella||null,color_tapa:d.color_tapa||null,color_boquilla:d.color_boquilla||null,direccion_envio:d.direccion_envio||null,estado:'Pendiente'});
+    toast('Pedido creado ✓','ok');closeModal('modal-import');resetImport();await loadPipeline();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+function importarACotizador(){
+  const d=window._importedData;if(!d)return;
+  closeModal('modal-import');resetImport();
+  const flds={'cot-subcli':d.sub_cliente,'cot-po':d.po,'cot-cap':d.capacidad,'cot-piezas':d.piezas,'cot-colores':d.num_colores,'cot-col-bot':d.color_botella,'cot-col-tap':d.color_tapa,'cot-envio':d.direccion_envio};
+  Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
+  showPage('cotizador',document.getElementById('nav-cotizador'));
+  renderColorBlocks();calcCotizador();
+  toast('Datos cargados ✓','ok');
+}
+
+// COTIZADOR
+function limpiarCotizador(){
+  ['cot-subcli','cot-po','cot-envio','cot-notas','cot-col-bot','cot-col-tap'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['cot-piezas','cot-colores','cot-cap','cot-cliente','cot-fecha','cot-corrida-bot','cot-corrida-tap'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('cot-color-bot').value='true';document.getElementById('cot-color-tap').value='true';
+  COT_COLORES=[];renderColorBlocks();calcCotizador();toast('Cotizador limpiado');
+}
+
+function renderColorBlocks(){
+  const n=parseInt(document.getElementById('cot-colores').value)||0;
+  while(COT_COLORES.length<n)COT_COLORES.push({componentes:[],aditivos:[]});
+  COT_COLORES=COT_COLORES.slice(0,n);
+  const el=document.getElementById('color-blocks');
+  if(!n){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:10px">Especifica el número de colores arriba</div>';calcCotizador();return;}
+  const tOpts='<option value="">Seleccionar...</option>'+CAT.tintas.map(t=>`<option value="${t.id}" data-precio="${t.precio_kg}">${t.sku} — ${t.nombre} (${t.proveedor})</option>`).join('');
+  const aOpts='<option value="">Seleccionar...</option>'+CAT.aditivos.map(a=>`<option value="${a.id}" data-precio="${a.precio_kg}">${a.nombre} (${a.proveedor})</option>`).join('');
+  el.innerHTML=COT_COLORES.map((col,ci)=>{
+    const tg=col.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+    const tc=col.componentes.reduce((s,x)=>s+(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0),0)+col.aditivos.reduce((s,a)=>s+(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0),0);
+    const comps=col.componentes.map((x,xi)=>`<div class="tinta-row-grid">
+      <div class="field" style="margin:0"><label style="font-size:10px">Tinta</label><select onchange="updTintaComp(${ci},${xi},'tinta',this)">${tOpts.replace(`value="${x.tinta_id}"`,`value="${x.tinta_id}" selected`)}</select></div>
+      <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="${x.gramos||''}" placeholder="0" style="text-align:center" oninput="updTintaComp(${ci},${xi},'gramos',this)"></div>
+      <div class="field" style="margin:0"><label style="font-size:10px">$/kg</label><input type="number" value="${x.precio_kg||''}" placeholder="0" style="text-align:center;font-size:11px" oninput="updTintaComp(${ci},${xi},'precio',this)"></div>
+      <div class="cot-val">${x.gramos&&x.precio_kg?mxn((x.gramos/1000)*x.precio_kg):'$0.00'}</div>
+      <button class="del-btn" onclick="remTintaComp(${ci},${xi})">✕</button></div>`).join('');
+    const adits=col.aditivos.map((a,ai)=>`<div class="tinta-row-grid">
+      <div class="field" style="margin:0"><label style="font-size:10px">Aditivo</label><select onchange="updAditivoComp(${ci},${ai},'aditivo',this)">${aOpts.replace(`value="${a.aditivo_id}"`,`value="${a.aditivo_id}" selected`)}</select></div>
+      <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="${a.gramos||''}" placeholder="0" style="text-align:center" oninput="updAditivoComp(${ci},${ai},'gramos',this)"></div>
+      <div class="field" style="margin:0"><label style="font-size:10px">$/kg</label><input type="number" value="${a.precio_kg||''}" placeholder="0" style="text-align:center;font-size:11px" oninput="updAditivoComp(${ci},${ai},'precio',this)"></div>
+      <div class="cot-val">${a.gramos&&a.precio_kg?mxn((a.gramos/1000)*a.precio_kg):'$0.00'}</div>
+      <button class="del-btn" onclick="remAditivoComp(${ci},${ai})">✕</button></div>`).join('');
+    return `<div class="color-block">
+      <div class="color-block-header"><div class="color-block-title">🎨 Color ${ci+1}</div><div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--amber)">${mxn(tc)} · ${tg}g</div></div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Tintas base</div>
+      ${comps}<button class="add-line-btn" onclick="addTintaComp(${ci})">+ Agregar tinta base</button>
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin:10px 0 6px">Aditivos (gramos sobre ${tg}g total)</div>
+      ${adits}<button class="add-line-btn" onclick="addAditivoComp(${ci})">+ Agregar aditivo</button>
+    </div>`;
+  }).join('');
+  calcCotizador();
+}
+
+function updTintaComp(ci,xi,f,el){if(!COT_COLORES[ci])return;if(!COT_COLORES[ci].componentes[xi])COT_COLORES[ci].componentes[xi]={tinta_id:'',nombre:'',gramos:0,precio_kg:0};const c=COT_COLORES[ci].componentes[xi];if(f==='tinta'){c.tinta_id=el.value;const o=el.options[el.selectedIndex];c.nombre=o.text;c.precio_kg=parseFloat(o.dataset.precio)||0;}else if(f==='gramos')c.gramos=parseFloat(el.value)||0;else c.precio_kg=parseFloat(el.value)||0;calcCotizador();}
+function addTintaComp(ci){if(COT_COLORES[ci])COT_COLORES[ci].componentes.push({tinta_id:'',nombre:'',gramos:0,precio_kg:0});renderColorBlocks();}
+function remTintaComp(ci,xi){if(COT_COLORES[ci])COT_COLORES[ci].componentes.splice(xi,1);renderColorBlocks();}
+function updAditivoComp(ci,ai,f,el){if(!COT_COLORES[ci])return;if(!COT_COLORES[ci].aditivos[ai])COT_COLORES[ci].aditivos[ai]={aditivo_id:'',nombre:'',gramos:0,precio_kg:0};const a=COT_COLORES[ci].aditivos[ai];if(f==='aditivo'){a.aditivo_id=el.value;const o=el.options[el.selectedIndex];a.nombre=o.text;a.precio_kg=parseFloat(o.dataset.precio)||0;}else if(f==='gramos')a.gramos=parseFloat(el.value)||0;else a.precio_kg=parseFloat(el.value)||0;calcCotizador();}
+function addAditivoComp(ci){if(COT_COLORES[ci])COT_COLORES[ci].aditivos.push({aditivo_id:'',nombre:'',gramos:0,precio_kg:0});renderColorBlocks();}
+function remAditivoComp(ci,ai){if(COT_COLORES[ci])COT_COLORES[ci].aditivos.splice(ai,1);renderColorBlocks();}
+
+function abrirCotizadorConPedido(id){
+  const p=PIPELINE.find(x=>x.id===id);if(!p)return;
+  limpiarCotizador();
+  const flds={'cot-subcli':p.sub_cliente,'cot-po':p.po,'cot-cap':p.capacidad,'cot-piezas':p.piezas,'cot-colores':p.colores,'cot-col-bot':p.color_botella,'cot-col-tap':p.color_tapa,'cot-envio':p.direccion_envio,'cot-fecha':p.fecha_entrega};
+  Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
+  document.getElementById('page-cotizador').dataset.pipelineId=id;
+  showPage('cotizador',document.getElementById('nav-cotizador'));
+  renderColorBlocks();calcCotizador();
+}
+
+function calcCotizador(){
+  const piezas=parseInt(document.getElementById('cot-piezas').value)||0;
+  const colores=parseInt(document.getElementById('cot-colores').value)||0;
+  const cap=parseInt(document.getElementById('cot-cap').value)||0;
+  const corridaBot=document.getElementById('cot-corrida-bot').value;
+  const colorBot=document.getElementById('cot-color-bot').value==='true';
+  const corridaTap=document.getElementById('cot-corrida-tap').value;
+  const colorTap=document.getElementById('cot-color-tap').value==='true';
+
+  let costoTintas=0;
+  COT_COLORES.forEach(col=>{
+    col.componentes.forEach(x=>{costoTintas+=(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);});
+    col.aditivos.forEach(a=>{costoTintas+=(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0);});
+  });
+
+  const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
+  let costoMdo=0;
+  for(let i=0;i<Math.min(colores,tarifas.length);i++)costoMdo+=tarifas[i].precio_pieza*piezas;
+
+  const cPant=500*colores,cPos=230*colores;
+  const tfP=(CAT.tarifas_fijas['papel_empaque_por_pieza']||0.15),tfT=(CAT.tarifas_fijas['tag_etiqueta_por_pieza']||0.15);
+  const costoEmp=(tfP+tfT)*piezas;
+  const costoTotal=costoTintas+costoMdo+cPant+cPos+costoEmp;
+
+  const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida===corridaBot&&p.con_color===colorBot);
+  const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida===corridaTap&&p.con_color===colorTap);
+  const tfTintas=CAT.tarifas_fijas['tintas_fijo_por_botella']||4;
+  const tfPant=CAT.tarifas_fijas['pantallas_positivos_por_color']||1160;
+
+  const vBot=(pvBot?.precio||0)*piezas,vTap=(pvTap?.precio||0)*piezas;
+  const vTintas=tfTintas*piezas,vPant=tfPant*colores,vMdo=costoMdo,vEmp=(tfP+tfT)*piezas;
+  const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
+  const margen=ventaTotal>0?((ventaTotal-costoTotal)/ventaTotal)*100:0;
+
+  const mdoEl=document.getElementById('mdo-interno');
+  if(mdoEl&&piezas>0){
+    let h='<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Mano de obra (auto)</div>';
+    for(let i=0;i<Math.min(colores,tarifas.length);i++)h+=`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Color ${i+1} — ${mxn(tarifas[i].precio_pieza)} × ${piezas} pzas</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--amber)">${mxn(tarifas[i].precio_pieza*piezas)}</span></div>`;
+    h+=`<div style="display:flex;justify-content:space-between;padding:7px 0 0;font-weight:600"><span style="font-size:12px">Subtotal</span><span style="font-family:'Space Mono',monospace;font-size:13px;color:var(--amber)">${mxn(costoMdo)}</span></div>`;
+    mdoEl.innerHTML=h;
+  }
+  const pantEl=document.getElementById('pant-interno');
+  if(pantEl&&piezas>0)pantEl.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Pantallas, positivos y empaque</div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas (${colores} × $500)</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--amber)">${mxn(cPant)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Positivos (${colores} × $230)</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--amber)">${mxn(cPos)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Papel ($0.15 × ${piezas})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--amber)">${mxn(0.15*piezas)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Tag ($0.15 × ${piezas})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--amber)">${mxn(0.15*piezas)}</span></div>`;
+
+  const ventaEl=document.getElementById('venta-desglose');
+  if(ventaEl&&piezas>0)ventaEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Botellas (${piezas} × ${mxn(pvBot?.precio||0)})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vBot)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tapas (${piezas} × ${mxn(pvTap?.precio||0)})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vTap)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tintas (${mxn(tfTintas)} × ${piezas})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vTintas)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas+positivos (${colores} × ${mxn(tfPant)})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vPant)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Mano de obra</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vMdo)}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Empaque</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vEmp)}</span></div>`;
+
+  const resEl=document.getElementById('panel-resumen');
+  if(resEl&&piezas>0){
+    resEl.innerHTML=`<div class="card-title">Resumen — Costo interno</div>
+    <div class="cost-summary" style="margin-bottom:14px">
+      <div class="cs-row"><span class="cs-label">Tintas e insumos</span><span class="cs-val">${mxn(costoTintas)}</span></div>
+      <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val">${mxn(costoMdo)}</span></div>
+      <div class="cs-row"><span class="cs-label">Pantallas</span><span class="cs-val">${mxn(cPant)}</span></div>
+      <div class="cs-row"><span class="cs-label">Positivos</span><span class="cs-val">${mxn(cPos)}</span></div>
+      <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val">${mxn(costoEmp)}</span></div>
+      <div class="cs-row"><span style="font-weight:700;font-size:13px">Total costo</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--red)">${mxn(costoTotal)}</span></div>
+      <div class="cs-row"><span class="cs-label">Costo/pieza</span><span class="cs-val" style="color:var(--blue)">${piezas?mxn(costoTotal/piezas):'—'}</span></div>
+    </div>
+    <div style="height:1px;background:var(--border);margin:14px 0"></div>
+    <div class="card-title">Precio de venta</div>
+    <div class="cost-summary" style="margin-bottom:14px">
+      <div class="cs-row"><span class="cs-label">Botellas</span><span class="cs-val" style="color:var(--green)">${mxn(vBot)}</span></div>
+      <div class="cs-row"><span class="cs-label">Tapas</span><span class="cs-val" style="color:var(--green)">${mxn(vTap)}</span></div>
+      <div class="cs-row"><span class="cs-label">Tintas</span><span class="cs-val" style="color:var(--green)">${mxn(vTintas)}</span></div>
+      <div class="cs-row"><span class="cs-label">Pantallas+positivos</span><span class="cs-val" style="color:var(--green)">${mxn(vPant)}</span></div>
+      <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val" style="color:var(--green)">${mxn(vMdo)}</span></div>
+      <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val" style="color:var(--green)">${mxn(vEmp)}</span></div>
+      <div class="cs-row"><span style="font-weight:700;font-size:13px">Total venta</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--green)">${mxn(ventaTotal)}</span></div>
+      <div class="cs-row"><span class="cs-label">Precio unitario</span><span class="cs-val" style="color:var(--amber)">${piezas?mxn(ventaTotal/piezas):'—'}</span></div>
+    </div>
+    <div style="background:${margen>=20?'var(--green-bg)':'var(--amber-bg)'};border:1px solid ${margen>=20?'var(--green-border)':'var(--amber-border)'};border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Margen de utilidad</div>
+      <div style="font-family:'Space Mono',monospace;font-size:28px;font-weight:700;color:${margen>=20?'var(--green)':'var(--amber)'}">${margen.toFixed(1)}%</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px">Utilidad: ${mxn(ventaTotal-costoTotal)}</div>
+    </div>`;
+    window._cotResult={costoTintas,costoMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen};
+  }
+}
+
+async function guardarCotizacion(){
+  const r=window._cotResult;
+  if(!r||!r.ventaTotal){toast('Completa los datos primero','err');return;}
+  const pipelineId=document.getElementById('page-cotizador').dataset.pipelineId||null;
+  const piezas=parseInt(document.getElementById('cot-piezas').value)||0;
+  const colores=parseInt(document.getElementById('cot-colores').value)||0;
+  const cotData={pipeline_id:pipelineId||null,cliente:document.getElementById('cot-cliente').options[document.getElementById('cot-cliente').selectedIndex]?.text||'',sub_cliente:document.getElementById('cot-subcli').value||null,po:document.getElementById('cot-po').value||null,capacidad_ml:parseInt(document.getElementById('cot-cap').value)||null,piezas,colores,corrida_botella:document.getElementById('cot-corrida-bot').value||null,con_color_botella:document.getElementById('cot-color-bot').value==='true',corrida_tapa:document.getElementById('cot-corrida-tap').value||null,con_color_tapa:document.getElementById('cot-color-tap').value==='true',formula_tintas:COT_COLORES,costo_tintas:r.costoTintas,costo_mdo:r.costoMdo,costo_pantallas:r.cPant,costo_positivos:r.cPos,costo_empaque:r.costoEmp,costo_total:r.costoTotal,venta_botellas:r.vBot,venta_tapas:r.vTap,venta_tintas:r.vTintas,venta_pantallas:r.vPant,venta_mdo:r.vMdo,venta_empaque:r.vEmp,venta_total:r.ventaTotal,margen:r.margen};
+  try{
+    await sbPost('cotizaciones',cotData);
+    const upd={costo_total:r.costoTotal,venta_total:r.ventaTotal,margen:r.margen};
+    if(pipelineId)await sbPatch('pipeline_mf',upd,`id=eq.${pipelineId}`);
+    else if(cotData.po){
+      const rows=await sbGet('pipeline_mf',`po=eq.${cotData.po}`);
+      if(rows.length)await sbPatch('pipeline_mf',upd,`po=eq.${cotData.po}`);
+      else await sbPost('pipeline_mf',{...cotData,...upd,estado:'Pendiente',capacidad:cotData.capacidad_ml});
+    }
+    toast('Cotización guardada ✓','ok');await loadPipeline();showPage('pipeline',document.getElementById('nav-pipeline'));
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+// PROYECCIÓN
+function renderProyeccion(){
+  const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
+  if(!activos.length){document.getElementById('timeline-container').innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Sin pedidos activos</div>';document.getElementById('proyeccion-barras').innerHTML='';return;}
+  const conFecha=activos.filter(p=>p.fecha_inicio);
+  const sinFecha=activos.filter(p=>!p.fecha_inicio);
+  const allDates=conFecha.map(p=>new Date(p.fecha_inicio+'T12:00:00'));
+  const minDate=allDates.length?new Date(Math.min(...allDates)):new Date();
+  const maxDate=new Date(minDate);maxDate.setDate(maxDate.getDate()+60);
+  const totalDays=(maxDate-minDate)/(1000*60*60*24);
+  const weeks=[];for(let d=new Date(minDate);d<maxDate;d.setDate(d.getDate()+7))weeks.push(new Date(d).toLocaleDateString('es-MX',{day:'numeric',month:'short'}));
+  const COLORS=['var(--red)','var(--blue)','var(--amber)','var(--green)','var(--purple)'];
+  const barsHTML=conFecha.map((p,i)=>{
+    const start=new Date(p.fecha_inicio+'T12:00:00');
+    const sp=((start-minDate)/(maxDate-minDate))*100;
+    const wp=Math.max(3,((p.horas_estimadas||8)/10/totalDays)*100);
+    return `<div class="timeline-row"><div class="timeline-label">${p.sub_cliente||p.cliente||p.po||'Pedido'}</div>
+      <div class="timeline-track"><div class="timeline-bar" style="left:${Math.min(97,sp)}%;width:${Math.min(100-sp,wp)}%;background:${COLORS[i%COLORS.length]}">${(p.piezas||0).toLocaleString()} · ${p.colores||0} col${p.horas_estimadas?' · '+p.horas_estimadas+'h':''}</div></div></div>`;
+  }).join('')+sinFecha.map(p=>`<div class="timeline-row"><div class="timeline-label" style="color:var(--text3)">${p.sub_cliente||p.cliente||p.po}</div><div class="timeline-track"><div style="height:100%;display:flex;align-items:center;padding:0 10px;font-size:10px;color:var(--text3)">Sin fecha de inicio</div></div></div>`).join('');
+  document.getElementById('timeline-container').innerHTML=`<div class="timeline-wrap"><div class="timeline-header">${weeks.map(w=>`<div class="timeline-month">${w}</div>`).join('')}</div>${barsHTML}</div>`;
+
+  const mesMap={};
+  activos.forEach(p=>{const f=p.fecha_entrega||p.fecha_inicio;if(!f)return;const k=new Date(f+'T12:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});if(!mesMap[k])mesMap[k]={v:0,c:0};mesMap[k].v+=(p.venta_total||0);mesMap[k].c+=(p.costo_total||0);});
+  const meses=Object.entries(mesMap).sort();
+  const maxV=Math.max(...meses.map(([,v])=>v.v),1);
+  document.getElementById('proyeccion-barras').innerHTML=meses.length?meses.map(([mes,v])=>`<div class="proj-card"><div class="proj-month" style="text-transform:capitalize">${mes}</div><div class="proj-bar-wrap"><div class="proj-bar" style="width:${(v.v/maxV)*100}%"></div></div><div class="proj-val">${mxn(v.v)}</div></div>`).join(''):'<div style="text-align:center;padding:20px;color:var(--text3)">Agrega fechas de entrega para ver la proyección</div>';
+  document.getElementById('proy-mes1-val').textContent=meses[0]?mxn(meses[0][1].v):'—';
+  document.getElementById('proy-mes1-label').textContent=meses[0]?meses[0][0]:'Este mes';
+  document.getElementById('proy-mes2-val').textContent=meses[1]?mxn(meses[1][1].v):'—';
+  document.getElementById('proy-mes2-label').textContent=meses[1]?meses[1][0]:'Próximo mes';
+  const util=activos.reduce((s,p)=>s+((p.venta_total||0)-(p.costo_total||0)),0);
+  document.getElementById('proy-util-val').textContent=util>0?mxn(util):'—';
+  document.getElementById('proy-pzas-val').textContent=activos.reduce((s,p)=>s+(p.piezas||0),0).toLocaleString();
+}
+
+// CATÁLOGOS
+const CAT_FORMS={
+  tintas:[{f:'sku',l:'SKU',t:'text'},{f:'nombre',l:'Nombre',t:'text'},{f:'proveedor',l:'Proveedor',t:'text'},{f:'precio_kg',l:'$/kg c/IVA',t:'number'},{f:'stock_kg',l:'Stock (kg)',t:'number'}],
+  aditivos:[{f:'nombre',l:'Nombre',t:'text'},{f:'proveedor',l:'Proveedor',t:'text'},{f:'precio_kg',l:'$/kg c/IVA',t:'number'},{f:'pct_tipico',l:'% típico',t:'number'}],
+  pantallas:[{f:'codigo',l:'Código',t:'text'},{f:'medidas',l:'Medidas',t:'text'},{f:'tipo',l:'Tipo',t:'text'},{f:'costo',l:'Costo interno',t:'number'}],
+  positivos:[{f:'codigo',l:'Código',t:'text'},{f:'descripcion',l:'Descripción',t:'text'},{f:'costo',l:'Costo interno',t:'number'}],
+  mano_de_obra:[{f:'concepto',l:'Concepto',t:'text'},{f:'unidad',l:'Unidad',t:'text'},{f:'costo',l:'Costo',t:'number'}],
+  clientes:[{f:'nombre',l:'Nombre',t:'text'},{f:'direccion',l:'Dirección',t:'text'},{f:'contacto',l:'Contacto',t:'text'}],
+  maquinas:[{f:'nombre',l:'Nombre',t:'text'},{f:'tipo',l:'Tipo',t:'text'},{f:'estado',l:'Estado',t:'text'}],
+};
+
+async function loadCatalogTab(id){
+  const tabMap={
+    'ct-tintas':{tabla:'tintas',cols:['sku','nombre','proveedor','precio_kg','stock_kg'],labels:['SKU','Nombre','Proveedor','$/kg c/IVA','Stock (kg)'],q:'activo=eq.true&order=proveedor.asc,nombre.asc'},
+    'ct-aditivos':{tabla:'aditivos',cols:['nombre','proveedor','precio_kg','pct_tipico'],labels:['Nombre','Proveedor','$/kg c/IVA','% típico'],q:'activo=eq.true&order=nombre.asc'},
+    'ct-pantallas':{tabla:'pantallas',cols:['codigo','medidas','tipo','costo'],labels:['Código','Medidas','Tipo','Costo'],q:'activo=eq.true'},
+    'ct-positivos':{tabla:'positivos',cols:['codigo','descripcion','costo'],labels:['Código','Descripción','Costo'],q:'activo=eq.true'},
+    'ct-clientes':{tabla:'clientes',cols:['nombre','direccion','contacto'],labels:['Cliente','Dirección','Contacto'],q:'activo=eq.true&order=nombre.asc'},
+    'ct-maquinas':{tabla:'maquinas',cols:['nombre','tipo','estado'],labels:['Nombre','Tipo','Estado'],q:'activo=eq.true'},
+  };
+  const el=document.getElementById(id);if(!el)return;
+  if(id==='ct-precios'){renderPreciosVenta();return;}
+  if(id==='ct-mdo'){await renderMDO();return;}
+  const cfg=tabMap[id];if(!cfg)return;
+  el.innerHTML='<div class="loading"><div class="loading-spinner"></div></div>';
+  try{
+    const rows=await sbGet(cfg.tabla,cfg.q);
+    const canEdit=USER.rol==='master';
+    el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text2)">${rows.length} registros</div>
+      ${canEdit?`<div style="display:flex;gap:8px">${cfg.tabla==='tintas'?`<button class="btn btn-ghost btn-sm" onclick="toast('Importar factura — próximamente')">📄 Importar factura PDF</button>`:''}
+      <button class="btn btn-primary btn-sm" onclick="openModalCatalogo('${cfg.tabla}',null)">+ Agregar</button></div>`:''}
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>${cfg.labels.map(l=>`<th>${l}</th>`).join('')}${canEdit?'<th></th>':''}</tr></thead>
+      <tbody>${rows.map(r=>`<tr>${cfg.cols.map(c=>`<td class="${['sku','precio_kg','costo','stock_kg','pct_tipico'].includes(c)?'td-mono':''}">${r[c]??'—'}</td>`).join('')}${canEdit?`<td><button class="btn btn-ghost btn-xs" onclick="openModalCatalogo('${cfg.tabla}','${r.id}')">✏️</button></td>`:''}</tr>`).join('')}</tbody>
+    </table></div>`;
+  }catch(e){el.innerHTML=`<div style="color:var(--red);padding:20px">Error: ${e.message}</div>`;}
+}
+
+async function renderMDO(){
+  const el=document.getElementById('ct-mdo');
+  try{
+    const [tarifas,conceptos]=await Promise.all([sbGet('tarifas_mdo','order=num_color.asc'),sbGet('mano_de_obra','activo=eq.true')]);
+    const canEdit=USER.rol==='master';
+    el.innerHTML=`<div class="card"><div class="card-title">Tarifa escalonada ($/pieza por color)</div>
+      <div style="display:grid;grid-template-columns:repeat(${tarifas.length},1fr);gap:10px">
+        ${tarifas.map(t=>`<div style="background:var(--bg3);border-radius:9px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Color ${t.num_color}</div>
+          <input type="number" value="${t.precio_pieza}" step="0.01" style="background:transparent;border:none;color:var(--amber);font-family:'Space Mono',monospace;font-size:20px;font-weight:700;text-align:center;width:100%;outline:none;${canEdit?'':'pointer-events:none'}" onchange="updateTarifaMdo('${t.id}',this.value)">
+        </div>`).join('')}
+      </div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text2)">Otros costos por pieza</div>
+      ${canEdit?`<button class="btn btn-primary btn-sm" onclick="openModalCatalogo('mano_de_obra',null)">+ Agregar</button>`:''}
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Concepto</th><th>Unidad</th><th>Costo</th>${canEdit?'<th></th>':''}</tr></thead>
+    <tbody>${conceptos.map(c=>`<tr><td>${c.concepto}</td><td>${c.unidad}</td><td class="td-mono">$${c.costo}</td>${canEdit?`<td><button class="btn btn-ghost btn-xs" onclick="openModalCatalogo('mano_de_obra','${c.id}')">✏️</button></td>`:''}</tr>`).join('')}</tbody></table></div>`;
+  }catch(e){el.innerHTML=`<div style="color:var(--red);padding:20px">Error: ${e.message}</div>`;}
+}
+
+async function updateTarifaMdo(id,val){
+  if(USER.rol!=='master')return;
+  try{await sbPatch('tarifas_mdo',{precio_pieza:parseFloat(val)},`id=eq.${id}`);CAT.tarifas_mdo=await sbGet('tarifas_mdo','order=num_color.asc');toast('Actualizado ✓','ok');}
+  catch(e){toast('Error: '+e.message,'err');}
+}
+
+function renderPreciosVenta(){
+  const el=document.getElementById('ct-precios');
+  const canEdit=USER.rol==='master';
+  const corrBots=[{v:'run500',l:'Run 500 pzas'},{v:'stock2500',l:'Stock / +2500 pzas'}];
+  const corrTaps=[{v:'500',l:'500 pzas'},{v:'1000',l:'1,000 pzas'},{v:'2500',l:'2,500 pzas'},{v:'5000',l:'5,000 pzas'}];
+  let html='<div style="margin-bottom:12px;font-size:12px;color:var(--text2)">Precios de venta.'+(canEdit?' Clic en un valor para editar.':'')+'</div>';
+  [500,600,700].forEach(cap=>{
+    html+=`<div class="card"><div class="card-title">Botellas — ${cap}ml</div><div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>`;
+    corrBots.forEach(c=>{
+      const nc=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida===c.v&&!p.con_color);
+      const cc=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida===c.v&&p.con_color);
+      html+=`<tr><td>${c.l}</td>
+        <td class="td-mono" ${canEdit?`contenteditable="true" style="color:var(--amber);cursor:text" onblur="updatePrecioVenta('${nc?.id}',this.textContent)"`:''} >${nc?'$'+nc.precio:'—'}</td>
+        <td class="td-mono" ${canEdit?`contenteditable="true" style="color:var(--amber);cursor:text" onblur="updatePrecioVenta('${cc?.id}',this.textContent)"`:''} >${cc?'$'+cc.precio:'—'}</td></tr>`;
+    });
+    html+='</tbody></table></div></div>';
+  });
+  html+=`<div class="card"><div class="card-title">Tapas</div><div class="table-wrap"><table><thead><tr><th>Corrida</th><th>Sin color</th><th>Con color</th></tr></thead><tbody>`;
+  corrTaps.forEach(c=>{
+    const nc=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida===c.v&&!p.con_color);
+    const cc=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida===c.v&&p.con_color);
+    html+=`<tr><td>${c.l}</td>
+      <td class="td-mono" ${canEdit?`contenteditable="true" style="color:var(--amber);cursor:text" onblur="updatePrecioVenta('${nc?.id}',this.textContent)"`:''} >${nc?'$'+nc.precio:'—'}</td>
+      <td class="td-mono" ${canEdit?`contenteditable="true" style="color:var(--amber);cursor:text" onblur="updatePrecioVenta('${cc?.id}',this.textContent)"`:''} >${cc?'$'+cc.precio:'—'}</td></tr>`;
+  });
+  html+='</tbody></table></div></div>';
+  const tf=CAT.tarifas_fijas;
+  html+=`<div class="card"><div class="card-title">Tarifas fijas venta</div><div class="field-row-4">
+    ${[['tintas_fijo_por_botella','Tintas (por botella)'],['pantallas_positivos_por_color','Pantallas+positivos (por color)'],['papel_empaque_por_pieza','Papel empaque (por pieza)'],['tag_etiqueta_por_pieza','Tag/etiqueta (por pieza)']].map(([k,l])=>`<div class="field"><label>${l}</label><input type="number" value="${tf[k]||0}" step="0.01" style="font-size:16px;font-weight:700;text-align:center;color:var(--amber)" ${canEdit?`onchange="updateTarifaFija('${k}',this.value)"`:' disabled'}></div>`).join('')}
+  </div></div>`;
+  el.innerHTML=html;
+}
+
+async function updatePrecioVenta(id,val){
+  if(!id||USER.rol!=='master')return;
+  const num=parseFloat(val.replace(/[$,]/g,''));if(isNaN(num))return;
+  try{await sbPatch('precios_venta',{precio:num},`id=eq.${id}`);CAT.precios_venta=await sbGet('precios_venta','order=tipo.asc,capacidad_ml.asc,corrida.asc');toast('Precio actualizado ✓','ok');}
+  catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function updateTarifaFija(concepto,val){
+  if(USER.rol!=='master')return;
+  try{await sbPatch('tarifas_fijas',{valor:parseFloat(val)},`concepto=eq.${concepto}`);CAT.tarifas_fijas[concepto]=parseFloat(val);toast('Tarifa actualizada ✓','ok');}
+  catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function openModalCatalogo(tabla,id){
+  document.getElementById('modal-cat-tabla').value=tabla;
+  document.getElementById('modal-cat-id').value=id||'';
+  document.getElementById('modal-cat-titulo').textContent=id?'Editar registro':'Nuevo registro';
+  const fields=CAT_FORMS[tabla]||[];
+  let data={};
+  if(id)try{const rows=await sbGet(tabla,`id=eq.${id}`);data=rows[0]||{};}catch(e){}
+  document.getElementById('modal-cat-body').innerHTML=fields.map(f=>`<div class="field"><label>${f.l}</label><input type="${f.t}" id="mcat-${f.f}" value="${data[f.f]??''}" placeholder="${f.l}" step="${f.t==='number'?'0.01':''}"></div>`).join('');
+  openModal('modal-catalogo');
+}
+
+async function guardarCatalogoItem(){
+  const tabla=document.getElementById('modal-cat-tabla').value;
+  const id=document.getElementById('modal-cat-id').value;
+  const fields=CAT_FORMS[tabla]||[];
+  const data={};
+  fields.forEach(f=>{const el=document.getElementById('mcat-'+f.f);if(el)data[f.f]=f.t==='number'?parseFloat(el.value)||0:el.value;});
+  try{
+    if(id)await sbPatch(tabla,data,`id=eq.${id}`);else await sbPost(tabla,data);
+    toast('Guardado ✓','ok');closeModal('modal-catalogo');
+    await loadCatalogos();
+    const activeTab=document.querySelector('#cat-tabs .tab.active');if(activeTab)activeTab.click();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+// USUARIOS
+async function loadUsuarios(){
+  const el=document.getElementById('usuarios-tbody');
+  el.innerHTML='<tr><td colspan="6" class="loading"><div class="loading-spinner"></div></td></tr>';
+  try{
+    const rows=await sbGet('usuarios','order=nombre.asc');
+    const canEdit=USER.rol==='master';
+    el.innerHTML=rows.map(u=>`<tr>
+      <td><div style="display:flex;align-items:center;gap:9px">
+        <div style="width:28px;height:28px;border-radius:50%;background:${u.color||'#888'}22;color:${u.color||'#888'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${u.nombre.slice(0,2).toUpperCase()}</div>${u.nombre}
+      </div></td>
+      <td><span class="badge ${u.rol==='master'?'badge-green':u.rol==='facturacion'?'badge-purple':u.rol==='supervisor'?'badge-amber':'badge-blue'}">${u.rol}</span></td>
+      <td><div style="width:20px;height:20px;border-radius:4px;background:${u.color||'#888'};border:1px solid var(--border2)"></div></td>
+      <td class="td-mono">••••</td>
+      <td><span class="badge ${u.activo?'badge-green':'badge-red'}">${u.activo?'Activo':'Inactivo'}</span></td>
+      <td>${canEdit?`<button class="btn btn-ghost btn-xs" onclick="openModalUsuario('${u.id}')">✏️</button>`:''}</td>
+    </tr>`).join('');
+  }catch(e){el.innerHTML=`<tr><td colspan="6" style="color:var(--red);padding:20px">Error: ${e.message}</td></tr>`;}
+}
+
+async function openModalUsuario(id){
+  document.getElementById('mu-id').value=id||'';
+  document.getElementById('modal-usuario-titulo').textContent=id?'Editar usuario':'Nuevo usuario';
+  if(id){
+    try{const rows=await sbGet('usuarios',`id=eq.${id}`);const u=rows[0];document.getElementById('mu-nombre').value=u.nombre||'';document.getElementById('mu-rol').value=u.rol||'operador';document.getElementById('mu-color').value=u.color||'#f5a623';document.getElementById('mu-color-hex').value=u.color||'#f5a623';document.getElementById('mu-pin').value='';document.getElementById('mu-activo').value=u.activo?'true':'false';}catch(e){}
+  }else{
+    ['mu-nombre','mu-pin'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('mu-rol').value='operador';document.getElementById('mu-color').value='#f5a623';document.getElementById('mu-color-hex').value='#f5a623';document.getElementById('mu-activo').value='true';
+  }
+  openModal('modal-usuario');
+}
+
+document.getElementById('mu-color').addEventListener('input',function(){document.getElementById('mu-color-hex').value=this.value;});
+document.getElementById('mu-color-hex').addEventListener('input',function(){if(/^#[0-9a-f]{6}$/i.test(this.value))document.getElementById('mu-color').value=this.value;});
+
+async function guardarUsuario(){
+  const id=document.getElementById('mu-id').value;
+  const pin=document.getElementById('mu-pin').value;
+  const data={nombre:document.getElementById('mu-nombre').value,rol:document.getElementById('mu-rol').value,color:document.getElementById('mu-color').value,activo:document.getElementById('mu-activo').value==='true'};
+  if(pin)data.pin=pin;
+  if(!data.nombre){toast('El nombre es requerido','err');return;}
+  if(!id&&!pin){toast('El PIN es requerido','err');return;}
+  try{
+    if(id)await sbPatch('usuarios',data,`id=eq.${id}`);else await sbPost('usuarios',data);
+    toast('Usuario guardado ✓','ok');closeModal('modal-usuario');loadUsuarios();await loadCatalogos();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+// INIT
+async function init(){
+  try{await loadCatalogos();await loadPipeline();}
+  catch(e){console.error('Init error:',e);}
+}
+init();
+
 </script>
 </body>
 </html>
