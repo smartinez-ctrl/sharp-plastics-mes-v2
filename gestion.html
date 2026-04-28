@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sharp Plastics — Gestión</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0f12;--bg2:#13161b;--bg3:#1a1e26;--bg4:#222733;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#e8eaf0;--text2:#8890a4;--text3:#50596a;--amber:#f5a623;--amber-bg:rgba(245,166,35,0.1);--amber-border:rgba(245,166,35,0.3);--green:#34d399;--green-bg:rgba(52,211,153,0.1);--green-border:rgba(52,211,153,0.3);--blue:#4a9eff;--blue-bg:rgba(74,158,255,0.1);--blue-border:rgba(74,158,255,0.3);--red:#f87171;--red-bg:rgba(248,113,113,0.1);--red-border:rgba(248,113,113,0.3);--r:12px;--r-lg:16px;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.logo{font-family:'Space Mono',monospace;font-size:11px;color:var(--text2);letter-spacing:0.08em}
+.logo span{color:var(--amber)}
+.main{max-width:900px;margin:0 auto;padding:24px 20px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;margin-bottom:16px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:500}
+.field input,.field select,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none}
+.field input:focus,.field select:focus{border-color:var(--amber)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.btn{border:none;border-radius:var(--r);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:opacity 0.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;font-size:14px}
+.btn:active{opacity:0.75}
+.btn-primary{background:var(--amber);color:#0d0f12}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);padding:6px 12px;font-size:12px}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);padding:8px 14px;font-size:12px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase}
+.badge-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.badge-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.badge-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.pipeline-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 18px;font-size:12px;color:var(--text);z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.user-chip{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:4px 12px 4px 4px;font-size:12px;color:var(--text2)}
+.user-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">MES <span>//</span> Gestión</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="user-chip" id="user-chip-gest">
+      <div class="user-av" id="gest-av" style="background:#00e5a022;color:#00e5a0">MA</div>
+      <span id="gest-name">—</span>
+    </div>
+    <button class="btn btn-ghost" onclick="cerrarSesion()">Salir</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- PIPELINE -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="card-title" style="margin:0">Pipeline de pedidos</div>
+      <button class="btn btn-ghost" onclick="loadPipeline()">↺ Actualizar</button>
+    </div>
+    <div id="pipeline-list"><div style="text-align:center;padding:30px;color:var(--text3)">Cargando...</div></div>
+  </div>
+
+  <!-- NUEVO PEDIDO -->
+  <div class="card" id="card-nuevo-pedido">
+    <div class="card-title">Agregar pedido al pipeline</div>
+    <div class="field-row">
+      <div class="field"><label>Cliente</label><input type="text" id="np-cliente" placeholder="Ej: MountainFlow"></div>
+      <div class="field"><label>Sub-cliente (opcional)</label><input type="text" id="np-subcliente" placeholder="Ej: Trail Series"></div>
+    </div>
+    <div class="field-row-3">
+      <div class="field"><label>PO / No. orden</label><input type="text" id="np-po" placeholder="PO-2025-001"></div>
+      <div class="field"><label>Talla (ml)</label><input type="number" id="np-talla" placeholder="600" inputmode="numeric"></div>
+      <div class="field"><label>Piezas</label><input type="number" id="np-piezas" placeholder="1000" inputmode="numeric"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Colores</label><input type="number" id="np-colores" placeholder="2" inputmode="numeric"></div>
+      <div class="field"><label>Fecha de entrega</label><input type="date" id="np-fecha"></div>
+    </div>
+    <div class="field"><label>Notas</label><textarea id="np-notas" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none" placeholder="Instrucciones especiales..."></textarea></div>
+    <button class="btn btn-primary" onclick="agregarPedido()" style="width:100%">+ Agregar al pipeline</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL='https://ozibjgsxyzdbporcarwv.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
+const SB_H={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+async function sbGet(t,q){const r=await fetch(SB_URL+'/rest/v1/'+t+(q?'?'+q:''),{headers:SB_H});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbPost(t,d){const h={...SB_H,'Prefer':'return=representation'};const r=await fetch(SB_URL+'/rest/v1/'+t,{method:'POST',headers:h,body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbDelete(t,f){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+f,{method:'DELETE',headers:SB_H});if(!r.ok)throw new Error(await r.text());}
+async function sbPatch(t,d,f){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+f,{method:'PATCH',headers:{...SB_H,'Prefer':'return=representation'},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json();}
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+
+// Verificar sesión
+const userSess=JSON.parse(sessionStorage.getItem('sp_user')||'null');
+if(!userSess||!(userSess.rol==='master'||userSess.rol==='facturacion')){
+  window.location.href='index.html';
+}
+if(userSess){
+  document.getElementById('gest-name').textContent=userSess.nombre;
+  const av=document.getElementById('gest-av');
+  av.textContent=userSess.nombre.slice(0,2).toUpperCase();
+  av.style.background=userSess.color+'22';
+  av.style.color=userSess.color;
+  // Facturación no puede agregar pedidos
+  if(userSess.rol==='facturacion'){
+    document.getElementById('card-nuevo-pedido').style.display='none';
+  }
+}
+
+function cerrarSesion(){sessionStorage.removeItem('sp_user');window.location.href='index.html';}
+
+const ESTADO_BADGE={
+  'Pendiente':'badge-amber',
+  'En producción':'badge-blue',
+  'Completado':'badge-green',
+  'Entregado':'badge-green',
+  'Cancelado':'badge-red',
+};
+
+async function loadPipeline(){
+  const el=document.getElementById('pipeline-list');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Cargando...</div>';
+  try{
+    const rows=await sbGet('pipeline_mf','order=created_at.desc');
+    if(!rows.length){
+      el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">Sin pedidos aún</div>';
+      return;
+    }
+    el.innerHTML=rows.map(p=>`
+      <div class="pipeline-row">
+        <div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:3px">${p.sub_cliente||p.cliente} — ${p.talla}ml</div>
+          <div style="font-size:12px;color:var(--text2)">${p.po} · ${(p.piezas||0).toLocaleString()} pzas · ${p.colores||0} colores${p.fecha_entrega?' · Entrega: '+p.fecha_entrega:''}</div>
+          ${p.notas?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${p.notas}</div>`:''}
+        </div>
+        <div class="badge ${ESTADO_BADGE[p.estado]||'badge-amber'}">${p.estado}</div>
+        ${userSess&&userSess.rol==='master'?`<button class="btn btn-danger" onclick="eliminarPedido('${p.id}')">Eliminar</button>`:'<div></div>'}
+      </div>`).join('');
+  }catch(e){
+    el.innerHTML=`<div style="text-align:center;padding:20px;color:var(--red)">Error: ${e.message}</div>`;
+  }
+}
+
+async function agregarPedido(){
+  const cliente=document.getElementById('np-cliente').value.trim();
+  const po=document.getElementById('np-po').value.trim();
+  if(!cliente||!po){toast('Cliente y PO son requeridos');return;}
+  const data={
+    cliente,
+    sub_cliente:document.getElementById('np-subcliente').value.trim()||null,
+    po,
+    talla:parseInt(document.getElementById('np-talla').value)||null,
+    piezas:parseInt(document.getElementById('np-piezas').value)||0,
+    colores:parseInt(document.getElementById('np-colores').value)||0,
+    fecha_entrega:document.getElementById('np-fecha').value||null,
+    notas:document.getElementById('np-notas').value.trim()||null,
+    estado:'Pendiente',
+  };
+  try{
+    await sbPost('pipeline_mf',data);
+    toast('Pedido agregado ✓');
+    ['np-cliente','np-subcliente','np-po','np-talla','np-piezas','np-colores','np-fecha','np-notas'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    loadPipeline();
+  }catch(e){toast('Error: '+e.message);}
+}
+
+async function eliminarPedido(id){
+  if(!confirm('¿Eliminar este pedido del pipeline?'))return;
+  try{
+    await sbDelete('pipeline_mf','id=eq.'+id);
+    toast('Pedido eliminado');
+    loadPipeline();
+  }catch(e){toast('Error: '+e.message);}
+}
+
+loadPipeline();
+</script>
+</body>
+</html>
