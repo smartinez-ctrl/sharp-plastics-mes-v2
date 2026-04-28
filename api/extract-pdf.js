@@ -1,14 +1,14 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { po, mockup } = req.body;
+    if (!po || !mockup) return res.status(400).json({ error: 'Faltan los PDFs' });
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -34,11 +34,22 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      return res.status(response.status).json({ error: data });
+      return res.status(500).json({ error: 'Anthropic error: ' + JSON.stringify(data) });
+    }
+
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: 'Respuesta vacía: ' + JSON.stringify(data) });
     }
 
     const text = data.content[0].text.replace(/```json|```/g, '').trim();
-    const extracted = JSON.parse(text);
+
+    let extracted;
+    try {
+      extracted = JSON.parse(text);
+    } catch(e) {
+      return res.status(500).json({ error: 'JSON inválido recibido: ' + text.substring(0, 200) });
+    }
+
     return res.status(200).json(extracted);
 
   } catch (e) {
