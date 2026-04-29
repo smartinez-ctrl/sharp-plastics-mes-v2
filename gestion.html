@@ -168,8 +168,8 @@ tr:hover td{background:var(--bg3);cursor:pointer}
   </div>
   <div class="topbar-right">
     <div style="font-size:11px;color:var(--text3);font-family:'Space Mono',monospace" id="clock"></div>
-    <button class="icon-btn prod" onclick="toast('→ Abriendo producción...')">▶ Producción</button>
-    <div class="user-pill"><div class="user-av">MA</div><span class="user-name">Master</span></div>
+    <button class="icon-btn prod" id="btn-produccion" onclick="irAProduccion()" style="display:none">▶ Producción</button>
+    <div class="user-pill"><div class="user-av" id="gest-av">—</div><span class="user-name" id="gest-name">—</span></div>
     <button class="icon-btn">Salir</button>
   </div>
 </div>
@@ -182,7 +182,7 @@ tr:hover td{background:var(--bg3);cursor:pointer}
     <div class="nav-item" onclick="showPage('cotizador',this)"><span class="nav-icon">🧮</span>Cotizador</div>
     <div class="nav-item" onclick="showPage('proyeccion',this)"><span class="nav-icon">📈</span>Proyección</div>
   </div>
-  <div class="nav-section">
+  <div class="nav-section" id="nav-admin-section">
     <div class="nav-label">Administración</div>
     <div class="nav-item" onclick="showPage('catalogos',this)"><span class="nav-icon">⚙️</span>Catálogos</div>
     <div class="nav-item" onclick="showPage('usuarios',this)"><span class="nav-icon">👥</span>Usuarios</div>
@@ -637,12 +637,10 @@ function cerrarSesion(){sessionStorage.removeItem('sp_user');window.location.hre
 
 if(USER){
   const av=document.getElementById('gest-av');
-  av.textContent=USER.nombre.slice(0,2).toUpperCase();
-  av.style.background=(USER.color||'#00e5a0')+'22';
-  av.style.color=USER.color||'#00e5a0';
-  document.getElementById('gest-name').textContent=USER.nombre;
-  if(USER.rol==='master')document.getElementById('btn-produccion').style.display='';
-  if(USER.rol==='facturacion')document.getElementById('nav-admin-section').style.display='none';
+  if(av){av.textContent=USER.nombre.slice(0,2).toUpperCase();av.style.background=(USER.color||'#00e5a0')+'22';av.style.color=USER.color||'#00e5a0';}
+  const gn=document.getElementById('gest-name');if(gn)gn.textContent=USER.nombre;
+  const bp=document.getElementById('btn-produccion');if(bp&&USER.rol==='master')bp.style.display='';
+  const na=document.getElementById('nav-admin-section');if(na&&USER.rol==='facturacion')na.style.display='none';
 }
 
 function mxn(n){return'$'+(parseFloat(n)||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
