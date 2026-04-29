@@ -645,11 +645,7 @@ async function abrirDetallePedido(id){
       </div>
       <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:16px">
         <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px">🎨 Fórmula de tintas — ${formula.length>0?'Estimado guardado':'Sin fórmula aún'}</div>
-        ${formula.length>0?formula.map((col,ci)=>{
-          const tg=(col.componentes||[]).reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-          const tc=(col.componentes||[]).reduce((s,x)=>s+(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0),0)+(col.aditivos||[]).reduce((s,a)=>s+(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0),0);
-          return '<div style="background:var(--bg4);border-radius:9px;padding:10px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:700">Color '+(ci+1)+'</span><span style="font-family:monospace;font-size:11px;color:var(--amber)">'+mxn(tc)+' · '+tg+'g</span></div>'+(col.componentes||[]).map(x=>'<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:var(--text2)"><span>'+(x.nombre||'—')+'</span><span>'+x.gramos+'g</span></div>').join('')+(col.aditivos||[]).map(a=>'<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:var(--text3)"><span>'+(a.nombre||'Aditivo')+'</span><span>'+(a.gramos||0)+'g</span></div>').join('')+'</div>';
-        }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3)"><div style="margin-bottom:8px">Sin fórmula de tintas</div><button class=\"btn btn-secondary btn-sm\" onclick=\"closeModal('modal-pedido');abrirCotizadorConPedido(''+p.id+'')\"}>🧮 Ir al cotizador</button></div>'}
+        ${renderFormulaTintas(formula, p.id)}
       </div>
     </div>`;
     document.getElementById('btn-mp-pdf-interno').style.display='';
