@@ -490,7 +490,7 @@ async function loadPipeline(){
   }catch(e){document.getElementById('pipeline-activos').innerHTML=`<div style="color:var(--red);padding:20px">Error: ${e.message}</div>`;}
 }
 
-function renderPipeline(){try{
+function renderPipeline(){
   const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
   const completados=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado');
   document.getElementById('badge-pipeline').textContent=activos.length;
@@ -535,7 +535,6 @@ function renderPipeline(){try{
       <td><span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}">${p.estado}</span></td>
       <td>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();eliminarPedido('${p.id}')">🗑</button>`:''}</td>
     </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">Sin completados</td></tr>';
-}catch(e){console.error("renderPipeline error:",e);}
 
 function abrirNuevoPedido(){
   document.getElementById('modal-pedido-titulo').textContent='Nuevo pedido';
