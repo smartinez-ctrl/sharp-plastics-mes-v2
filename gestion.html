@@ -788,7 +788,11 @@ async function procesarPDFs(){
     // Normalizar tintas como array de objetos {nombre, pantone}
     if(extracted.tintas&&Array.isArray(extracted.tintas)){
       extracted.tintas_info=extracted.tintas.map(function(t){
-        return typeof t==='string'?{nombre:t,pantone:t}:{nombre:t.nombre||t,pantone:t.pantone||t};
+        if(typeof t!=='string')return{nombre:t.nombre||'',pantone:t.pantone||''};
+        // Intentar separar nombre de pantone: "REI BLUE PMS 4142 C" → nombre="REI BLUE", pantone="PMS 4142 C"
+        const pmsMatch=t.match(/^(.*?)\s*(PMS\s+[\w\s]+C|Pantone\s+[\w\s]+|\d{3,4}\s*C)$/i);
+        if(pmsMatch)return{nombre:pmsMatch[1].trim(),pantone:pmsMatch[2].trim()};
+        return{nombre:t,pantone:''};
       });
     } else {
       extracted.tintas_info=[];
@@ -847,10 +851,12 @@ async function procesarPDFs(){
               ${(extracted.tintas_info&&extracted.tintas_info.length?extracted.tintas_info:extracted.tintas||[]).map((t,i)=>{
                 const nombre=t.nombre||t;
                 const pantone=t.pantone||t;
+                // Si nombre y pantone son iguales, solo mostrar uno
+                const pantoneDisplay=pantone===nombre?'':pantone;
                 return `<div style="display:flex;gap:4px;align-items:center">
                   <span style="font-size:10px;color:var(--text3);min-width:50px">Color ${i+1}</span>
-                  <input type="text" id="imp-color-nombre-${i}" value="${nombre}" placeholder="Nombre" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:3px 7px;color:var(--text);font-size:11px;outline:none" oninput="syncImpColor(${i})">
-                  <input type="text" id="imp-color-pantone-${i}" value="${pantone}" placeholder="Pantone" style="width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:3px 7px;color:var(--text);font-size:11px;outline:none" oninput="syncImpColor(${i})">
+                  <input type="text" id="imp-color-nombre-${i}" value="${nombre}" placeholder="Nombre del color" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:3px 7px;color:var(--text);font-size:11px;outline:none" oninput="syncImpColor(${i})">
+                  <input type="text" id="imp-color-pantone-${i}" value="${pantoneDisplay}" placeholder="Pantone #" style="width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:3px 7px;color:var(--text);font-size:11px;outline:none" oninput="syncImpColor(${i})">
                 </div>`;
               }).join('')}
             </div>

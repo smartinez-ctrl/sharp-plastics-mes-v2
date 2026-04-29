@@ -1206,6 +1206,7 @@ function openFotoMenu(i){
 }
 function handleFoto(i,input){
   if(!input.files||!input.files[0])return;
+  const file=input.files[0];
   const reader=new FileReader();
   reader.onload=e=>{
     S.fotos[i]=e.target.result;
@@ -1213,7 +1214,8 @@ function handleFoto(i,input){
     if(slot){slot.classList.add('taken');slot.innerHTML=`<img src="${e.target.result}" alt="foto ${i}">`;}
     toast('Foto guardada ✓');
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
+  input.value=''; // resetear para poder seleccionar el mismo archivo de nuevo
 }
 function goFotos(){guardarOrden('fotos');showScreen('fotos');renderSteps('steps-fotos','fotos');}
 
