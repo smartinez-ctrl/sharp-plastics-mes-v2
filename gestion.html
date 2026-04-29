@@ -846,7 +846,7 @@ async function procesarPDFs(){
   }catch(e){
     let msg=e.message;
     if(msg.includes('Entity Too Large')||msg.includes('413')||msg.includes('Request En')){
-      msg='El PDF es demasiado grande. Intenta comprimir el archivo antes de subirlo (max ~3MB por PDF).';
+      msg='El PDF es demasiado grande (max ~3MB). <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--amber)">Comprimir en ilovepdf.com →</a>';
     }
     document.getElementById('pdf-result').innerHTML=`<div style="color:var(--red);padding:10px">Error: ${msg}</div>`;
     document.getElementById('pdf-result').style.display='block';
