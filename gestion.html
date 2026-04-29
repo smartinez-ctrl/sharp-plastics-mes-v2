@@ -638,6 +638,12 @@ async function abrirDetallePedido(id){
             ${costoRow('Pantallas ('+colores+' col)',colores,costPant,'','pant')}
             ${costoRow('Positivos ('+colores+' col)',colores,costPos,'','pos')}
             ${costoRow('Empaque',piezas,(tfP+tfT),'','emp')}
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:10px 14px;font-size:13px">Mano de obra</td>
+              <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-horas" value="0" min="0" step="0.5" style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()" placeholder="hrs"></td>
+              <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-hora" value="70" min="0" step="0.01" style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()"></td>
+              <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="costo-sub-mo">$0.00</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -645,17 +651,7 @@ async function abrirDetallePedido(id){
         <span style="font-size:14px;font-weight:700">Total costo (sin MO)</span>
         <span style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">${mxn(costoTotal)}</span>
       </div>
-      <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:8px">
-        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Mano de obra</div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="font-size:12px;color:var(--text2)">Horas</span>
-          <input type="number" id="costo-mo-horas" value="0" min="0" step="0.5" style="width:70px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:13px;text-align:center;outline:none" oninput="recalcMO()">
-          <span style="font-size:12px;color:var(--text2)">× $/hora</span>
-          <input type="number" id="costo-mo-hora" value="70" min="0" step="0.01" style="width:80px;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:13px;text-align:center;outline:none" oninput="recalcMO()">
-          <span style="font-size:12px;color:var(--text2)">=</span>
-          <span id="costo-mo-total" style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--amber)">$0.00</span>
-        </div>
-      </div>
+
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:10px;margin-bottom:10px">
         <span style="font-size:14px;font-weight:700">Total costo (con MO)</span>
         <span id="costo-total-mo-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--amber)">${mxn(costoTotal)}</span>
@@ -676,6 +672,7 @@ async function abrirDetallePedido(id){
 
 async function guardarPedido(){
   const id=document.getElementById('modal-pedido').dataset.id;
+  const pedActual = window._pedidoActual;
   const data={
     cliente:document.getElementById('mp-cliente').options[document.getElementById('mp-cliente').selectedIndex]?.text||'',
     sub_cliente:document.getElementById('mp-subcli').value||null,po:document.getElementById('mp-po').value||null,
@@ -686,6 +683,13 @@ async function guardarPedido(){
     color_boquilla:document.getElementById('mp-col-boq').value||null,direccion_envio:document.getElementById('mp-envio').value||null,
     notas:document.getElementById('mp-notas').value||null,estado:document.getElementById('mp-estado').value,
   };
+  // Preservar financieros si existen
+  if(pedActual){
+    if(pedActual.costo_total)data.costo_total=pedActual.costo_total;
+    if(pedActual.venta_total)data.venta_total=pedActual.venta_total;
+    if(pedActual.margen)data.margen=pedActual.margen;
+    if(pedActual.costo_mdo)data.costo_mdo=pedActual.costo_mdo;
+  }
   try{
     if(id)await sbPatch('pipeline_mf',data,`id=eq.${id}`);else await sbPost('pipeline_mf',data);
     toast(id?'Actualizado ✓':'Creado ✓','ok');closeModal('modal-pedido');await loadPipeline();
@@ -855,9 +859,15 @@ function abrirCotizadorConPedido(id){
   limpiarCotizador();
   const flds={'cot-subcli':p.sub_cliente,'cot-po':p.po,'cot-cap':p.capacidad,'cot-piezas':p.piezas,'cot-colores':p.colores,'cot-col-bot':p.color_botella,'cot-col-tap':p.color_tapa,'cot-envio':p.direccion_envio,'cot-fecha':p.fecha_entrega};
   Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
+  document.getElementById('cot-corrida-bot').value='stock2500';
+  document.getElementById('cot-color-bot').value='true';
+  document.getElementById('cot-corrida-tap').value='2500';
+  document.getElementById('cot-color-tap').value='true';
   document.getElementById('page-cotizador').dataset.pipelineId=id;
-  showPage('cotizador',document.getElementById('nav-cotizador'));
+  const sel=document.getElementById('cot-pipeline-select');if(sel)sel.value=id;
+  COT_COLORES=p.formula_tintas&&Array.isArray(p.formula_tintas)&&p.formula_tintas.length?JSON.parse(JSON.stringify(p.formula_tintas)):[];
   renderColorBlocks();calcCotizador();
+  toast('Pedido cargado: '+(p.sub_cliente||p.po),'ok');
 }
 
 function calcCotizador(){
@@ -1198,7 +1208,7 @@ function ventaRow(id, label, qty, price){
   return `<tr style="border-bottom:1px solid var(--border)">
     <td style="padding:10px 14px;font-size:13px">${label}</td>
     <td style="padding:10px 14px;text-align:center"><input type="number" value="${qty}" min="0" style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcVenta()" data-id="${id}" data-field="qty"></td>
-    <td style="padding:10px 14px;text-align:center"><input type="number" value="${parseFloat(price).toFixed(4)}" min="0" step="0.01" style="width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcVenta()" data-id="${id}" data-field="price"></td>
+    <td style="padding:10px 14px;text-align:center"><input type="number" value="${parseFloat(price).toFixed(2)}" min="0" step="0.01" style="width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcVenta()" data-id="${id}" data-field="price"></td>
     <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--green)" id="sub-${id}">${mxn(sub)}</td>
   </tr>`;
 }
@@ -1320,11 +1330,14 @@ function renderDetallePedido(p) {
   var costPos = tf['costo_positivo']||115;
   var vOtros = tfTintas*piezas + tfPant*colores + mdoVentaTotal + (tfP+tfT)*piezas;
   // Buscar precios reales de botellas y tapas del catálogo
-  var pvBotStock = CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===cap&&x.corrida==='stock2500'&&x.con_color===true;});
-  var pvBotRun = CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===cap&&x.corrida==='run500'&&x.con_color===true;});
-  var pvTap500 = CAT.precios_venta.find(function(x){return x.tipo==='tapa'&&x.corrida==='500'&&x.con_color===true;});
-  var pBot = pvBotStock ? pvBotStock.precio : (pvBotRun ? pvBotRun.precio : 0);
-  var pTap = pvTap500 ? pvTap500.precio : 0;
+  // Usar precios guardados en cotización, o buscar en catálogo
+  var vBotGuardado = p.venta_botellas || 0;
+  var vTapGuardado = p.venta_tapas || 0;
+  var pBot = piezas && vBotGuardado ? vBotGuardado/piezas : 0;
+  var pTap = piezas && vTapGuardado ? vTapGuardado/piezas : 0;
+  // Si no hay guardado, buscar en catálogo
+  if(!pBot){var pvB=CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===cap&&x.corrida==='stock2500'&&x.con_color===true;});pBot=pvB?pvB.precio:0;}
+  if(!pTap){var pvT=CAT.precios_venta.find(function(x){return x.tipo==='tapa'&&x.corrida==='2500'&&x.con_color===true;});pTap=pvT?pvT.precio:0;}
   var formula = p.formula_tintas||[];
   var costoTintas = 0;
   formula.forEach(function(col) {
@@ -1332,6 +1345,8 @@ function renderDetallePedido(p) {
     (col.aditivos||[]).forEach(function(a){costoTintas+=(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0);});
   });
   var costoTotal = piezas*costBot + piezas*costTap + costoTintas + colores*costPant + colores*costPos + piezas*(tfP+tfT);
+  // Si hay costo guardado en pipeline, mostrarlo en el total con MO
+  var costoGuardado = p.costo_total || costoTotal;
 
   var tabsHTML = '<div style="display:flex;gap:2px;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content">'
     + '<div id="tab-venta" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg2);color:var(--green);box-shadow:0 1px 4px rgba(0,0,0,0.3)" onclick="switchDetTab(\'venta\')">💰 Precio de venta</div>'
@@ -1422,9 +1437,10 @@ function recalcMO(){
   const horas=parseFloat(document.getElementById('costo-mo-horas')?.value||0);
   const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||0);
   const mo=horas*tarifa;
-  const moEl=document.getElementById('costo-mo-total');
-  if(moEl)moEl.textContent=mxn(mo);
-  // Recalcular total con MO
+  // Actualizar fila MO en tabla
+  const moSubEl=document.getElementById('costo-sub-mo');
+  if(moSubEl)moSubEl.textContent=mxn(mo);
+  // Recalcular total sin MO
   let total=0;
   ['bot','tap','tintas','pant','pos','emp'].forEach(function(k){
     const inp=document.getElementById('costo-inp-'+k);
@@ -1432,6 +1448,8 @@ function recalcMO(){
     const qty=k==='tintas'?1:(p?(['pant','pos'].includes(k)?p.colores||0:p.piezas||0):0);
     if(inp)total+=(parseFloat(inp.value)||0)*qty;
   });
+  const totEl=document.getElementById('costo-total-display');
+  if(totEl)totEl.textContent=mxn(total);
   const totMoEl=document.getElementById('costo-total-mo-display');
   if(totMoEl)totMoEl.textContent=mxn(total+mo);
 }
