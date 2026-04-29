@@ -1684,13 +1684,20 @@ async function guardarCostoEdit(id){
   const {sinMO,mo,total:costoFinal}=calcCostoTotal();
   const horas=parseFloat(document.getElementById('costo-mo-horas')?.value||0);
   const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||70);
-  const venta=p?.venta_total||0;
+  const ped=window._pedidoActual||PIPELINE.find(x=>x.id===id)||{};
+  const venta=ped.venta_total||0;
   const margen=venta>0?((venta-costoFinal)/venta)*100:0;
   try{
     await sbPatch('pipeline_mf',{costo_total:costoFinal,costo_mdo:mo,mo_horas:horas,mo_tarifa:tarifa,margen:margen},`id=eq.${id}`);
     const row=PIPELINE.find(x=>x.id===id);
     if(row){row.costo_total=costoFinal;row.costo_mdo=mo;row.mo_horas=horas;row.mo_tarifa=tarifa;row.margen=margen;}
-    if(p){p.costo_total=costoFinal;p.costo_mdo=mo;p.mo_horas=horas;p.mo_tarifa=tarifa;p.margen=margen;}
+    if(window._pedidoActual&&window._pedidoActual.id===id){
+      window._pedidoActual.costo_total=costoFinal;
+      window._pedidoActual.costo_mdo=mo;
+      window._pedidoActual.mo_horas=horas;
+      window._pedidoActual.mo_tarifa=tarifa;
+      window._pedidoActual.margen=margen;
+    }
     toast('Costo actualizado ✓','ok');
     await loadPipeline();
   }catch(e){toast('Error: '+e.message,'err');}
