@@ -826,7 +826,11 @@ async function procesarPDFs(){
     document.getElementById('pdf-result').style.display='block';
     document.getElementById('btn-import-guardar').style.display='';
   }catch(e){
-    document.getElementById('pdf-result').innerHTML=`<div style="color:var(--red);padding:10px">Error: ${e.message}</div>`;
+    let msg=e.message;
+    if(msg.includes('Entity Too Large')||msg.includes('413')||msg.includes('Request En')){
+      msg='El PDF es demasiado grande. Intenta comprimir el archivo antes de subirlo (max ~3MB por PDF).';
+    }
+    document.getElementById('pdf-result').innerHTML=`<div style="color:var(--red);padding:10px">Error: ${msg}</div>`;
     document.getElementById('pdf-result').style.display='block';
   }
   document.getElementById('pdf-processing').style.display='none';
@@ -960,15 +964,15 @@ function renderColorBlocks(){
       <button class="del-btn" onclick="remTintaComp(${ci},${xi})">✕</button></div>`).join('');
     const adits=col.aditivos.map((a,ai)=>`<div class="tinta-row-grid">
       <div class="field" style="margin:0"><label style="font-size:10px">Aditivo</label><select onchange="updAditivoComp(${ci},${ai},'aditivo',this)">${aOpts.replace(`value="${a.aditivo_id}"`,`value="${a.aditivo_id}" selected`)}</select></div>
-      <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="${a.gramos||''}" placeholder="0" style="text-align:center" oninput="updAditivoComp(${ci},${ai},'gramos',this)"></div>
+      <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="${a.gramos||''}" placeholder="0" style="text-align:center" oninput="updAditivoComp(${ci},${ai},'pct',this)"></div>
       <div class="field" style="margin:0"><label style="font-size:10px">$/kg</label><input type="number" value="${a.precio_kg||''}" placeholder="0" style="text-align:center;font-size:11px" oninput="updAditivoComp(${ci},${ai},'precio',this)"></div>
-      <div class="cot-val">${a.gramos&&a.precio_kg?mxn((a.gramos/1000)*a.precio_kg):'$0.00'}</div>
+      <div class="cot-val">${a.pct&&tg&&a.precio_kg?mxn((a.pct/100*tg/1000)*a.precio_kg):'$0.00'}</div>
       <button class="del-btn" onclick="remAditivoComp(${ci},${ai})">✕</button></div>`).join('');
     return `<div class="color-block">
       <div class="color-block-header"><div class="color-block-title">🎨 Color ${ci+1}</div><div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--amber)">${mxn(tc)} · ${tg}g</div></div>
       <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Tintas base</div>
       ${comps}<button class="add-line-btn" onclick="addTintaComp(${ci})">+ Agregar tinta base</button>
-      <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin:10px 0 6px">Aditivos (gramos sobre ${tg}g total)</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin:10px 0 6px">Aditivos (% sobre ${tg}g de tintas)</div>
       ${adits}<button class="add-line-btn" onclick="addAditivoComp(${ci})">+ Agregar aditivo</button>
     </div>`;
   }).join('');
@@ -991,15 +995,16 @@ function addTintaComp(ci){if(COT_COLORES[ci])COT_COLORES[ci].componentes.push({t
 function remTintaComp(ci,xi){if(COT_COLORES[ci])COT_COLORES[ci].componentes.splice(xi,1);renderColorBlocks();}
 function updAditivoComp(ci,ai,f,el){
   if(!COT_COLORES[ci])return;
-  if(!COT_COLORES[ci].aditivos[ai])COT_COLORES[ci].aditivos[ai]={aditivo_id:'',nombre:'',gramos:0,precio_kg:0};
+  if(!COT_COLORES[ci].aditivos[ai])COT_COLORES[ci].aditivos[ai]={aditivo_id:'',nombre:'',pct:5,precio_kg:0};
   const a=COT_COLORES[ci].aditivos[ai];
   if(f==='aditivo'){a.aditivo_id=el.value;const o=el.options[el.selectedIndex];a.nombre=o.text;a.precio_kg=parseFloat(o.dataset.precio)||0;renderColorBlocks();}
-  else if(f==='gramos'){a.gramos=parseFloat(el.value)||0;}
+  else if(f==='pct'){a.pct=parseFloat(el.value)||0;}
   else{a.precio_kg=parseFloat(el.value)||0;}
-  // Actualizar subtotal inline
+  const tg=COT_COLORES[ci].componentes.reduce(function(s,x){return s+(parseFloat(x.gramos)||0);},0);
+  a.gramos=a.pct/100*tg;
   const sub=a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0;
   const row=el.closest('.tinta-row-grid');
-  if(row){const cotVal=row.querySelector('.cot-val');if(cotVal)cotVal.textContent=mxn(sub);}
+  if(row){const cv=row.querySelector('.cot-val');if(cv)cv.textContent=mxn(sub);}
   calcCotizador();
 }
 function addAditivoComp(ci){if(COT_COLORES[ci])COT_COLORES[ci].aditivos.push({aditivo_id:'',nombre:'',gramos:0,precio_kg:0});renderColorBlocks();}
@@ -1033,7 +1038,8 @@ function calcCotizador(){
   let costoTintas=0;
   COT_COLORES.forEach(col=>{
     col.componentes.forEach(x=>{costoTintas+=(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);});
-    col.aditivos.forEach(a=>{costoTintas+=(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0);});
+    const tgC=col.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+    col.aditivos.forEach(a=>{const grA=a.pct!==undefined?(a.pct/100*tgC):(a.gramos||0);costoTintas+=(grA&&a.precio_kg?(grA/1000)*a.precio_kg:0);});
   });
 
   const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
@@ -1097,14 +1103,23 @@ async function guardarCotizacion(){
   const cotData={pipeline_id:pipelineId||null,cliente:document.getElementById('cot-cliente').options[document.getElementById('cot-cliente').selectedIndex]?.text||'',sub_cliente:document.getElementById('cot-subcli').value||null,po:document.getElementById('cot-po').value||null,capacidad_ml:parseInt(document.getElementById('cot-cap').value)||null,piezas,colores,corrida_botella:document.getElementById('cot-corrida-bot').value||null,con_color_botella:document.getElementById('cot-color-bot').value==='true',corrida_tapa:document.getElementById('cot-corrida-tap').value||null,con_color_tapa:document.getElementById('cot-color-tap').value==='true',formula_tintas:COT_COLORES,costo_tintas:r.costoTintas,costo_mdo:r.costoMdo,costo_pantallas:r.cPant,costo_positivos:r.cPos,costo_empaque:r.costoEmp,costo_total:r.costoTotal,venta_botellas:r.vBot,venta_tapas:r.vTap,venta_tintas:r.vTintas,venta_pantallas:r.vPant,venta_mdo:r.vMdo,venta_empaque:r.vEmp,venta_total:r.ventaTotal,margen:r.margen};
   try{
     await sbPost('cotizaciones',cotData);
-    const upd={costo_total:r.costoTotal,venta_total:r.ventaTotal,margen:r.margen,formula_tintas:COT_COLORES,costo_tintas_estimado:r.costoTintas};
+    const formulaGuardar=COT_COLORES&&COT_COLORES.length>0?COT_COLORES:undefined;
+    const upd={costo_total:r.costoTotal,venta_total:r.ventaTotal,margen:r.margen,costo_tintas_estimado:r.costoTintas};
+    if(formulaGuardar)upd.formula_tintas=formulaGuardar;
     if(pipelineId)await sbPatch('pipeline_mf',upd,`id=eq.${pipelineId}`);
     else if(cotData.po){
       const rows=await sbGet('pipeline_mf',`po=eq.${cotData.po}`);
       if(rows.length)await sbPatch('pipeline_mf',upd,`po=eq.${cotData.po}`);
       else await sbPost('pipeline_mf',{...cotData,...upd,estado:'Pendiente',capacidad:cotData.capacidad_ml});
     }
-    toast('Cotización guardada ✓','ok');await loadPipeline();showPage('pipeline',document.getElementById('nav-pipeline'));
+    toast('Cotización guardada ✓','ok');
+    await loadPipeline();
+    if(pipelineId){
+      showPage('pipeline',document.getElementById('nav-pipeline'));
+      setTimeout(function(){abrirDetallePedido(pipelineId);},300);
+    } else {
+      showPage('pipeline',document.getElementById('nav-pipeline'));
+    }
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
@@ -1593,7 +1608,7 @@ function mxnPDF(n){return'$'+(parseFloat(n)||0).toLocaleString('es-MX',{minimumF
 function abrirPDFCliente(p){
   if(!p)p=window._pedidoActual;
   if(!p){toast('Abre un pedido primero','err');return;}
-  const piezas=p.piezas||0, colores=p.colores||0;
+  const piezas=p.piezas||0, colores=p.colores||0, cap=p.capacidad||0;
   const tf=CAT.tarifas_fijas;
   const tfTintas=tf['tintas_fijo_por_botella']||4;
   const tfPant=tf['pantallas_positivos_por_color']||1160;
