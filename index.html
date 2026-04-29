@@ -1052,25 +1052,38 @@ function addAdit(ti){if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};
 function removeAdit(ti,ai){if(S.tintas[ti])S.tintas[ti].aditivos.splice(ai,1);renderTintasAjuste();}
 
 // ══════════════════════════════════════════════════════
-// TIMERS
+// TIMERS — usa timestamps reales para resistir cambios de pestaña
 // ══════════════════════════════════════════════════════
 function timerPlay(name){
-  const t=S.timers[name];if(t.running)return;t.running=true;
-  const disp=document.getElementById('timer-'+name);
-  t.iv=setInterval(()=>{t.s++;if(disp){disp.textContent=fmt(t.s);disp.className='timer-display running mono';}if(name==='prod')updateProdStats();syncTimerBars();},1000);
+  const t=S.timers[name];if(t.running)return;
+  t.running=true;
+  t.startTs=Date.now()-(t.s*1000); // reanudar desde donde quedó
+  clearInterval(t.iv);
+  t.iv=setInterval(()=>{
+    t.s=Math.floor((Date.now()-t.startTs)/1000);
+    const disp=document.getElementById('timer-'+name);
+    if(disp){disp.textContent=fmt(t.s);disp.className='timer-display running mono';}
+    if(name==='prod')updateProdStats();
+    syncTimerBars();
+  },500); // 500ms para mayor precisión
   document.getElementById('btn-'+name+'-play').style.display='none';
   document.getElementById('btn-'+name+'-pause').style.display='flex';
   document.getElementById('btn-'+name+'-stop').style.display='flex';
   startGlobalTimer();
 }
 function timerPause(name){
-  const t=S.timers[name];t.running=false;clearInterval(t.iv);
+  const t=S.timers[name];
+  if(!t.running)return;
+  t.s=Math.floor((Date.now()-t.startTs)/1000); // guardar segundos exactos al pausar
+  t.running=false;clearInterval(t.iv);
   const disp=document.getElementById('timer-'+name);if(disp)disp.className='timer-display paused mono';
   const pb=document.getElementById('btn-'+name+'-pause');if(pb)pb.style.display='none';
   const plb=document.getElementById('btn-'+name+'-play');if(plb){plb.style.display='flex';plb.innerHTML='▶ Reanudar';}
 }
 function timerStop(name){
-  const t=S.timers[name];t.running=false;clearInterval(t.iv);t.total=t.s;
+  const t=S.timers[name];
+  if(t.running)t.s=Math.floor((Date.now()-t.startTs)/1000);
+  t.running=false;clearInterval(t.iv);t.total=t.s;
   const disp=document.getElementById('timer-'+name);if(disp)disp.className='timer-display stopped mono';
   ['pause','stop'].forEach(a=>{const b=document.getElementById('btn-'+name+'-'+a);if(b)b.style.display='none';});
   const plb=document.getElementById('btn-'+name+'-play');if(plb){plb.style.display='flex';plb.innerHTML='▶ Iniciar';}
@@ -1078,7 +1091,11 @@ function timerStop(name){
 function startGlobalTimer(){
   if(S.timers.global.running)return;
   S.timers.global.running=true;
-  S.timers.global.iv=setInterval(()=>{S.timers.global.s++;syncTimerBars();},1000);
+  S.timers.global.startTs=Date.now()-(S.timers.global.s*1000);
+  S.timers.global.iv=setInterval(()=>{
+    S.timers.global.s=Math.floor((Date.now()-S.timers.global.startTs)/1000);
+    syncTimerBars();
+  },500);
 }
 function syncTimerBars(){
   const g=fmt(S.timers.global.s);
@@ -1399,6 +1416,20 @@ function generarPDF(){
 // INIT
 // ══════════════════════════════════════════════════════
 loadUsers();
+
+// Re-sincronizar timers al volver a la pestaña
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState!=='visible')return;
+  ['prod','ajuste','global'].forEach(function(name){
+    const t=S.timers[name];
+    if(t.running&&t.startTs){
+      t.s=Math.floor((Date.now()-t.startTs)/1000);
+      const disp=document.getElementById('timer-'+name);
+      if(disp){disp.textContent=fmt(t.s);disp.className='timer-display running mono';}
+    }
+  });
+  syncTimerBars();
+});
 </script>
 </body>
 </html>
