@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   "color_botella": "color exacto de BOTTLE o COLOR OF BOTTLE. Si dice See Mock Up, busca en el Mock Up el color de la botella",
   "color_tapa": "color exacto de TOP o COLOR OF THE BOTTLE TOP. Si dice See Mock Up, busca en el Mock Up",
   "color_boquilla": "color exacto de MOUTHPIECE. Si dice See Mock Up, busca en el Mock Up",
-  "tintas": ["color1", "color2"],
+  "tintas": [{"nombre": "nombre descriptivo del color (ej: REI Blue, White)", "pantone": "código Pantone/PMS si existe (ej: Pantone 285 C), o vacío"}],
   "num_colores": 2,
   "notas_packaging": "texto completo de PACKAGING"
 }`;

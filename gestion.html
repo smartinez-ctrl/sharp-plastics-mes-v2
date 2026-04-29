@@ -789,9 +789,12 @@ async function procesarPDFs(){
     if(extracted.tintas&&Array.isArray(extracted.tintas)){
       extracted.tintas_info=extracted.tintas.map(function(t){
         if(typeof t!=='string')return{nombre:t.nombre||'',pantone:t.pantone||''};
-        // Intentar separar nombre de pantone: "REI BLUE PMS 4142 C" → nombre="REI BLUE", pantone="PMS 4142 C"
-        const pmsMatch=t.match(/^(.*?)\s*(PMS\s+[\w\s]+C|Pantone\s+[\w\s]+|\d{3,4}\s*C)$/i);
-        if(pmsMatch)return{nombre:pmsMatch[1].trim(),pantone:pmsMatch[2].trim()};
+        // Detectar si el string completo ES un código Pantone/PMS (ej: "Pantone 285 C", "285 C", "PMS 485")
+        const isPantone=/^(PMS\s+[\w\s]+|Pantone\s+[\w\s]+|\d{3,4}\s*C)$/i.test(t.trim());
+        if(isPantone)return{nombre:'',pantone:t.trim()};
+        // Separar nombre + pantone al final: "REI BLUE PMS 4142 C" → nombre="REI BLUE", pantone="PMS 4142 C"
+        const pmsMatch=t.match(/^(.*?)\s*(PMS\s+[\w\s]+C|Pantone\s+[\w\s]+C?|\d{3,4}\s*C)$/i);
+        if(pmsMatch&&pmsMatch[1].trim())return{nombre:pmsMatch[1].trim(),pantone:pmsMatch[2].trim()};
         return{nombre:t,pantone:''};
       });
     } else {
