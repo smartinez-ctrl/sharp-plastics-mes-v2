@@ -138,7 +138,7 @@ tr:last-child td{border-bottom:none}
 <div class="topbar">
   <div class="topbar-left">
     <div class="logo">SHARP <b>//</b> PLASTICS <b>MES</b></div>
-    <div class="version-tag">GESTIÓN</div>
+    <div class="version-tag">GESTIÓN v2.1</div>
   </div>
   <div class="topbar-right">
     <div style="font-size:11px;color:var(--text3);font-family:'Space Mono',monospace" id="clock"></div>
@@ -843,8 +843,10 @@ function recalcImport(){
   d.piezas=piezas;d.num_colores=colores;d.capacidad=cap;
   const corridaBot=document.getElementById('imp-corrida-bot')?.value||'stock2500';
   const corridaTap=document.getElementById('imp-corrida-tap')?.value||'2500';
-  const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida===corridaBot&&p.con_color===true);
-  const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida===corridaTap&&p.con_color===true);
+  let pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida===corridaBot&&p.con_color===true);
+  if(!pvBot)pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.con_color===true);
+  let pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida===corridaTap&&p.con_color===true);
+  if(!pvTap)pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.con_color===true);
   const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
   let vMdo=0;for(let i=0;i<Math.min(colores,tarifas.length);i++)vMdo+=tarifas[i].precio_pieza*piezas;
   const tfP=CAT.tarifas_fijas['papel_empaque_por_pieza']||0.15,tfT=CAT.tarifas_fijas['tag_etiqueta_por_pieza']||0.15;
