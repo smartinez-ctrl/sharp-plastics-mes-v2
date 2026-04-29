@@ -1499,13 +1499,13 @@ function renderDetallePedido(p) {
   // Precio SIEMPRE desde catálogo (stock2500 con color) para consistencia con importar
   var pBot = pvBotDef ? pvBotDef.precio : 0;
   var pTap = pvTapDef ? pvTapDef.precio : 0;
-  // Recalcular total desde catálogo para consistencia
-  var tf = CAT.tarifas_fijas;
-  var tfTintasD = tf['tintas_fijo_por_botella']||4;
-  var tfPantD = tf['pantallas_positivos_por_color']||1160;
-  var tfPD = tf['papel_empaque_por_pieza']||0.15, tfTD = tf['tag_etiqueta_por_pieza']||0.15;
-  var ventaTotalCalc = pBot*piezas + pTap*piezas + tfTintasD*piezas + tfPantD*colores + mdoVentaTotal + (tfPD+tfTD)*piezas;
   var formula = p.formula_tintas||[];
+  // Calcular total venta desde catálogo para consistencia
+  var tfTintasD = CAT.tarifas_fijas['tintas_fijo_por_botella']||4;
+  var tfPantD = CAT.tarifas_fijas['pantallas_positivos_por_color']||1160;
+  var tfPD = CAT.tarifas_fijas['papel_empaque_por_pieza']||0.15;
+  var tfTD = CAT.tarifas_fijas['tag_etiqueta_por_pieza']||0.15;
+  var ventaTotalCalc = pBot*piezas + pTap*piezas + tfTintasD*piezas + tfPantD*colores + mdoVentaTotal + (tfPD+tfTD)*piezas;
   var costoTintas = 0;
   formula.forEach(function(col) {
     (col.componentes||[]).forEach(function(x){costoTintas+=(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);});
