@@ -364,6 +364,14 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
       </div>
       <div class="field"><label>Dirección de envío</label><input type="text" id="mp-envio"></div>
       <div class="field"><label>Notas / Packaging</label><textarea id="mp-notas" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none"></textarea></div>
+      <div class="field"><label>PDF de diseño</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="mp-pdf-diseno" placeholder="URL del diseño o nombre de archivo">
+          <input type="file" id="mp-pdf-diseno-file" accept="application/pdf,image/*" style="display:none" onchange="handlePDFDiseno(this)">
+          <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('mp-pdf-diseno-file').click()">📎</button>
+          <button class="btn btn-ghost btn-sm" id="btn-ver-diseno" type="button" onclick="verPDFDiseno()" style="display:none">👁 Ver</button>
+        </div>
+      </div>
       <div class="field"><label>Estado</label><select id="mp-estado"><option value="Pendiente">Pendiente</option><option value="En producción">En producción</option><option value="Completado">Completado</option><option value="Entregado">Entregado</option><option value="Cancelado">Cancelado</option></select></div>
     </div>
     <div id="mp-cotizacion-resumen" style="display:none;margin-bottom:14px"></div>
@@ -571,9 +579,14 @@ function abrirNuevoPedido(){
 async function abrirDetallePedido(id){
   const p=PIPELINE.find(x=>x.id===id);if(!p)return;
   document.getElementById('modal-pedido-titulo').textContent=`${p.sub_cliente||p.cliente||'Pedido'} — ${p.capacidad?p.capacidad+'ml':''}`;
-  const flds={'mp-subcli':p.sub_cliente,'mp-po':p.po,'mp-cap':p.capacidad,'mp-piezas':p.piezas,'mp-colores':p.colores,'mp-fecha-entrega':p.fecha_entrega,'mp-fecha-inicio':p.fecha_inicio,'mp-horas':p.horas_estimadas,'mp-col-bot':p.color_botella,'mp-col-tap':p.color_tapa,'mp-col-boq':p.color_boquilla,'mp-envio':p.direccion_envio,'mp-notas':p.notas,'mp-estado':p.estado||'Pendiente'};
+  const flds={'mp-subcli':p.sub_cliente,'mp-po':p.po,'mp-cap':p.capacidad,'mp-piezas':p.piezas,'mp-colores':p.colores,'mp-fecha-entrega':p.fecha_entrega,'mp-fecha-inicio':p.fecha_inicio,'mp-horas':p.horas_estimadas,'mp-col-bot':p.color_botella,'mp-col-tap':p.color_tapa,'mp-col-boq':p.color_boquilla,'mp-envio':p.direccion_envio,'mp-notas':p.notas,'mp-estado':p.estado||'Pendiente','mp-pdf-diseno':p.pdf_diseno_url||''};
   Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
   document.getElementById('modal-pedido').dataset.id=id;
+  // Mostrar botón ver PDF si hay diseño guardado
+  setTimeout(function(){
+    const btnVer=document.getElementById('btn-ver-diseno');
+    if(btnVer)btnVer.style.display=p.pdf_diseno_url?'':'none';
+  },100);
   const resumen=document.getElementById('mp-cotizacion-resumen');
   if(true){
     resumen.style.display='';
@@ -710,6 +723,7 @@ async function guardarPedido(){
     color_botella:document.getElementById('mp-col-bot').value||null,color_tapa:document.getElementById('mp-col-tap').value||null,
     color_boquilla:document.getElementById('mp-col-boq').value||null,direccion_envio:document.getElementById('mp-envio').value||null,
     notas:document.getElementById('mp-notas').value||null,estado:document.getElementById('mp-estado').value,
+    pdf_diseno_url:document.getElementById('mp-pdf-diseno')?.value||null,
   };
   // Preservar financieros si existen
   if(pedActual){
@@ -2039,6 +2053,25 @@ function exportarPDFInternoCotizador(){
     formula_tintas:COT_COLORES||[],
   };
   abrirPDFInterno(p);
+}
+
+
+function handlePDFDiseno(input){
+  const file=input.files[0];if(!file)return;
+  // Guardar nombre del archivo como referencia
+  const inp=document.getElementById('mp-pdf-diseno');
+  if(inp)inp.value=file.name;
+  // Mostrar botón ver
+  const btn=document.getElementById('btn-ver-diseno');
+  if(btn)btn.style.display='';
+  toast('Archivo registrado: '+file.name);
+}
+
+function verPDFDiseno(){
+  const url=document.getElementById('mp-pdf-diseno')?.value;
+  if(!url){toast('Sin PDF de diseño guardado','err');return;}
+  if(url.startsWith('http'))window.open(url,'_blank');
+  else toast('URL: '+url);
 }
 
 
