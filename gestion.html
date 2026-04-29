@@ -517,21 +517,29 @@ function renderPipeline(){
   document.getElementById('pipeline-activos').innerHTML=activos.length?activos.map(p=>{
     const isUrgent=p.fecha_entrega&&(new Date(p.fecha_entrega+'T12:00:00')-new Date())<4*24*60*60*1000;
     const tv=p.venta_total>0,tc=p.costo_total>0;
-    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')">
-      <div class="pc-top">
-        <div><div class="pc-title">${p.sub_cliente||p.cliente||'Sin nombre'} — ${p.capacidad?p.capacidad+'ml':'—'}</div>
-        <div class="pc-meta"><span>🔢 ${p.po||'—'}</span><span>📦 ${(p.piezas||0).toLocaleString()} pzas</span><span>🎨 ${p.colores||0} col</span>${p.fecha_entrega?`<span>📅 ${new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>`:''}${p.fecha_inicio?`<span>🕐 ${new Date(p.fecha_inicio+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}${p.horas_estimadas?' · '+p.horas_estimadas+'h':''}</span>`:'<span style="color:var(--text3)">🕐 Sin fecha</span>'}</div></div>
-        <span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}">${isUrgent&&p.estado==='Pendiente'?'Urgente':p.estado}</span>
-      </div>
-      <div class="pc-financials">
-        <div class="pc-fin-item"><div class="pc-fin-label">Venta</div><div class="pc-fin-val" style="color:${tv?'var(--green)':'var(--text3)'}">${tv?mxn(p.venta_total):'Sin cotizar'}</div></div>
-        <div class="pc-fin-item"><div class="pc-fin-label">Costo</div><div class="pc-fin-val" style="color:${tc?'var(--red)':'var(--text3)'}">${tc?mxn(p.costo_total):'—'}</div></div>
-        <div class="pc-fin-item"><div class="pc-fin-label">Margen</div><div class="pc-fin-val" style="color:${p.margen>0?'var(--green)':'var(--text3)'}">${p.margen>0?p.margen.toFixed(1)+'%':'—'}</div></div>
-      </div>
-      <div class="pc-actions">
-        ${!tv?`<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();abrirCotizadorConPedido('${p.id}')">🧮 Cotizar</button>`:''}
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openModal('modal-import')">📄 PDFs</button>
-        ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();eliminarPedido('${p.id}')">🗑</button>`:''}
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')" style="padding:10px 14px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;min-width:0">
+          <span style="font-size:14px;font-weight:600">${p.sub_cliente||p.cliente||'—'} — ${p.capacidad?p.capacidad+'ml':'—'}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3)">🔢 ${p.po||'—'}</span>
+          <span style="font-size:11px;color:var(--text2)">📦 ${p.piezas||0} pzas</span>
+          <span style="font-size:11px;color:var(--text2)">🎨 ${p.colores||0} col</span>
+          ${p.fecha_inicio?`<span style="font-size:11px;color:var(--text2)">📅 ${new Date(p.fecha_inicio+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>`:''}
+          ${p.fecha_entrega?`<span style="font-size:11px;color:var(--text2)">🏁 ${new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>`:'<span style="font-size:11px;color:var(--text3)">Sin fecha</span>'}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+          <div style="text-align:right;min-width:90px">
+            <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--green)">${p.venta_total?'$'+p.venta_total.toLocaleString('es-MX',{minimumFractionDigits:2}):'Sin cotizar'}</div>
+            <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--red)">${p.costo_total?'$'+p.costo_total.toLocaleString('es-MX',{minimumFractionDigits:2}):'—'}</div>
+          </div>
+          <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:${(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)'};min-width:42px;text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
+          <span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴 Urgente':p.estado}</span>
+          <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+            <button class="btn btn-primary btn-xs" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button>
+            <button class="btn btn-ghost btn-xs" onclick="abrirPDFs_menu(event,'${p.id}')">📄</button>
+            ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
+          </div>
+        </div>
       </div>
     </div>`;
   }).join(''):'<div style="text-align:center;padding:30px;color:var(--text3)">Sin pedidos activos.</div>';
