@@ -532,6 +532,7 @@ function renderPipeline(){
           <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3)">🔢 ${p.po||'—'}</span>
           <span style="font-size:11px;color:var(--text2)">📦 ${p.piezas||0} pzas</span>
           <span style="font-size:11px;color:var(--text2)">🎨 ${p.colores||0} col</span>
+          ${p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;color:var(--text2)">${t.pantone||t.nombre||''}</span>`).join(''):''}
           ${p.fecha_inicio?`<span style="font-size:11px;color:var(--text2)">📅 ${new Date(p.fecha_inicio+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>`:''}
           ${p.fecha_entrega?`<span style="font-size:11px;color:var(--text2)">🏁 ${new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>`:'<span style="font-size:11px;color:var(--text3)">Sin fecha</span>'}
         </div>
@@ -842,6 +843,7 @@ async function procesarPDFs(){
             </select>
           </div>
           <div class="pdf-field"><span class="pdf-field-key">Tintas</span><input id="imp-tintas" value="${(extracted.tintas||[]).join(', ')}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
+          <div class="pdf-field" style="border:none"><span class="pdf-field-key">Pantones</span><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">${(extracted.tintas_info||extracted.tintas||[]).map(t=>`<span style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:10px;color:var(--text2)">${t.pantone||t.nombre||t}</span>`).join('')}</div></div>
           <div class="pdf-field"><span class="pdf-field-key">Color botella</span><input id="imp-col-bot" value="${extracted.color_botella||''}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
           <div class="pdf-field"><span class="pdf-field-key">Color tapa</span><input id="imp-col-tap" value="${extracted.color_tapa||''}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
           <div class="pdf-field" style="border:none"><span class="pdf-field-key">Boquilla</span><input id="imp-col-boq" value="${extracted.color_boquilla||''}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
@@ -938,12 +940,13 @@ async function importarAPipeline(){
   try{
     // Verificar duplicado por PO
     if(d.po){
-      const existe=await sbGet('pipeline_mf','po=eq.'+d.po);
+      // Buscar duplicado — probar con string y con número
+      const existe=await sbGet('pipeline_mf','po=eq.'+String(d.po));
       if(existe.length>0){
-        toast('Ya existe un pedido con PO '+d.po+' — abriendo...','err');
+        toast('Ya existe PO '+d.po+' — abriendo existente','err');
         closeModal('modal-import');resetImport();
         await loadPipeline();
-        abrirDetallePedido(existe[0].id);
+        setTimeout(()=>abrirDetallePedido(existe[0].id),500);
         return;
       }
     }
@@ -1093,22 +1096,26 @@ function abrirCotizadorConPedido(id){
   };
   setCotCliente();
   setTimeout(setCotCliente,500);
-  // Cargar fórmula si existe, asignando nombres/pantones desde tintas_info
+  // Cargar fórmula existente o crear colores vacíos con nombres de tintas_info
+  const ti=p.tintas_info||[];
   if(p.formula_tintas&&Array.isArray(p.formula_tintas)&&p.formula_tintas.length){
     COT_COLORES=JSON.parse(JSON.stringify(p.formula_tintas));
-    // Asignar nombres desde tintas_info si los colores no tienen nombre
-    const ti=p.tintas_info||[];
+    // Solo completar nombre/pantone si faltan
     COT_COLORES.forEach(function(col,ci){
       if(!col.nombre&&ti[ci])col.nombre=ti[ci].nombre||'Color '+(ci+1);
       if(!col.pantone&&ti[ci])col.pantone=ti[ci].pantone||'';
     });
   } else {
-    COT_COLORES=[];
-    // Inicializar colores desde tintas_info
+    // Sin fórmula: crear N colores vacíos con nombres de tintas_info
     const n=p.colores||0;
-    const ti=p.tintas_info||[];
-    for(let i=0;i<n;i++){
-      COT_COLORES.push({nombre:ti[i]?ti[i].nombre:'Color '+(i+1),pantone:ti[i]?ti[i].pantone:'',componentes:[],aditivos:[]});
+    COT_COLORES=[];
+    for(var i=0;i<n;i++){
+      COT_COLORES.push({
+        nombre:ti[i]?ti[i].nombre:'Color '+(i+1),
+        pantone:ti[i]?ti[i].pantone:'',
+        componentes:[],
+        aditivos:[]
+      });
     }
   }
   renderColorBlocks();calcCotizador();
