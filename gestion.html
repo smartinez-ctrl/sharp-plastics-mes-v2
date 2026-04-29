@@ -842,8 +842,19 @@ async function procesarPDFs(){
               <option value="4" ${colores===4?'selected':''}>4 colores</option>
             </select>
           </div>
-          <div class="pdf-field"><span class="pdf-field-key">Tintas</span><input id="imp-tintas" value="${(extracted.tintas||[]).join(', ')}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
-          <div class="pdf-field" style="border:none"><span class="pdf-field-key">Pantones</span><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">${(extracted.tintas_info||extracted.tintas||[]).map(t=>`<span style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:10px;color:var(--text2)">${t.pantone||t.nombre||t}</span>`).join('')}</div></div>
+          <div class="pdf-field" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="pdf-field-key" style="margin-bottom:4px">Colores / Pantones</span>
+            <div id="imp-colores-inputs" style="width:100%;display:flex;flex-direction:column;gap:4px">
+              ${(extracted.tintas_info&&extracted.tintas_info.length?extracted.tintas_info:extracted.tintas||[]).map((t,i)=>{
+                const nombre=t.nombre||t;
+                const pantone=t.pantone||t;
+                return `<div style="display:flex;gap:4px;align-items:center">
+                  <span style="font-size:10px;color:var(--text3);min-width:50px">Color ${i+1}</span>
+                  <input type="text" id="imp-color-nombre-${i}" value="${nombre}" placeholder="Nombre" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:3px 7px;color:var(--text);font-size:11px;outline:none" oninput="syncImpColor(${i})">
+                  <input type="text" id="imp-color-pantone-${i}" value="${pantone}" placeholder="Pantone" style="width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:3px 7px;color:var(--text);font-size:11px;outline:none" oninput="syncImpColor(${i})">
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
           <div class="pdf-field"><span class="pdf-field-key">Color botella</span><input id="imp-col-bot" value="${extracted.color_botella||''}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
           <div class="pdf-field"><span class="pdf-field-key">Color tapa</span><input id="imp-col-tap" value="${extracted.color_tapa||''}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
           <div class="pdf-field" style="border:none"><span class="pdf-field-key">Boquilla</span><input id="imp-col-boq" value="${extracted.color_boquilla||''}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
@@ -2124,6 +2135,19 @@ function verPDFDiseno(){
 function updColorNombre(ci, field, val){
   if(!COT_COLORES[ci])return;
   COT_COLORES[ci][field]=val;
+}
+
+
+function syncImpColor(i){
+  const d=window._importedData;if(!d)return;
+  if(!d.tintas_info)d.tintas_info=[];
+  while(d.tintas_info.length<=i)d.tintas_info.push({nombre:'',pantone:''});
+  const nb=document.getElementById('imp-color-nombre-'+i);
+  const pt=document.getElementById('imp-color-pantone-'+i);
+  if(nb)d.tintas_info[i].nombre=nb.value;
+  if(pt)d.tintas_info[i].pantone=pt.value;
+  // También actualizar tintas como array de strings
+  d.tintas=d.tintas_info.map(t=>t.pantone||t.nombre);
 }
 
 
