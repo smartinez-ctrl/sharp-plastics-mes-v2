@@ -488,8 +488,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       <button class="btn btn-danger btn-full" id="btn-desajuste" onclick="goReajuste()">⚠ Registrar desajuste</button>
     </div>
   </div></div>
-  <div class="bottom-bar">
-    <button class="btn btn-primary" id="btn-completar-prod" onclick="goCierre()">Completar producción →</button>
+  <div class="bottom-bar" style="display:flex;gap:8px">
+    <button class="btn btn-secondary" style="flex:1" onclick="pausarYSalir()">⏸ Pausar y salir</button>
+    <button class="btn btn-primary" style="flex:2" id="btn-completar-prod" onclick="goCierre()">Completar producción →</button>
   </div>
 </div>
 
@@ -1208,6 +1209,13 @@ function goFotos(){guardarOrden('fotos');showScreen('fotos');renderSteps('steps-
 // ══════════════════════════════════════════════════════
 function goProduccion(){
   guardarOrden('produccion');
+  // Restaurar tiempo pausado si existe
+  if(S.orden&&S.orden.tiempo_pausado&&S.orden.tiempo_pausado>0&&S.timers.prod.s===0){
+    S.timers.prod.s=S.orden.tiempo_pausado;
+    const disp=document.getElementById('timer-prod');
+    if(disp){disp.textContent=fmt(S.timers.prod.s);disp.className='timer-display paused mono';}
+    toast('Tiempo restaurado: '+fmt(S.orden.tiempo_pausado));
+  }
   showScreen('produccion');
   renderSteps('steps-prod','produccion');
   renderMermaGrid('prod');
@@ -1234,6 +1242,39 @@ function goReajuste(){S.reajustes++;toast('Desajuste registrado #'+S.reajustes);
 // ══════════════════════════════════════════════════════
 // CIERRE
 // ══════════════════════════════════════════════════════
+function pausarYSalir(){
+  // Pausar todos los timers activos
+  ['prod','ajuste','global'].forEach(function(name){
+    const t=S.timers[name];
+    if(t.running){
+      t.s=Math.floor((Date.now()-t.startTs)/1000);
+      t.running=false;
+      clearInterval(t.iv);
+    }
+  });
+  // Guardar estado pausado en Supabase
+  if(S.orden_id){
+    const tiempoSegundos=S.timers.prod.s||0;
+    const body={
+      estado:'En producción',
+      tiempo_pausado:tiempoSegundos,
+      pausado_por:S.user?.nombre||null,
+      pausado_at:new Date().toISOString()
+    };
+    fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.orden_id,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify(body)
+    }).catch(function(e){console.error('Error guardando pausa:',e);});
+  }
+  toast('Producción pausada — tiempo guardado');
+  setTimeout(function(){
+    S={...S_DEFAULT()};
+    showScreen('dashboard');
+    renderDashboard();
+  },1000);
+}
+
 function goCierre(){timerStop('prod');guardarOrden('completado');showScreen('cierre');renderCierre();}
 
 function renderCierre(){
