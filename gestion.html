@@ -828,6 +828,41 @@ async function procesarPDFs(){
   document.getElementById('pdf-processing').style.display='none';
 }
 
+function recalcImport(){
+  const d=window._importedData;if(!d)return;
+  // Leer valores editados
+  const subcliEl=document.getElementById('imp-subcli');if(subcliEl)d.sub_cliente=subcliEl.value;
+  const poEl=document.getElementById('imp-po');if(poEl)d.po=poEl.value;
+  const tintasEl=document.getElementById('imp-tintas');if(tintasEl)d.tintas=tintasEl.value.split(',').map(s=>s.trim());
+  const cbEl=document.getElementById('imp-col-bot');if(cbEl)d.color_botella=cbEl.value;
+  const ctEl=document.getElementById('imp-col-tap');if(ctEl)d.color_tapa=ctEl.value;
+  const cboqEl=document.getElementById('imp-col-boq');if(cboqEl)d.color_boquilla=cboqEl.value;
+  const piezas=parseInt(document.getElementById('imp-piezas')?.value||d.piezas||0);
+  const colores=parseInt(document.getElementById('imp-colores')?.value||d.num_colores||0);
+  const cap=parseInt(document.getElementById('imp-cap')?.value||d.capacidad||0);
+  d.piezas=piezas;d.num_colores=colores;d.capacidad=cap;
+  const corridaBot=document.getElementById('imp-corrida-bot')?.value||'stock2500';
+  const corridaTap=document.getElementById('imp-corrida-tap')?.value||'2500';
+  const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida===corridaBot&&p.con_color===true);
+  const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida===corridaTap&&p.con_color===true);
+  const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
+  let vMdo=0;for(let i=0;i<Math.min(colores,tarifas.length);i++)vMdo+=tarifas[i].precio_pieza*piezas;
+  const tfP=CAT.tarifas_fijas['papel_empaque_por_pieza']||0.15,tfT=CAT.tarifas_fijas['tag_etiqueta_por_pieza']||0.15;
+  const tfTintas=CAT.tarifas_fijas['tintas_fijo_por_botella']||4,tfPant=CAT.tarifas_fijas['pantallas_positivos_por_color']||1160;
+  const vBot=(pvBot?.precio||0)*piezas,vTap=(pvTap?.precio||0)*piezas;
+  const vTintas=tfTintas*piezas,vPant=tfPant*colores,vEmp=(tfP+tfT)*piezas;
+  const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
+  const cPant=500*colores,cPos=230*colores,costoEmp=(tfP+tfT)*piezas;
+  const costoTotal=vMdo+cPant+cPos+costoEmp;
+  const margen=ventaTotal>0?((ventaTotal-costoTotal)/ventaTotal)*100:0;
+  window._cotCalc={costoMdo:vMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen,corridaBot,colorBot:true,corridaTap,colorTap:true};
+  const el=id=>document.getElementById(id);
+  if(el('imp-v-bot'))el('imp-v-bot').textContent=mxn(vBot);
+  if(el('imp-v-tap'))el('imp-v-tap').textContent=mxn(vTap);
+  if(el('imp-v-otros'))el('imp-v-otros').textContent=mxn(vTintas+vPant+vMdo+vEmp);
+  if(el('imp-v-total'))el('imp-v-total').textContent=mxn(ventaTotal);
+}
+
 async function importarAPipeline(){
   const d=window._importedData;const c=window._cotCalc;if(!d)return;
   recalcImport();
