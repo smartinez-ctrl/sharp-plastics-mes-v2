@@ -480,7 +480,14 @@ async function loadCatalogos(){
   CAT={tintas,aditivos,clientes,tarifas_mdo,precios_venta,tarifas_fijas:{}};
   tarifas_fijas.forEach(t=>CAT.tarifas_fijas[t.concepto]=parseFloat(t.valor));
   const opts=clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-  ['cot-cliente','mp-cliente'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Seleccionar...</option>'+opts;});
+  // Poblar selects de clientes
+  const mfId=CAT.clientes.find(c=>c.nombre&&c.nombre.toLowerCase().includes('mountainflow'))?.id||'';
+  ['cot-cliente','mp-cliente'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.innerHTML='<option value="">Seleccionar...</option>'+opts;
+    if(mfId)el.value=mfId; // seleccionar MountainFlow por default
+  });
 }
 
 async function loadPipeline(){
@@ -1396,8 +1403,15 @@ async function guardarVentaEdit(id){
   const total=window._ventaEditTotal;const margen=window._margenEdit;
   if(!total)return;
   try{
-    await sbPatch('pipeline_mf',{venta_total:total,margen:margen},`id=eq.${id}`);
-    const p=PIPELINE.find(x=>x.id===id);if(p){p.venta_total=total;p.margen=margen;}
+    // Obtener precios unitarios de los inputs
+    const botInp=document.querySelector('[data-id="botellas"][data-field="price"]');
+    const tapInp=document.querySelector('[data-id="tapas"][data-field="price"]');
+    const botQInp=document.querySelector('[data-id="botellas"][data-field="qty"]');
+    const tapQInp=document.querySelector('[data-id="tapas"][data-field="qty"]');
+    const vBot2=(parseFloat(botInp?.value)||0)*(parseFloat(botQInp?.value)||0);
+    const vTap2=(parseFloat(tapInp?.value)||0)*(parseFloat(tapQInp?.value)||0);
+    await sbPatch('pipeline_mf',{venta_total:total,margen:margen,venta_botellas:vBot2,venta_tapas:vTap2},`id=eq.${id}`);
+    const p=PIPELINE.find(x=>x.id===id);if(p){p.venta_total=total;p.margen=margen;p.venta_botellas=vBot2;p.venta_tapas=vTap2;}
     toast('Venta actualizada ✓','ok');await loadPipeline();
   }catch(e){toast('Error: '+e.message,'err');}
 }
@@ -1478,9 +1492,9 @@ function renderDetallePedido(p) {
   // Buscar precios en catálogo primero (stock2500 con color = default)
   var pvBotDef = CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===cap&&x.corrida==='stock2500'&&x.con_color===true;});
   var pvTapDef = CAT.precios_venta.find(function(x){return x.tipo==='tapa'&&x.corrida==='2500'&&x.con_color===true;});
-  // Precio desde guardado — si no existe, catálogo stock2500 con color
-  var pBot = (p.venta_botellas>0&&piezas) ? parseFloat((p.venta_botellas/piezas).toFixed(4)) : (pvBotDef ? pvBotDef.precio : 0);
-  var pTap = (p.venta_tapas>0&&piezas) ? parseFloat((p.venta_tapas/piezas).toFixed(4)) : (pvTapDef ? pvTapDef.precio : 0);
+  // Precio SIEMPRE desde catálogo (stock2500 con color) para consistencia con importar
+  var pBot = pvBotDef ? pvBotDef.precio : 0;
+  var pTap = pvTapDef ? pvTapDef.precio : 0;
   var formula = p.formula_tintas||[];
   var costoTintas = 0;
   formula.forEach(function(col) {
