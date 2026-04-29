@@ -584,8 +584,11 @@ async function abrirDetallePedido(id){
     const capND=p.capacidad===750?700:p.capacidad||0;
     const pvBotD=CAT.precios_venta.find(x=>x.tipo==='botella'&&x.capacidad_ml===capND&&x.corrida==='stock2500'&&x.con_color===true)||CAT.precios_venta.find(x=>x.tipo==='botella'&&x.capacidad_ml===capND&&x.con_color===true);
     const pvTapD=CAT.precios_venta.find(x=>x.tipo==='tapa'&&x.corrida==='2500'&&x.con_color===true);
-    const pBot=pvBotD?pvBotD.precio:0;
-    const pTap=pvTapD?pvTapD.precio:0;
+    // Fallback hardcodeado por capacidad si CAT no cargó
+    const pBotFallback=capND===500?4.85:capND===700?5.85:5.35;
+    const pTapFallback=4.60;
+    const pBot=pvBotD?pvBotD.precio:pBotFallback;
+    const pTap=pvTapD?pvTapD.precio:pTapFallback;
     const formula=p.formula_tintas||[];
     let costoTintas=0;
     formula.forEach(col=>{
@@ -1012,12 +1015,14 @@ function updAditivoComp(ci,ai,f,el){
   if(!COT_COLORES[ci])return;
   if(!COT_COLORES[ci].aditivos[ai])COT_COLORES[ci].aditivos[ai]={aditivo_id:'',nombre:'',pct:5,precio_kg:0};
   const a=COT_COLORES[ci].aditivos[ai];
-  if(f==='aditivo'){a.aditivo_id=el.value;const o=el.options[el.selectedIndex];a.nombre=o.text;a.precio_kg=parseFloat(o.dataset.precio)||0;renderColorBlocks();}
+  if(f==='aditivo'){a.aditivo_id=el.value;const o=el.options[el.selectedIndex];a.nombre=o.text;a.precio_kg=parseFloat(o.dataset.precio)||0;renderColorBlocks();return;}
   else if(f==='pct'){a.pct=parseFloat(el.value)||0;}
-  else{a.precio_kg=parseFloat(el.value)||0;}
+  else if(f==='precio'){a.precio_kg=parseFloat(el.value)||0;}
+  // Calcular gramos y subtotal
   const tg=COT_COLORES[ci].componentes.reduce(function(s,x){return s+(parseFloat(x.gramos)||0);},0);
   a.gramos=a.pct/100*tg;
   const sub=a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0;
+  // Actualizar cot-val inline
   const row=el.closest('.tinta-row-grid');
   if(row){const cv=row.querySelector('.cot-val');if(cv)cv.textContent=mxn(sub);}
   calcCotizador();
@@ -1036,12 +1041,15 @@ function abrirCotizadorConPedido(id){
   document.getElementById('cot-color-tap').value='true';
   document.getElementById('page-cotizador').dataset.pipelineId=id;
   const sel=document.getElementById('cot-pipeline-select');if(sel)sel.value=id;
-  // Cargar cliente
-  const cliSel=document.getElementById('cot-cliente');
-  if(cliSel&&p.cliente){
+  // Cargar cliente - intentar ahora y con timeout como fallback
+  const setCotCliente=()=>{
+    const cliSel=document.getElementById('cot-cliente');
+    if(!cliSel)return;
     const opt=Array.from(cliSel.options).find(o=>o.text===p.cliente||o.text.toLowerCase().includes('mountainflow'));
     if(opt)cliSel.value=opt.value;
-  }
+  };
+  setCotCliente();
+  setTimeout(setCotCliente,500);
   COT_COLORES=p.formula_tintas&&Array.isArray(p.formula_tintas)&&p.formula_tintas.length?JSON.parse(JSON.stringify(p.formula_tintas)):[];
   renderColorBlocks();calcCotizador();
   toast('Pedido cargado: '+(p.sub_cliente||p.po),'ok');
@@ -1142,8 +1150,9 @@ function calcCotizador(){
 }
 
 async function guardarCotizacion(){
-  const r=window._cotResult;
-  if(!r||!r.ventaTotal){toast('Completa los datos primero','err');return;}
+  calcCotizador();
+  const r2=window._cotResult;
+  if(!r2||!r2.ventaTotal){toast('Completa los datos primero: capacidad, piezas y colores son requeridos','err');return;}
   const pipelineId=document.getElementById('page-cotizador').dataset.pipelineId||null;
   const piezas=parseInt(document.getElementById('cot-piezas').value)||0;
   const colores=parseInt(document.getElementById('cot-colores').value)||0;
