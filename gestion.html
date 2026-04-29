@@ -365,8 +365,7 @@ tr:last-child td{border-bottom:none}
     <div id="pdf-result" style="display:none;margin-top:14px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
       <button class="btn btn-ghost" onclick="closeModal('modal-import');resetImport()">Cancelar</button>
-      <button class="btn btn-secondary" id="btn-import-cotizar" style="display:none" onclick="importarACotizador()">→ Ir a cotizador</button>
-      <button class="btn btn-primary" id="btn-import-guardar" style="display:none" onclick="importarAPipeline()">Guardar en pipeline</button>
+      <button class="btn btn-primary" id="btn-import-guardar" style="display:none" onclick="confirmarImportacion()">✓ Confirmar y guardar</button>
     </div>
   </div>
 </div>
@@ -689,30 +688,66 @@ async function procesarPDFs(){
   document.getElementById('pdf-processing').style.display='block';
   document.getElementById('pdf-result').style.display='none';
   try{
-    const prompt='Analiza estos dos PDFs y extrae la información en este JSON exacto sin texto adicional:\n{"sub_cliente":"nombre bajo Ship To primera línea","po":"solo el número final del PO#","capacidad":600,"piezas":505,"fecha_pedido":"2026-03-25","direccion_envio":"dirección completa bajo Ship To","color_botella":"valor de BOTTLE:","color_tapa":"valor de TOP:","color_boquilla":"valor de MOUTHPIECE:","tintas":["348 C","White"],"num_colores":2}';
     const response=await fetch('/api/extract-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({po:pdfData.po,mockup:pdfData.mockup})});
     const extracted=await response.json();
     if(!response.ok)throw new Error(extracted.error||'Error en servidor');
     window._importedData=extracted;
-    document.getElementById('pdf-result').innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✓ Datos extraídos por Claude</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="pdf-preview"><div class="pdf-preview-title">📄 Purchase Order</div>
-        <div class="pdf-field"><span class="pdf-field-key">Sub-cliente</span><span class="pdf-field-val">${extracted.sub_cliente||'—'}</span></div>
-        <div class="pdf-field"><span class="pdf-field-key">PO #</span><span class="pdf-field-val">${extracted.po||'—'}</span></div>
-        <div class="pdf-field"><span class="pdf-field-key">Capacidad</span><span class="pdf-field-val">${extracted.capacidad?extracted.capacidad+'ml':'—'}</span></div>
-        <div class="pdf-field"><span class="pdf-field-key">Piezas</span><span class="pdf-field-val">${extracted.piezas||'—'}</span></div>
-        <div class="pdf-field"><span class="pdf-field-key">Fecha</span><span class="pdf-field-val">${extracted.fecha_pedido||'—'}</span></div>
-        <div class="pdf-field"><span class="pdf-field-key">Envío a</span><span class="pdf-field-val" style="font-size:10px">${extracted.direccion_envio||'—'}</span></div>
-      </div>
-      <div class="pdf-preview"><div class="pdf-preview-title">🎨 Mock Up</div>
-        <div class="pdf-field"><span class="pdf-field-key">Botella</span><span class="pdf-field-val">${extracted.color_botella||'—'}</span></div>
-        <div class="pdf-field"><span class="pdf-field-key">Tapa</span><span class="pdf-field-val">${extracted.color_tapa||'—'}</span></div>
-        <div class="pdf-field"><span class="pdf-field-key">Boquilla</span><span class="pdf-field-val">${extracted.color_boquilla||'—'}</span></div>
-        ${(extracted.tintas||[]).map((t,i)=>`<div class="pdf-field"><span class="pdf-field-key">Tinta #${i+1}</span><span class="pdf-field-val">${t}</span></div>`).join('')}
-        <div class="pdf-field"><span class="pdf-field-key">Colores</span><span class="pdf-field-val">${extracted.num_colores||'—'} → ${extracted.num_colores||0} pantallas</span></div>
-      </div></div>`;
+    // Calcular venta automáticamente con defaults: stock2500 con color
+    const piezas=extracted.piezas||0;
+    const colores=extracted.num_colores||0;
+    const cap=extracted.capacidad||0;
+    const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida==='stock2500'&&p.con_color===true);
+    const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida==='2500'&&p.con_color===true);
+    const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
+    let costoMdo=0;
+    for(let i=0;i<Math.min(colores,tarifas.length);i++)costoMdo+=tarifas[i].precio_pieza*piezas;
+    const cPant=500*colores,cPos=230*colores;
+    const tfP=CAT.tarifas_fijas['papel_empaque_por_pieza']||0.15;
+    const tfT=CAT.tarifas_fijas['tag_etiqueta_por_pieza']||0.15;
+    const costoEmp=(tfP+tfT)*piezas;
+    const costoTotal=costoMdo+cPant+cPos+costoEmp; // tintas se agregan después en cotizador
+    const vBot=(pvBot?.precio||0)*piezas;
+    const vTap=(pvTap?.precio||0)*piezas;
+    const tfTintas=CAT.tarifas_fijas['tintas_fijo_por_botella']||4;
+    const tfPant=CAT.tarifas_fijas['pantallas_positivos_por_color']||1160;
+    const vTintas=tfTintas*piezas,vPant=tfPant*colores,vMdo=costoMdo,vEmp=(tfP+tfT)*piezas;
+    const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
+    const margen=ventaTotal>0?((ventaTotal-costoTotal)/ventaTotal)*100:0;
+    window._cotCalc={costoMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen,pvBot,pvTap,corridaBot:'stock2500',colorBot:true,corridaTap:'2500',colorTap:true};
+
+    document.getElementById('pdf-result').innerHTML=`
+      <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✓ Claude extrajo y calculó automáticamente</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="pdf-preview"><div class="pdf-preview-title">📄 Datos del pedido</div>
+          <div class="pdf-field"><span class="pdf-field-key">Sub-cliente</span><span class="pdf-field-val">${extracted.sub_cliente||'—'}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">PO #</span><span class="pdf-field-val">${extracted.po||'—'}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Capacidad</span><span class="pdf-field-val">${extracted.capacidad?extracted.capacidad+'ml':'—'}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Piezas</span><span class="pdf-field-val">${piezas}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Colores</span><span class="pdf-field-val">${colores}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tintas</span><span class="pdf-field-val">${(extracted.tintas||[]).join(', ')}</span></div>
+        </div>
+        <div class="pdf-preview"><div class="pdf-preview-title">💰 Venta calculada (editable)</div>
+          <div class="pdf-field"><span class="pdf-field-key">Corrida botellas</span>
+            <select id="imp-corrida-bot" onchange="recalcImport()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;color:var(--text);font-size:11px">
+              <option value="run500">Run 500 pzas</option>
+              <option value="stock2500" selected>Stock / +2500 pzas</option>
+            </select>
+          </div>
+          <div class="pdf-field"><span class="pdf-field-key">Corrida tapas</span>
+            <select id="imp-corrida-tap" onchange="recalcImport()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;color:var(--text);font-size:11px">
+              <option value="500">500 pzas</option>
+              <option value="1000">1,000 pzas</option>
+              <option value="2500" selected>2,500 pzas</option>
+              <option value="5000">5,000 pzas</option>
+            </select>
+          </div>
+          <div class="pdf-field"><span class="pdf-field-key">Botellas</span><span class="pdf-field-val" id="imp-v-bot" style="color:var(--green)">${mxn(vBot)}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tapas</span><span class="pdf-field-val" id="imp-v-tap" style="color:var(--green)">${mxn(vTap)}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tintas+pantallas+MO</span><span class="pdf-field-val" id="imp-v-otros" style="color:var(--green)">${mxn(vTintas+vPant+vMdo+vEmp)}</span></div>
+          <div class="pdf-field" style="border:none;padding-top:8px"><span style="font-size:12px;font-weight:700">Total venta</span><span class="pdf-field-val" id="imp-v-total" style="color:var(--green);font-size:14px;font-weight:700">${mxn(ventaTotal)}</span></div>
+        </div>
+      </div>`;
     document.getElementById('pdf-result').style.display='block';
-    document.getElementById('btn-import-cotizar').style.display='';
     document.getElementById('btn-import-guardar').style.display='';
   }catch(e){
     document.getElementById('pdf-result').innerHTML=`<div style="color:var(--red);padding:10px">Error: ${e.message}</div>`;
@@ -721,13 +756,51 @@ async function procesarPDFs(){
   document.getElementById('pdf-processing').style.display='none';
 }
 
-async function importarAPipeline(){
+function recalcImport(){
   const d=window._importedData;if(!d)return;
+  const piezas=d.piezas||0,colores=d.num_colores||0,cap=d.capacidad||0;
+  const corridaBot=document.getElementById('imp-corrida-bot')?.value||'stock2500';
+  const corridaTap=document.getElementById('imp-corrida-tap')?.value||'2500';
+  const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida===corridaBot&&p.con_color===true);
+  const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida===corridaTap&&p.con_color===true);
+  const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
+  let vMdo=0;for(let i=0;i<Math.min(colores,tarifas.length);i++)vMdo+=tarifas[i].precio_pieza*piezas;
+  const tfP=CAT.tarifas_fijas['papel_empaque_por_pieza']||0.15,tfT=CAT.tarifas_fijas['tag_etiqueta_por_pieza']||0.15;
+  const tfTintas=CAT.tarifas_fijas['tintas_fijo_por_botella']||4,tfPant=CAT.tarifas_fijas['pantallas_positivos_por_color']||1160;
+  const vBot=(pvBot?.precio||0)*piezas,vTap=(pvTap?.precio||0)*piezas;
+  const vTintas=tfTintas*piezas,vPant=tfPant*colores,vEmp=(tfP+tfT)*piezas;
+  const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
+  const cPant=500*colores,cPos=230*colores,costoEmp=(tfP+tfT)*piezas;
+  const costoTotal=vMdo+cPant+cPos+costoEmp;
+  const margen=ventaTotal>0?((ventaTotal-costoTotal)/ventaTotal)*100:0;
+  window._cotCalc={costoMdo:vMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen,corridaBot,colorBot:true,corridaTap,colorTap:true};
+  const el=id=>document.getElementById(id);
+  if(el('imp-v-bot'))el('imp-v-bot').textContent=mxn(vBot);
+  if(el('imp-v-tap'))el('imp-v-tap').textContent=mxn(vTap);
+  if(el('imp-v-otros'))el('imp-v-otros').textContent=mxn(vTintas+vPant+vMdo+vEmp);
+  if(el('imp-v-total'))el('imp-v-total').textContent=mxn(ventaTotal);
+}
+
+async function confirmarImportacion(){
+  const d=window._importedData;const c=window._cotCalc;
+  if(!d||!c)return;
   try{
-    await sbPost('pipeline_mf',{cliente:'MountainFlow',sub_cliente:d.sub_cliente||null,po:d.po||null,capacidad:d.capacidad||null,piezas:d.piezas||0,colores:d.num_colores||0,color_botella:d.color_botella||null,color_tapa:d.color_tapa||null,color_boquilla:d.color_boquilla||null,direccion_envio:d.direccion_envio||null,estado:'Pendiente'});
-    toast('Pedido creado ✓','ok');closeModal('modal-import');resetImport();await loadPipeline();
+    const data={
+      cliente:'MountainFlow',sub_cliente:d.sub_cliente||null,po:d.po||null,
+      capacidad:d.capacidad||null,piezas:d.piezas||0,colores:d.num_colores||0,
+      color_botella:d.color_botella||null,color_tapa:d.color_tapa||null,
+      color_boquilla:d.color_boquilla||null,direccion_envio:d.direccion_envio||null,
+      tintas_info:d.tintas||[],estado:'Pendiente',
+      costo_total:c.costoTotal,venta_total:c.ventaTotal,margen:c.margen,
+    };
+    await sbPost('pipeline_mf',data);
+    toast('Pedido guardado con cotización ✓','ok');
+    closeModal('modal-import');resetImport();
+    await loadPipeline();
   }catch(e){toast('Error: '+e.message,'err');}
 }
+
+async function importarAPipeline(){confirmarImportacion();}
 
 function importarACotizador(){
   const d=window._importedData;if(!d)return;
