@@ -130,7 +130,7 @@ tr:last-child td{border-bottom:none}
 .loading{text-align:center;padding:40px;color:var(--text3)}
 .loading-spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
-::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
+input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:pointer;padding:2px}::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
 @media(max-width:768px){.sidebar{position:fixed;transform:translateX(-100%)}.main{margin-left:0;padding:16px}.stats-row{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -338,7 +338,7 @@ tr:last-child td{border-bottom:none}
     <div class="card" style="margin-bottom:12px">
       <div class="card-title">Datos generales</div>
       <div class="field-row">
-        <div class="field"><label>Cliente</label><select id="mp-cliente"><option value="">Seleccionar...</option></select></div>
+        <div class="field"><label>Cliente</label><select id="mp-cliente"><option value="">Seleccionar...</option><option value="mountainflow" selected>MountainFlow</option></select></div>
         <div class="field"><label>Sub-cliente</label><input type="text" id="mp-subcli"></div>
       </div>
       <div class="field-row-3">
@@ -817,7 +817,8 @@ async function procesarPDFs(){
           </div>
           <div class="pdf-field"><span class="pdf-field-key">Bot. $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-bot" type="number" value="${pvBot?(+pvBot.precio).toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-bot" style="color:var(--green)">${mxn(vBot)}</span></div></div>
           <div class="pdf-field"><span class="pdf-field-key">Tapa $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-tap" type="number" value="${pvTap?(+pvTap.precio).toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-tap" style="color:var(--green)">${mxn(vTap)}</span></div></div>
-          <div class="pdf-field"><span class="pdf-field-key">Tintas+pantallas</span><span class="pdf-field-val" id="imp-v-otros" style="color:var(--green)">${mxn(vTintas+vPant)}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tintas (fijo)</span><span class="pdf-field-val" id="imp-v-tintas" style="color:var(--green)">${mxn(vTintas)}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Pantallas+positivos</span><span class="pdf-field-val" id="imp-v-pant" style="color:var(--green)">${mxn(vPant)}</span></div>
           <div class="pdf-field"><span class="pdf-field-key">Empaque</span><span class="pdf-field-val" id="imp-v-emp" style="color:var(--green)">${mxn(vEmp)}</span></div>
           <div class="pdf-field"><span class="pdf-field-key">MO $/pza (${colores} col)</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-mdo" type="number" value="${piezas?(vMdo/piezas).toFixed(4):'0'}" step="0.01" oninput="recalcImport()" style="width:70px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-mdo" style="color:var(--green)">${mxn(vMdo)}</span></div></div>
           <div class="pdf-field" style="border:none;padding-top:8px"><span style="font-size:12px;font-weight:700">Total venta</span><span class="pdf-field-val" id="imp-v-total" style="color:var(--green);font-size:14px;font-weight:700">${mxn(ventaTotal)}</span></div>
@@ -877,7 +878,8 @@ function recalcImport(){
   const el=id=>document.getElementById(id);
   if(el('imp-v-bot'))el('imp-v-bot').textContent=mxn(vBot);
   if(el('imp-v-tap'))el('imp-v-tap').textContent=mxn(vTap);
-  if(el('imp-v-otros'))el('imp-v-otros').textContent=mxn(vTintas+vPant);
+  if(el('imp-v-tintas'))el('imp-v-tintas').textContent=mxn(vTintas);
+  if(el('imp-v-pant'))el('imp-v-pant').textContent=mxn(vPant);
   if(el('imp-v-emp'))el('imp-v-emp').textContent=mxn(vEmp);
   if(el('imp-v-mdo'))el('imp-v-mdo').textContent=mxn(vMdo);
   if(el('imp-v-total'))el('imp-v-total').textContent=mxn(ventaTotal);
@@ -964,7 +966,7 @@ function renderColorBlocks(){
       <button class="del-btn" onclick="remTintaComp(${ci},${xi})">✕</button></div>`).join('');
     const adits=col.aditivos.map((a,ai)=>`<div class="tinta-row-grid">
       <div class="field" style="margin:0"><label style="font-size:10px">Aditivo</label><select onchange="updAditivoComp(${ci},${ai},'aditivo',this)">${aOpts.replace(`value="${a.aditivo_id}"`,`value="${a.aditivo_id}" selected`)}</select></div>
-      <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="${a.gramos||''}" placeholder="0" style="text-align:center" oninput="updAditivoComp(${ci},${ai},'pct',this)"></div>
+      <div class="field" style="margin:0"><label style="font-size:10px">% tintas</label><input type="number" value="${a.pct!==undefined?a.pct:5}" placeholder="5" min="0" max="100" step="0.5" style="text-align:center" oninput="updAditivoComp(${ci},${ai},'pct',this)"></div>
       <div class="field" style="margin:0"><label style="font-size:10px">$/kg</label><input type="number" value="${a.precio_kg||''}" placeholder="0" style="text-align:center;font-size:11px" oninput="updAditivoComp(${ci},${ai},'precio',this)"></div>
       <div class="cot-val">${a.pct&&tg&&a.precio_kg?mxn((a.pct/100*tg/1000)*a.precio_kg):'$0.00'}</div>
       <button class="del-btn" onclick="remAditivoComp(${ci},${ai})">✕</button></div>`).join('');
