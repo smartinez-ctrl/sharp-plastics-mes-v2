@@ -587,8 +587,9 @@ async function abrirDetallePedido(id){
     // Fallback hardcodeado por capacidad si CAT no cargó
     const pBotFallback=capND===500?4.85:capND===700?5.85:5.35;
     const pTapFallback=4.60;
-    const pBot=pvBotD?pvBotD.precio:pBotFallback;
-    const pTap=pvTapD?pvTapD.precio:pTapFallback;
+    // Prioridad: 1) venta guardada/piezas, 2) catálogo, 3) fallback
+    const pBot=p.venta_botellas>0&&piezas?parseFloat((p.venta_botellas/piezas).toFixed(2)):(pvBotD?pvBotD.precio:pBotFallback);
+    const pTap=p.venta_tapas>0&&piezas?parseFloat((p.venta_tapas/piezas).toFixed(2)):(pvTapD?pvTapD.precio:pTapFallback);
     const formula=p.formula_tintas||[];
     let costoTintas=0;
     formula.forEach(col=>{
@@ -932,11 +933,15 @@ async function importarAPipeline(){
     };
     // Incluir venta si se calculó
     if(c&&c.ventaTotal>0){
+      // Leer precios editados por el usuario en el modal
+      const pBotUI=parseFloat(document.getElementById('imp-p-bot')?.value)||0;
+      const pTapUI=parseFloat(document.getElementById('imp-p-tap')?.value)||0;
+      const pzUI=parseInt(document.getElementById('imp-piezas')?.value)||d.piezas||0;
       data.venta_total=c.ventaTotal;
       data.costo_total=c.costoTotal;
       data.margen=c.margen;
-      data.venta_botellas=c.vBot;
-      data.venta_tapas=c.vTap;
+      data.venta_botellas=pBotUI&&pzUI?parseFloat((pBotUI*pzUI).toFixed(2)):c.vBot;
+      data.venta_tapas=pTapUI&&pzUI?parseFloat((pTapUI*pzUI).toFixed(2)):c.vTap;
     }
     await sbPost('pipeline_mf',data);
     toast('Pedido creado ✓','ok');
@@ -1113,12 +1118,12 @@ function calcCotizador(){
     const pvBotV=pvBot?.precio||0, pvTapV=pvTap?.precio||0;
     const pMdoV=piezas?vMdo/piezas:0;
     ventaEl.innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Botellas × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-pbot" type="number" value="${pvBotV.toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-bot" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(pvBotV*piezas)}</span></div></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tapas × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-ptap" type="number" value="${pvTapV.toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-tap" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(pvTapV*piezas)}</span></div></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tintas $/bot × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-ptintas" type="number" value="${tfTintas.toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-tintas" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(tfTintas*piezas)}</span></div></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas+pos × ${colores}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-ppant" type="number" value="${tfPant.toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-pant" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(tfPant*colores)}</span></div></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">MO $/pza × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-pmdo" type="number" value="${pMdoV.toFixed(4)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-mdo" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(pMdoV*piezas)}</span></div></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Empaque × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-pemp" type="number" value="${(tfP+tfT).toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-emp" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn((tfP+tfT)*piezas)}</span></div></div>`;
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Botellas × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-pbot" type="number" value="${pvBotV.toFixed(2)}" step="0.01" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--green);font-size:12px;text-align:center;outline:none;width:78px" oninput="calcCotizadorVenta()"><span id="cot-sv-bot" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(pvBotV*piezas)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tapas × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-ptap" type="number" value="${pvTapV.toFixed(2)}" step="0.01" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--green);font-size:12px;text-align:center;outline:none;width:78px" oninput="calcCotizadorVenta()"><span id="cot-sv-tap" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(pvTapV*piezas)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tintas $/bot × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-ptintas" type="number" value="${tfTintas.toFixed(2)}" step="0.01" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--green);font-size:12px;text-align:center;outline:none;width:78px" oninput="calcCotizadorVenta()"><span id="cot-sv-tintas" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(tfTintas*piezas)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas+pos × ${colores}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-ppant" type="number" value="${tfPant.toFixed(2)}" step="0.01" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--green);font-size:12px;text-align:center;outline:none;width:78px" oninput="calcCotizadorVenta()"><span id="cot-sv-pant" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(tfPant*colores)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">MO $/pza × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-pmdo" type="number" value="${pMdoV.toFixed(4)}" step="0.01" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--green);font-size:12px;text-align:center;outline:none;width:78px" oninput="calcCotizadorVenta()"><span id="cot-sv-mdo" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(pMdoV*piezas)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Empaque × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-pemp" type="number" value="${(tfP+tfT).toFixed(2)}" step="0.01" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--green);font-size:12px;text-align:center;outline:none;width:78px" oninput="calcCotizadorVenta()"><span id="cot-sv-emp" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn((tfP+tfT)*piezas)}</span></div></div>`;
   }
 
   // Actualizar panel resumen sticky
