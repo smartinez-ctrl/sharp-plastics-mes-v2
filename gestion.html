@@ -214,7 +214,7 @@ tr:last-child td{border-bottom:none}
         </div>
         <div class="field-row-3">
           <div class="field"><label>PO #</label><input type="text" id="cot-po"></div>
-          <div class="field"><label>Capacidad</label><select id="cot-cap" onchange="calcCotizador()"><option value="">—</option><option value="500">500ml</option><option value="600">600ml</option><option value="700">700ml</option></select></div>
+          <div class="field"><label>Capacidad</label><select id="cot-cap" onchange="calcCotizador()"><option value="">—</option><option value="500">500ml</option><option value="600">600ml</option><option value="700">750ml</option></select></div>
           <div class="field"><label>Piezas</label><input type="number" id="cot-piezas" oninput="calcCotizador()"></div>
         </div>
         <div class="field-row">
@@ -343,7 +343,7 @@ tr:last-child td{border-bottom:none}
       </div>
       <div class="field-row-3">
         <div class="field"><label>PO #</label><input type="text" id="mp-po"></div>
-        <div class="field"><label>Capacidad</label><select id="mp-cap"><option value="">—</option><option value="500">500ml</option><option value="600">600ml</option><option value="700">700ml</option></select></div>
+        <div class="field"><label>Capacidad</label><select id="mp-cap"><option value="">—</option><option value="500">500ml</option><option value="600">600ml</option><option value="700">750ml</option></select></div>
         <div class="field"><label>Piezas</label><input type="number" id="mp-piezas"></div>
       </div>
       <div class="field-row">
@@ -750,6 +750,7 @@ async function procesarPDFs(){
     // Calcular venta automáticamente con defaults: stock2500 con color
     const piezas=extracted.piezas||0;
     const colores=extracted.num_colores||0;
+    if(extracted.capacidad===750)extracted.capacidad=700; // 750ml usa misma botella que 700ml
     const cap=extracted.capacidad||0;
     const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida==='stock2500'&&p.con_color===true);
     const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida==='2500'&&p.con_color===true);
@@ -780,8 +781,7 @@ async function procesarPDFs(){
             <select id="imp-cap" onchange="recalcImport()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none">
               <option value="500" ${extracted.capacidad===500?'selected':''}>500ml</option>
               <option value="600" ${extracted.capacidad===600?'selected':''}>600ml</option>
-              <option value="700" ${extracted.capacidad===700?'selected':''}>700ml</option>
-              <option value="750" ${extracted.capacidad===750?'selected':''}>750ml</option>
+              <option value="700" ${(extracted.capacidad===700||extracted.capacidad===750)?'selected':''}>750ml</option>
             </select>
           </div>
           <div class="pdf-field"><span class="pdf-field-key">Piezas</span><input id="imp-piezas" type="number" value="${piezas}" oninput="recalcImport()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
@@ -844,7 +844,6 @@ function recalcImport(){
   d.piezas=piezas;d.num_colores=colores;d.capacidad=cap;
   const corridaBot=document.getElementById('imp-corrida-bot')?.value||'stock2500';
   const corridaTap=document.getElementById('imp-corrida-tap')?.value||'2500';
-  // Para 750ml usar precio de 700ml (más cercano disponible)
   const capBusq=cap===750?700:cap;
   let pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capBusq&&p.corrida===corridaBot&&p.con_color===true);
   if(!pvBot)pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capBusq&&p.con_color===true);
@@ -975,10 +974,9 @@ function updTintaComp(ci,xi,f,el){
   if(f==='tinta'){c.tinta_id=el.value;const o=el.options[el.selectedIndex];c.nombre=o.text;c.precio_kg=parseFloat(o.dataset.precio)||0;renderColorBlocks();}
   else if(f==='gramos'){c.gramos=parseFloat(el.value)||0;}
   else{c.precio_kg=parseFloat(el.value)||0;}
-  // Actualizar el cot-val inline sin re-renderizar
   const sub=c.gramos&&c.precio_kg?(c.gramos/1000)*c.precio_kg:0;
-  const valEl=el.closest('tr')||el.parentElement?.parentElement;
-  const cotVals=document.querySelectorAll('.tinta-row-grid .cot-val');
+  const row=el.closest('.tinta-row-grid');
+  if(row){const cv=row.querySelector('.cot-val');if(cv)cv.textContent=mxn(sub);}
   calcCotizador();
 }
 function addTintaComp(ci){if(COT_COLORES[ci])COT_COLORES[ci].componentes.push({tinta_id:'',nombre:'',gramos:0,precio_kg:0});renderColorBlocks();}
@@ -990,6 +988,10 @@ function updAditivoComp(ci,ai,f,el){
   if(f==='aditivo'){a.aditivo_id=el.value;const o=el.options[el.selectedIndex];a.nombre=o.text;a.precio_kg=parseFloat(o.dataset.precio)||0;renderColorBlocks();}
   else if(f==='gramos'){a.gramos=parseFloat(el.value)||0;}
   else{a.precio_kg=parseFloat(el.value)||0;}
+  // Actualizar subtotal inline
+  const sub=a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0;
+  const row=el.closest('.tinta-row-grid');
+  if(row){const cotVal=row.querySelector('.cot-val');if(cotVal)cotVal.textContent=mxn(sub);}
   calcCotizador();
 }
 function addAditivoComp(ci){if(COT_COLORES[ci])COT_COLORES[ci].aditivos.push({aditivo_id:'',nombre:'',gramos:0,precio_kg:0});renderColorBlocks();}
@@ -1649,8 +1651,13 @@ function abrirPDFCliente(p){
     mdoTotal+=sub;
     mdoFilas.push({concepto:'Mano de obra Color '+(i+1),cantidad:piezas,precio:tarifas[i].precio_pieza,sub:sub});
   }
-  const vBot=p.venta_botellas||0, vTap=p.venta_tapas||0;
-  const pBot=piezas?vBot/piezas:0, pTap=piezas?vTap/piezas:0;
+  // Precio bot/tap desde catálogo si no hay guardado
+  var capB=(cap===750||cap===700)?700:cap;
+  var pvBotC=CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===capB&&x.corrida==='stock2500'&&x.con_color===true;})||CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===capB&&x.con_color===true;});
+  var pvTapC=CAT.precios_venta.find(function(x){return x.tipo==='tapa'&&x.corrida==='2500'&&x.con_color===true;});
+  var vBot=p.venta_botellas>0?p.venta_botellas:(pvBotC?pvBotC.precio*piezas:0);
+  var vTap=p.venta_tapas>0?p.venta_tapas:(pvTapC?pvTapC.precio*piezas:0);
+  var pBot=piezas?vBot/piezas:0, pTap=piezas?vTap/piezas:0;
 
   const filasHTML=[
     {c:'Botellas '+( p.capacidad||'')+'ml',q:piezas,u:pBot,s:vBot},
