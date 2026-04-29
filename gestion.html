@@ -617,7 +617,7 @@ async function abrirDetallePedido(id){
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg3);border-radius:10px;margin-bottom:10px">
         <span style="font-size:14px;font-weight:700">Total venta</span>
-        <span id="venta-total-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--green)">${mxn(ventaTotalCalc||p.venta_total||0)}</span>
+        <span id="venta-total-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--green)">${mxn(p.venta_total||0)}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div style="background:var(--bg3);border-radius:10px;padding:14px;text-align:center">
