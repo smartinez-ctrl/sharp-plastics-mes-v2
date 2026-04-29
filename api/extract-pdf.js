@@ -1,3 +1,11 @@
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb',
+    },
+  },
+};
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -11,16 +19,16 @@ export default async function handler(req, res) {
 
     const prompt = `Analiza estos dos PDFs de un pedido de botellas de plástico impresas y extrae la información en JSON exacto sin texto adicional ni backticks:
 {
-  "sub_cliente": "nombre del sub-cliente bajo Ship To (primera línea solamente, ej: Peaked Sports)",
-  "po": "solo el número al final del PO#, ej: si dice MF-Peaked Sports-750ml-435742527 devuelve 435742527",
-  "capacidad": 750,
+  "sub_cliente": "nombre del sub-cliente bajo Ship To (primera línea solamente, ej: Peaked Sports, Wheel Wranglers, C/O Mountainflow)",
+  "po": "solo el número al final del PO#. El PO# tiene formato MF-NombreCliente-XXXml-NÚMERO. Extrae SOLO el número final, ej: 435742527",
+  "capacidad": 600,
   "piezas": 205,
   "fecha_pedido": "2026-04-23",
-  "direccion_envio": "dirección completa bajo Ship To incluyendo ciudad estado y país",
-  "color_botella": "color de BOTTLE o COLOR OF BOTTLE",
-  "color_tapa": "color de TOP o COLOR OF THE BOTTLE TOP",
-  "color_boquilla": "color de MOUTHPIECE o COLOR OF THE MOUTH PIECE",
-  "tintas": ["Black", "White"],
+  "direccion_envio": "dirección completa bajo Ship To incluyendo nombre, calle, ciudad, estado y país",
+  "color_botella": "color exacto de BOTTLE o COLOR OF BOTTLE. Si dice See Mock Up, busca en el Mock Up el color de la botella",
+  "color_tapa": "color exacto de TOP o COLOR OF THE BOTTLE TOP. Si dice See Mock Up, busca en el Mock Up",
+  "color_boquilla": "color exacto de MOUTHPIECE. Si dice See Mock Up, busca en el Mock Up",
+  "tintas": ["color1", "color2"],
   "num_colores": 2,
   "notas_packaging": "texto completo de PACKAGING"
 }`;

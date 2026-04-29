@@ -1,7 +1,10 @@
 {
-  "version": 2,
-  "routes": [
-    {"src": "/", "dest": "/index.html"},
-    {"src": "/gestion", "dest": "/gestion.html"}
-  ]
+  "functions": {
+    "api/extract-pdf.js": {
+      "maxDuration": 30
+    },
+    "api/generate-pdf.js": {
+      "maxDuration": 10
+    }
+  }
 }
