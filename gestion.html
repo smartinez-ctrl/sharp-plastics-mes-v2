@@ -817,7 +817,8 @@ async function procesarPDFs(){
           </div>
           <div class="pdf-field"><span class="pdf-field-key">Bot. $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-bot" type="number" value="${pvBot?(+pvBot.precio).toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-bot" style="color:var(--green)">${mxn(vBot)}</span></div></div>
           <div class="pdf-field"><span class="pdf-field-key">Tapa $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-tap" type="number" value="${pvTap?(+pvTap.precio).toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-tap" style="color:var(--green)">${mxn(vTap)}</span></div></div>
-          <div class="pdf-field"><span class="pdf-field-key">Tintas+pantallas+emp</span><span class="pdf-field-val" id="imp-v-otros" style="color:var(--green)">${mxn(vTintas+vPant+vEmp)}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tintas+pantallas</span><span class="pdf-field-val" id="imp-v-otros" style="color:var(--green)">${mxn(vTintas+vPant)}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Empaque</span><span class="pdf-field-val" id="imp-v-emp" style="color:var(--green)">${mxn(vEmp)}</span></div>
           <div class="pdf-field"><span class="pdf-field-key">MO $/pza (${colores} col)</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-mdo" type="number" value="${piezas?(vMdo/piezas).toFixed(4):'0'}" step="0.01" oninput="recalcImport()" style="width:70px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-mdo" style="color:var(--green)">${mxn(vMdo)}</span></div></div>
           <div class="pdf-field" style="border:none;padding-top:8px"><span style="font-size:12px;font-weight:700">Total venta</span><span class="pdf-field-val" id="imp-v-total" style="color:var(--green);font-size:14px;font-weight:700">${mxn(ventaTotal)}</span></div>
         </div>
@@ -872,7 +873,8 @@ function recalcImport(){
   const el=id=>document.getElementById(id);
   if(el('imp-v-bot'))el('imp-v-bot').textContent=mxn(vBot);
   if(el('imp-v-tap'))el('imp-v-tap').textContent=mxn(vTap);
-  if(el('imp-v-otros'))el('imp-v-otros').textContent=mxn(vTintas+vPant+vEmp);
+  if(el('imp-v-otros'))el('imp-v-otros').textContent=mxn(vTintas+vPant);
+  if(el('imp-v-emp'))el('imp-v-emp').textContent=mxn(vEmp);
   if(el('imp-v-mdo'))el('imp-v-mdo').textContent=mxn(vMdo);
   if(el('imp-v-total'))el('imp-v-total').textContent=mxn(ventaTotal);
 }
@@ -1072,45 +1074,18 @@ function calcCotizador(){
     <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Tag ($0.15 × ${piezas})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--amber)">${mxn(0.15*piezas)}</span></div>`;
 
   const ventaEl=document.getElementById('venta-desglose');
-  if(ventaEl&&piezas>0)ventaEl.innerHTML=`
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Botellas (${piezas} × ${mxn(pvBot?.precio||0)})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vBot)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tapas (${piezas} × ${mxn(pvTap?.precio||0)})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vTap)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tintas (${mxn(tfTintas)} × ${piezas})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vTintas)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas+positivos (${colores} × ${mxn(tfPant)})</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vPant)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Mano de obra</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vMdo)}</span></div>
-    <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Empaque</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">${mxn(vEmp)}</span></div>`;
-
-  const resEl=document.getElementById('panel-resumen');
-  if(resEl&&piezas>0){
-    resEl.innerHTML=`<div class="card-title">Resumen — Costo interno</div>
-    <div class="cost-summary" style="margin-bottom:14px">
-      <div class="cs-row"><span class="cs-label">Tintas e insumos</span><span class="cs-val">${mxn(costoTintas)}</span></div>
-      <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val">${mxn(costoMdo)}</span></div>
-      <div class="cs-row"><span class="cs-label">Pantallas</span><span class="cs-val">${mxn(cPant)}</span></div>
-      <div class="cs-row"><span class="cs-label">Positivos</span><span class="cs-val">${mxn(cPos)}</span></div>
-      <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val">${mxn(costoEmp)}</span></div>
-      <div class="cs-row"><span style="font-weight:700;font-size:13px">Total costo</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--red)">${mxn(costoTotal)}</span></div>
-      <div class="cs-row"><span class="cs-label">Costo/pieza</span><span class="cs-val" style="color:var(--blue)">${piezas?mxn(costoTotal/piezas):'—'}</span></div>
-    </div>
-    <div style="height:1px;background:var(--border);margin:14px 0"></div>
-    <div class="card-title">Precio de venta</div>
-    <div class="cost-summary" style="margin-bottom:14px">
-      <div class="cs-row"><span class="cs-label">Botellas</span><span class="cs-val" style="color:var(--green)">${mxn(vBot)}</span></div>
-      <div class="cs-row"><span class="cs-label">Tapas</span><span class="cs-val" style="color:var(--green)">${mxn(vTap)}</span></div>
-      <div class="cs-row"><span class="cs-label">Tintas</span><span class="cs-val" style="color:var(--green)">${mxn(vTintas)}</span></div>
-      <div class="cs-row"><span class="cs-label">Pantallas+positivos</span><span class="cs-val" style="color:var(--green)">${mxn(vPant)}</span></div>
-      <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val" style="color:var(--green)">${mxn(vMdo)}</span></div>
-      <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val" style="color:var(--green)">${mxn(vEmp)}</span></div>
-      <div class="cs-row"><span style="font-weight:700;font-size:13px">Total venta</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--green)">${mxn(ventaTotal)}</span></div>
-      <div class="cs-row"><span class="cs-label">Precio unitario</span><span class="cs-val" style="color:var(--amber)">${piezas?mxn(ventaTotal/piezas):'—'}</span></div>
-    </div>
-    <div style="background:${margen>=20?'var(--green-bg)':'var(--amber-bg)'};border:1px solid ${margen>=20?'var(--green-border)':'var(--amber-border)'};border-radius:10px;padding:14px;text-align:center">
-      <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Margen de utilidad</div>
-      <div style="font-family:'Space Mono',monospace;font-size:28px;font-weight:700;color:${margen>=20?'var(--green)':'var(--amber)'}">${margen.toFixed(1)}%</div>
-      <div style="font-size:11px;color:var(--text2);margin-top:2px">Utilidad: ${mxn(ventaTotal-costoTotal)}</div>
-    </div>`;
-    window._cotResult={costoTintas,costoMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen};
+  if(ventaEl&&piezas>0){
+    const pvBotV=pvBot?.precio||0, pvTapV=pvTap?.precio||0;
+    const pMdoV=piezas?vMdo/piezas:0;
+    ventaEl.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Botellas × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-pbot" type="number" value="${pvBotV.toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-bot" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(pvBotV*piezas)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tapas × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-ptap" type="number" value="${pvTapV.toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-tap" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(pvTapV*piezas)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Tintas $/bot × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-ptintas" type="number" value="${tfTintas.toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-tintas" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(tfTintas*piezas)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">Pantallas+pos × ${colores}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-ppant" type="number" value="${tfPant.toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-pant" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(tfPant*colores)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--text2)">MO $/pza × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-pmdo" type="number" value="${pMdoV.toFixed(4)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-mdo" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn(pMdoV*piezas)}</span></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0"><span style="font-size:12px;color:var(--text2)">Empaque × ${piezas}</span><div style="display:flex;align-items:center;gap:5px"><input id="cot-v-pemp" type="number" value="${(tfP+tfT).toFixed(2)}" step="0.01" style="${inS}" oninput="calcCotizadorVenta()"><span id="cot-sv-emp" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green);min-width:65px;text-align:right">${mxn((tfP+tfT)*piezas)}</span></div></div>`;
   }
+  
 }
 
 async function guardarCotizacion(){
@@ -1486,9 +1461,9 @@ function renderDetallePedido(p) {
   // Buscar precios en catálogo primero (stock2500 con color = default)
   var pvBotDef = CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===cap&&x.corrida==='stock2500'&&x.con_color===true;});
   var pvTapDef = CAT.precios_venta.find(function(x){return x.tipo==='tapa'&&x.corrida==='2500'&&x.con_color===true;});
-  // Precio desde guardado o catálogo
-  var pBot = (p.venta_botellas>0&&piezas) ? p.venta_botellas/piezas : (pvBotDef ? pvBotDef.precio : 0);
-  var pTap = (p.venta_tapas>0&&piezas) ? p.venta_tapas/piezas : (pvTapDef ? pvTapDef.precio : 0);
+  // Precio desde guardado — si no existe, catálogo stock2500 con color
+  var pBot = (p.venta_botellas>0&&piezas) ? parseFloat((p.venta_botellas/piezas).toFixed(4)) : (pvBotDef ? pvBotDef.precio : 0);
+  var pTap = (p.venta_tapas>0&&piezas) ? parseFloat((p.venta_tapas/piezas).toFixed(4)) : (pvTapDef ? pvTapDef.precio : 0);
   var formula = p.formula_tintas||[];
   var costoTintas = 0;
   formula.forEach(function(col) {
@@ -1585,36 +1560,13 @@ function recalcCosto(id, val, qty){
 }
 
 function recalcMO(){
-  const horas=parseFloat(document.getElementById('costo-mo-horas')?.value||0);
-  const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||0);
-  const mo=horas*tarifa;
-  const moSubEl=document.getElementById('costo-sub-mo');
-  if(moSubEl)moSubEl.textContent=mxn(mo);
-  let sinMO=0;
-  const p=window._pedidoActual;
-  ['bot','tap','tintas','pant','pos','emp'].forEach(function(k){
-    const inp=document.getElementById('costo-inp-'+k);
-    const qty=k==='tintas'?1:(p?(['pant','pos'].includes(k)?p.colores||0:p.piezas||0):0);
-    if(inp)sinMO+=(parseFloat(inp.value)||0)*qty;
-  });
-  const totEl=document.getElementById('costo-total-display');
-  if(totEl)totEl.textContent=mxn(sinMO);
-  const totMoEl=document.getElementById('costo-total-mo-display');
-  if(totMoEl)totMoEl.textContent=mxn(sinMO+mo);
+  calcCostoTotal();
 }
 
 async function guardarCostoEdit(id){
-  let sinMO=0;
-  const p=window._pedidoActual;
-  ['bot','tap','tintas','pant','pos','emp'].forEach(function(k){
-    const inp=document.getElementById('costo-inp-'+k);
-    const qty=k==='tintas'?1:(p?(['pant','pos'].includes(k)?p.colores||0:p.piezas||0):0);
-    if(inp)sinMO+=(parseFloat(inp.value)||0)*qty;
-  });
+  const {sinMO,mo,total:costoFinal}=calcCostoTotal();
   const horas=parseFloat(document.getElementById('costo-mo-horas')?.value||0);
   const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||70);
-  const mo=horas*tarifa;
-  const costoFinal=sinMO+mo;
   const venta=p?.venta_total||0;
   const margen=venta>0?((venta-costoFinal)/venta)*100:0;
   try{
@@ -1828,6 +1780,37 @@ function abrirPDFInterno(p){
   const w=window.open('','_blank','width=900,height=750');
   w.document.write(html);
   w.document.close();
+}
+
+
+function calcCotizadorVenta(){
+  const piezas=parseInt(document.getElementById('cot-piezas')?.value)||0;
+  const colores=parseInt(document.getElementById('cot-colores')?.value)||0;
+  const ids=[['cot-v-pbot',piezas],['cot-v-ptap',piezas],['cot-v-ptintas',piezas],['cot-v-ppant',colores],['cot-v-pmdo',piezas],['cot-v-pemp',piezas]];
+  const svIds=['cot-sv-bot','cot-sv-tap','cot-sv-tintas','cot-sv-pant','cot-sv-mdo','cot-sv-emp'];
+  let total=0;
+  ids.forEach(function([id,qty],i){
+    const inp=document.getElementById(id);
+    if(!inp)return;
+    const sub=(parseFloat(inp.value)||0)*qty;
+    total+=sub;
+    const sv=document.getElementById(svIds[i]);
+    if(sv)sv.textContent=mxn(sub);
+  });
+  // Actualizar panel resumen
+  const resEl=document.getElementById('panel-resumen');
+  if(resEl&&piezas>0){
+    const vTotalEl=document.getElementById('venta-total-display');
+    const vUnitEl=document.getElementById('precio-unit-display');
+    const mEl=document.getElementById('margen-display');
+    if(vTotalEl)vTotalEl.textContent=mxn(total);
+    if(vUnitEl)vUnitEl.textContent=piezas?mxn(total/piezas):'—';
+    // Recalcular margen con costo actual
+    const costo=window._cotResult?.costoTotal||0;
+    const margen=total>0?((total-costo)/total)*100:0;
+    if(mEl)mEl.textContent=margen.toFixed(1)+'%';
+    if(window._cotResult)window._cotResult.ventaTotal=total;
+  }
 }
 
 
