@@ -580,10 +580,12 @@ async function abrirDetallePedido(id){
     const costBot=cap===500?tf['costo_botella_500ml']||2.96:cap===700?tf['costo_botella_700ml']||3.22:tf['costo_botella_600ml']||2.77;
     const costTap=tf['costo_tapa']||3.37;
     const costPant=tf['costo_pantalla']||356.52,costPos=tf['costo_positivo']||115;
-    const vOtros=tfTintas*piezas+tfPant*colores+mdoVentaTotal+(tfP+tfT)*piezas;
-    const vBotTap=Math.max(0,p.venta_total-vOtros);
-    const pBot=piezas?vBotTap/2/piezas:0;
-    const pTap=piezas?vBotTap/2/piezas:0;
+    // Precios bot/tap siempre desde catálogo (stock2500 con color)
+    const capND=p.capacidad===750?700:p.capacidad||0;
+    const pvBotD=CAT.precios_venta.find(x=>x.tipo==='botella'&&x.capacidad_ml===capND&&x.corrida==='stock2500'&&x.con_color===true)||CAT.precios_venta.find(x=>x.tipo==='botella'&&x.capacidad_ml===capND&&x.con_color===true);
+    const pvTapD=CAT.precios_venta.find(x=>x.tipo==='tapa'&&x.corrida==='2500'&&x.con_color===true);
+    const pBot=pvBotD?pvBotD.precio:0;
+    const pTap=pvTapD?pvTapD.precio:0;
     const formula=p.formula_tintas||[];
     let costoTintas=0;
     formula.forEach(col=>{
@@ -781,6 +783,7 @@ async function procesarPDFs(){
     const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
     const margen=ventaTotal>0?((ventaTotal-costoTotal)/ventaTotal)*100:0;
     window._cotCalc={costoMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen,corridaBot:'stock2500',colorBot:true,corridaTap:'2500',colorTap:true};
+    window._cotResult={costoTotal,ventaTotal,margen,costoTintas,piezas,colores};
     document.getElementById('pdf-result').innerHTML=`
       <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✓ Claude extrajo — revisa y corrige antes de guardar</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
@@ -967,7 +970,7 @@ function renderColorBlocks(){
   const aOpts='<option value="">Seleccionar...</option>'+CAT.aditivos.map(a=>`<option value="${a.id}" data-precio="${a.precio_kg}">${a.nombre} (${a.proveedor})</option>`).join('');
   el.innerHTML=COT_COLORES.map((col,ci)=>{
     const tg=col.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-    const tc=col.componentes.reduce((s,x)=>s+(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0),0)+col.aditivos.reduce((s,a)=>s+(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0),0);
+    const tc=col.componentes.reduce((s,x)=>s+(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0),0)+col.aditivos.reduce((s,a)=>{const grA=a.pct!==undefined?(a.pct/100*tg):(a.gramos||0);return s+(grA&&a.precio_kg?(grA/1000)*a.precio_kg:0);},0);
     const comps=col.componentes.map((x,xi)=>`<div class="tinta-row-grid">
       <div class="field" style="margin:0"><label style="font-size:10px">Tinta</label><select onchange="updTintaComp(${ci},${xi},'tinta',this)">${tOpts.replace(`value="${x.tinta_id}"`,`value="${x.tinta_id}" selected`)}</select></div>
       <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="${x.gramos||''}" placeholder="0" style="text-align:center" oninput="updTintaComp(${ci},${xi},'gramos',this)"></div>
@@ -1025,7 +1028,7 @@ function remAditivoComp(ci,ai){if(COT_COLORES[ci])COT_COLORES[ci].aditivos.splic
 function abrirCotizadorConPedido(id){
   const p=PIPELINE.find(x=>x.id===id);if(!p)return;
   limpiarCotizador();
-  const flds={'cot-subcli':p.sub_cliente,'cot-po':p.po,'cot-cap':p.capacidad,'cot-piezas':p.piezas,'cot-colores':p.colores,'cot-col-bot':p.color_botella,'cot-col-tap':p.color_tapa,'cot-envio':p.direccion_envio,'cot-fecha':p.fecha_entrega};
+  const flds={'cot-subcli':p.sub_cliente,'cot-po':p.po,'cot-cap':p.capacidad,'cot-piezas':p.piezas,'cot-colores':p.colores,'cot-col-bot':p.color_botella,'cot-col-tap':p.color_tapa,'cot-envio':p.direccion_envio,'cot-fecha':p.fecha_entrega,'cot-notas':p.notas};
   Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
   document.getElementById('cot-corrida-bot').value='stock2500';
   document.getElementById('cot-color-bot').value='true';
@@ -1033,6 +1036,12 @@ function abrirCotizadorConPedido(id){
   document.getElementById('cot-color-tap').value='true';
   document.getElementById('page-cotizador').dataset.pipelineId=id;
   const sel=document.getElementById('cot-pipeline-select');if(sel)sel.value=id;
+  // Cargar cliente
+  const cliSel=document.getElementById('cot-cliente');
+  if(cliSel&&p.cliente){
+    const opt=Array.from(cliSel.options).find(o=>o.text===p.cliente||o.text.toLowerCase().includes('mountainflow'));
+    if(opt)cliSel.value=opt.value;
+  }
   COT_COLORES=p.formula_tintas&&Array.isArray(p.formula_tintas)&&p.formula_tintas.length?JSON.parse(JSON.stringify(p.formula_tintas)):[];
   renderColorBlocks();calcCotizador();
   toast('Pedido cargado: '+(p.sub_cliente||p.po),'ok');
