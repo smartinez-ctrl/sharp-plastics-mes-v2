@@ -781,6 +781,7 @@ async function procesarPDFs(){
               <option value="500" ${extracted.capacidad===500?'selected':''}>500ml</option>
               <option value="600" ${extracted.capacidad===600?'selected':''}>600ml</option>
               <option value="700" ${extracted.capacidad===700?'selected':''}>700ml</option>
+              <option value="750" ${extracted.capacidad===750?'selected':''}>750ml</option>
             </select>
           </div>
           <div class="pdf-field"><span class="pdf-field-key">Piezas</span><input id="imp-piezas" type="number" value="${piezas}" oninput="recalcImport()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;color:var(--text);font-size:11px;outline:none;width:55%;text-align:right"></div>
@@ -813,8 +814,8 @@ async function procesarPDFs(){
               <option value="5000">5,000 pzas</option>
             </select>
           </div>
-          <div class="pdf-field"><span class="pdf-field-key">Botellas</span><span class="pdf-field-val" id="imp-v-bot" style="color:var(--green)">${mxn(vBot)}</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Tapas</span><span class="pdf-field-val" id="imp-v-tap" style="color:var(--green)">${mxn(vTap)}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Bot. $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-bot" type="number" value="${pvBot?pvBot.precio.toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-bot" style="color:var(--green)">${mxn(vBot)}</span></div></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tapa $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-tap" type="number" value="${pvTap?pvTap.precio.toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-tap" style="color:var(--green)">${mxn(vTap)}</span></div></div>
           <div class="pdf-field"><span class="pdf-field-key">Tintas+pantallas+MO</span><span class="pdf-field-val" id="imp-v-otros" style="color:var(--green)">${mxn(vTintas+vPant+vMdo+vEmp)}</span></div>
           <div class="pdf-field" style="border:none;padding-top:8px"><span style="font-size:12px;font-weight:700">Total venta</span><span class="pdf-field-val" id="imp-v-total" style="color:var(--green);font-size:14px;font-weight:700">${mxn(ventaTotal)}</span></div>
         </div>
@@ -843,21 +844,27 @@ function recalcImport(){
   d.piezas=piezas;d.num_colores=colores;d.capacidad=cap;
   const corridaBot=document.getElementById('imp-corrida-bot')?.value||'stock2500';
   const corridaTap=document.getElementById('imp-corrida-tap')?.value||'2500';
-  let pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida===corridaBot&&p.con_color===true);
-  if(!pvBot)pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.con_color===true);
+  // Para 750ml usar precio de 700ml (más cercano disponible)
+  const capBusq=cap===750?700:cap;
+  let pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capBusq&&p.corrida===corridaBot&&p.con_color===true);
+  if(!pvBot)pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capBusq&&p.con_color===true);
   let pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida===corridaTap&&p.con_color===true);
   if(!pvTap)pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.con_color===true);
   const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
   let vMdo=0;for(let i=0;i<Math.min(colores,tarifas.length);i++)vMdo+=tarifas[i].precio_pieza*piezas;
   const tfP=CAT.tarifas_fijas['papel_empaque_por_pieza']||0.15,tfT=CAT.tarifas_fijas['tag_etiqueta_por_pieza']||0.15;
   const tfTintas=CAT.tarifas_fijas['tintas_fijo_por_botella']||4,tfPant=CAT.tarifas_fijas['pantallas_positivos_por_color']||1160;
-  const vBot=(pvBot?.precio||0)*piezas,vTap=(pvTap?.precio||0)*piezas;
+  const pBotInput=document.getElementById('imp-p-bot');
+  const pTapInput=document.getElementById('imp-p-tap');
+  const pBotVal=pBotInput?parseFloat(pBotInput.value)||0:(pvBot?.precio||0);
+  const pTapVal=pTapInput?parseFloat(pTapInput.value)||0:(pvTap?.precio||0);
+  const vBot=pBotVal*piezas,vTap=pTapVal*piezas;
   const vTintas=tfTintas*piezas,vPant=tfPant*colores,vEmp=(tfP+tfT)*piezas;
   const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
   const cPant=500*colores,cPos=230*colores,costoEmp=(tfP+tfT)*piezas;
   const costoTotal=vMdo+cPant+cPos+costoEmp;
   const margen=ventaTotal>0?((ventaTotal-costoTotal)/ventaTotal)*100:0;
-  window._cotCalc={costoMdo:vMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen,corridaBot,colorBot:true,corridaTap,colorTap:true};
+  window._cotCalc={costoMdo:vMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen,corridaBot,colorBot:true,corridaTap,colorTap:true,pBot:pBotVal,pTap:pTapVal};
   const el=id=>document.getElementById(id);
   if(el('imp-v-bot'))el('imp-v-bot').textContent=mxn(vBot);
   if(el('imp-v-tap'))el('imp-v-tap').textContent=mxn(vTap);
@@ -1033,7 +1040,11 @@ function calcCotizador(){
   const tfTintas=CAT.tarifas_fijas['tintas_fijo_por_botella']||4;
   const tfPant=CAT.tarifas_fijas['pantallas_positivos_por_color']||1160;
 
-  const vBot=(pvBot?.precio||0)*piezas,vTap=(pvTap?.precio||0)*piezas;
+  const pBotInput=document.getElementById('imp-p-bot');
+  const pTapInput=document.getElementById('imp-p-tap');
+  const pBotVal=pBotInput?parseFloat(pBotInput.value)||0:(pvBot?.precio||0);
+  const pTapVal=pTapInput?parseFloat(pTapInput.value)||0:(pvTap?.precio||0);
+  const vBot=pBotVal*piezas,vTap=pTapVal*piezas;
   const vTintas=tfTintas*piezas,vPant=tfPant*colores,vMdo=costoMdo,vEmp=(tfP+tfT)*piezas;
   const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
   const margen=ventaTotal>0?((ventaTotal-costoTotal)/ventaTotal)*100:0;
