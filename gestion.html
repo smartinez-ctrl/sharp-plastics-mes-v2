@@ -611,24 +611,71 @@ async function abrirDetallePedido(id){
   const resumen=document.getElementById('mp-cotizacion-resumen');
   if(p.venta_total>0||p.costo_total>0){
     resumen.style.display='';
-    resumen.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div class="card" style="margin:0"><div class="card-title">Costo interno</div>
-        <div class="cs-row"><span class="cs-label">Total</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--red)">${mxn(p.costo_total)}</span></div>
-        <div class="cs-row"><span class="cs-label">Por pieza</span><span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--blue)">${p.piezas?mxn(p.costo_total/p.piezas):'—'}</span></div>
-      </div>
-      <div class="card" style="margin:0"><div class="card-title">Venta al cliente</div>
-        <div class="cs-row"><span class="cs-label">Total</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--green)">${mxn(p.venta_total)}</span></div>
-        <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:9px;padding:10px;text-align:center;margin-top:10px">
-          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;margin-bottom:3px">Margen</div>
-          <div style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:var(--green)">${(p.margen||0).toFixed(1)}%</div>
+    const piezas=p.piezas||0, colores=p.colores||0;
+    const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
+    let costoMdo=0;
+    let mdoRows='';
+    for(let i=0;i<Math.min(colores,tarifas.length);i++){
+      costoMdo+=tarifas[i].precio_pieza*piezas;
+      mdoRows+=`<div class="cs-row"><span class="cs-label">Color ${i+1} — ${mxn(tarifas[i].precio_pieza)}/pza × ${piezas}</span><span class="cs-val">${mxn(tarifas[i].precio_pieza*piezas)}</span></div>`;
+    }
+    const cPant=500*colores, cPos=230*colores;
+    const tfP=CAT.tarifas_fijas['papel_empaque_por_pieza']||0.15;
+    const tfT=CAT.tarifas_fijas['tag_etiqueta_por_pieza']||0.15;
+    const costoEmp=(tfP+tfT)*piezas;
+    const costoTotal=costoMdo+cPant+cPos+costoEmp;
+    const tfTintas=CAT.tarifas_fijas['tintas_fijo_por_botella']||4;
+    const tfPant=CAT.tarifas_fijas['pantallas_positivos_por_color']||1160;
+    const vTintas=tfTintas*piezas;
+    const vPant=tfPant*colores;
+    const vMdo=costoMdo;
+    const vEmp=(tfP+tfT)*piezas;
+    const vBotTap=p.venta_total-(vTintas+vPant+vMdo+vEmp);
+    resumen.innerHTML=`
+    <div style="display:flex;gap:2px;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content">
+      <div id="tab-venta" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg2);color:var(--green);box-shadow:0 1px 4px rgba(0,0,0,0.3)" onclick="switchDetTab('venta')">💰 Precio de venta</div>
+      <div id="tab-costo" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2)" onclick="switchDetTab('costo')">🔴 Costo interno</div>
+    </div>
+
+    <div id="det-venta">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="cost-summary">
+          <div class="cs-row"><span class="cs-label">Botellas + Tapas</span><span class="cs-val" style="color:var(--green)">${mxn(vBotTap>0?vBotTap:0)}</span></div>
+          <div class="cs-row"><span class="cs-label">Tintas (${mxn(tfTintas)}/bot × ${piezas})</span><span class="cs-val" style="color:var(--green)">${mxn(vTintas)}</span></div>
+          <div class="cs-row"><span class="cs-label">Pantallas+positivos (${colores} × ${mxn(tfPant)})</span><span class="cs-val" style="color:var(--green)">${mxn(vPant)}</span></div>
+          <div class="cs-row"><span class="cs-label">Mano de obra</span><span class="cs-val" style="color:var(--green)">${mxn(vMdo)}</span></div>
+          <div class="cs-row"><span class="cs-label">Empaque</span><span class="cs-val" style="color:var(--green)">${mxn(vEmp)}</span></div>
+          <div class="cs-row" style="padding-top:8px"><span style="font-weight:700;font-size:13px">Total venta</span><span style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--green)">${mxn(p.venta_total)}</span></div>
+          <div class="cs-row"><span class="cs-label">Precio unitario</span><span class="cs-val" style="color:var(--amber)">${piezas?mxn(p.venta_total/piezas):'—'}</span></div>
         </div>
-      </div></div>`;
+        <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:12px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Margen de utilidad</div>
+          <div style="font-family:'Space Mono',monospace;font-size:36px;font-weight:700;color:var(--green)">${(p.margen||0).toFixed(1)}%</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">Utilidad: ${mxn(p.venta_total-p.costo_total)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="det-costo" style="display:none">
+      <div class="cost-summary">
+        ${mdoRows}
+        <div class="cs-row"><span class="cs-label">Pantallas (${colores} × $500)</span><span class="cs-val">${mxn(cPant)}</span></div>
+        <div class="cs-row"><span class="cs-label">Positivos (${colores} × $230)</span><span class="cs-val">${mxn(cPos)}</span></div>
+        <div class="cs-row"><span class="cs-label">Papel empaque</span><span class="cs-val">${mxn(tfP*piezas)}</span></div>
+        <div class="cs-row"><span class="cs-label">Tag / etiqueta</span><span class="cs-val">${mxn(tfT*piezas)}</span></div>
+        <div class="cs-row" style="padding-top:8px"><span style="font-weight:700;font-size:13px">Total costo</span><span style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--red)">${mxn(costoTotal)}</span></div>
+        <div class="cs-row"><span class="cs-label">Costo por pieza</span><span class="cs-val" style="color:var(--blue)">${piezas?mxn(costoTotal/piezas):'—'}</span></div>
+        <div style="background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:9px;padding:10px;text-align:center;margin-top:10px">
+          <div style="font-size:10px;color:var(--text2);text-transform:uppercase;margin-bottom:3px">Nota</div>
+          <div style="font-size:12px;color:var(--amber)">El costo de tintas se agrega en el cotizador</div>
+        </div>
+      </div>
+    </div>`;
     document.getElementById('btn-mp-pdf-interno').style.display='';
     document.getElementById('btn-mp-pdf-cliente').style.display='';
   } else {
     resumen.style.display='none';
-  }
-  openModal('modal-pedido');
+  }  openModal('modal-pedido');
 }
 
 async function guardarPedido(){
@@ -1203,6 +1250,14 @@ async function guardarUsuario(){
 }
 
 // INIT
+function switchDetTab(tab){
+  document.getElementById('det-venta').style.display=tab==='venta'?'':'none';
+  document.getElementById('det-costo').style.display=tab==='costo'?'':'none';
+  const tv=document.getElementById('tab-venta'),tc=document.getElementById('tab-costo');
+  if(tv){tv.style.background=tab==='venta'?'var(--bg2)':'transparent';tv.style.color=tab==='venta'?'var(--green)':'var(--text2)';tv.style.boxShadow=tab==='venta'?'0 1px 4px rgba(0,0,0,0.3)':'none';tv.style.fontWeight=tab==='venta'?'600':'500';}
+  if(tc){tc.style.background=tab==='costo'?'var(--bg2)':'transparent';tc.style.color=tab==='costo'?'var(--red)':'var(--text2)';tc.style.boxShadow=tab==='costo'?'0 1px 4px rgba(0,0,0,0.3)':'none';tc.style.fontWeight=tab==='costo'?'600':'500';}
+}
+
 async function init(){
   try{await loadCatalogos();await loadPipeline();}
   catch(e){console.error('Init error:',e);}
