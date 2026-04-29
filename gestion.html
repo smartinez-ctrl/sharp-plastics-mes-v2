@@ -810,10 +810,45 @@ async function procesarPDFs(){
 }
 
 async function importarAPipeline(){
-  const d=window._importedData;if(!d)return;
+  const d=window._importedData;const c=window._cotCalc;if(!d)return;
   try{
-    await sbPost('pipeline_mf',{cliente:'MountainFlow',sub_cliente:d.sub_cliente||null,po:d.po||null,capacidad:d.capacidad||null,piezas:d.piezas||0,colores:d.num_colores||0,color_botella:d.color_botella||null,color_tapa:d.color_tapa||null,color_boquilla:d.color_boquilla||null,direccion_envio:d.direccion_envio||null,estado:'Pendiente'});
-    toast('Pedido creado ✓','ok');closeModal('modal-import');resetImport();await loadPipeline();
+    // Verificar duplicado por PO
+    if(d.po){
+      const existe=await sbGet('pipeline_mf','po=eq.'+d.po);
+      if(existe.length>0){
+        toast('Ya existe un pedido con PO '+d.po+' — abriendo...','err');
+        closeModal('modal-import');resetImport();
+        await loadPipeline();
+        abrirDetallePedido(existe[0].id);
+        return;
+      }
+    }
+    const data={
+      cliente:'MountainFlow',
+      sub_cliente:d.sub_cliente||null,
+      po:d.po||null,
+      capacidad:d.capacidad||null,
+      piezas:d.piezas||0,
+      colores:d.num_colores||0,
+      color_botella:d.color_botella||null,
+      color_tapa:d.color_tapa||null,
+      color_boquilla:d.color_boquilla||null,
+      direccion_envio:d.direccion_envio||null,
+      notas:d.notas_packaging||null,
+      estado:'Pendiente',
+    };
+    // Incluir venta si se calculó
+    if(c&&c.ventaTotal>0){
+      data.venta_total=c.ventaTotal;
+      data.costo_total=c.costoTotal;
+      data.margen=c.margen;
+      data.venta_botellas=c.vBot;
+      data.venta_tapas=c.vTap;
+    }
+    await sbPost('pipeline_mf',data);
+    toast('Pedido creado ✓','ok');
+    closeModal('modal-import');resetImport();
+    await loadPipeline();
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
