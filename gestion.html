@@ -421,6 +421,7 @@ async function sbDelete(t,q){const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,{
 
 const USER=JSON.parse(sessionStorage.getItem('sp_user')||'null');
 if(!USER||!(USER.rol==='master'||USER.rol==='facturacion')){window.location.href='index.html';}
+window.addEventListener('focus',function(){const u=JSON.parse(sessionStorage.getItem('sp_user')||'null');if(!u||!(u.rol==='master'||u.rol==='facturacion'))window.location.href='index.html';});
 
 function irAProduccion(){window.open('index.html','_blank');}
 function cerrarSesion(){sessionStorage.removeItem('sp_user');window.location.href='index.html';}
@@ -490,7 +491,7 @@ async function loadPipeline(){
   }catch(e){document.getElementById('pipeline-activos').innerHTML=`<div style="color:var(--red);padding:20px">Error: ${e.message}</div>`;}
 }
 
-function renderPipeline(){try{
+function renderPipeline(){
   const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
   const completados=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado');
   document.getElementById('badge-pipeline').textContent=activos.length;
