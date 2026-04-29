@@ -768,26 +768,46 @@ async function procesarPDFs(){
     const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
     const margen=ventaTotal>0?((ventaTotal-costoTotal)/ventaTotal)*100:0;
     window._cotCalc={costoMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen,corridaBot:'stock2500',colorBot:true,corridaTap:'2500',colorTap:true};
+    const inpStyle='background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;color:var(--text);font-size:11px;outline:none;width:100%;font-family:Space Mono,monospace;text-align:right';
+    const selStyle='background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;color:var(--text);font-size:11px;outline:none';
     document.getElementById('pdf-result').innerHTML=`
-      <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✓ Claude extrajo y calculó automáticamente</div>
+      <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✓ Claude extrajo — revisa y edita antes de guardar</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div class="pdf-preview"><div class="pdf-preview-title">📄 Datos del pedido</div>
-          <div class="pdf-field"><span class="pdf-field-key">Sub-cliente</span><span class="pdf-field-val">${extracted.sub_cliente||'—'}</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">PO #</span><span class="pdf-field-val">${extracted.po||'—'}</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Capacidad</span><span class="pdf-field-val">${extracted.capacidad?extracted.capacidad+'ml':'—'}</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Piezas</span><span class="pdf-field-val">${piezas}</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Colores</span><span class="pdf-field-val">${colores}</span></div>
-          <div class="pdf-field"><span class="pdf-field-key">Tintas</span><span class="pdf-field-val">${(extracted.tintas||[]).join(', ')}</span></div>
+        <div class="pdf-preview">
+          <div class="pdf-preview-title">📄 Datos del pedido (editables)</div>
+          <div class="pdf-field"><span class="pdf-field-key">Sub-cliente</span><input id="imp-subcli" value="${extracted.sub_cliente||''}" style="${inpStyle}" oninput="syncImportData()"></div>
+          <div class="pdf-field"><span class="pdf-field-key">PO #</span><input id="imp-po" value="${extracted.po||''}" style="${inpStyle}" oninput="syncImportData()"></div>
+          <div class="pdf-field"><span class="pdf-field-key">Capacidad</span>
+            <select id="imp-cap" onchange="recalcImport()" style="${selStyle}">
+              <option value="500" ${extracted.capacidad===500?'selected':''}>500ml</option>
+              <option value="600" ${extracted.capacidad===600?'selected':''}>600ml</option>
+              <option value="700" ${extracted.capacidad===700?'selected':''}>700ml</option>
+            </select>
+          </div>
+          <div class="pdf-field"><span class="pdf-field-key">Piezas</span><input id="imp-piezas" type="number" value="${piezas}" style="${inpStyle}" oninput="recalcImport()"></div>
+          <div class="pdf-field"><span class="pdf-field-key">Colores</span>
+            <select id="imp-colores" onchange="recalcImport()" style="${selStyle}">
+              <option value="1" ${colores===1?'selected':''}>1 color</option>
+              <option value="2" ${colores===2?'selected':''}>2 colores</option>
+              <option value="3" ${colores===3?'selected':''}>3 colores</option>
+              <option value="4" ${colores===4?'selected':''}>4 colores</option>
+            </select>
+          </div>
+          <div class="pdf-field"><span class="pdf-field-key">Tintas</span><input id="imp-tintas" value="${(extracted.tintas||[]).join(', ')}" style="${inpStyle}" oninput="syncImportData()"></div>
+          <div class="pdf-field"><span class="pdf-field-key">Color botella</span><input id="imp-col-bot" value="${extracted.color_botella||''}" style="${inpStyle}" oninput="syncImportData()"></div>
+          <div class="pdf-field"><span class="pdf-field-key">Color tapa</span><input id="imp-col-tap" value="${extracted.color_tapa||''}" style="${inpStyle}" oninput="syncImportData()"></div>
+          <div class="pdf-field" style="border:none"><span class="pdf-field-key">Boquilla</span><input id="imp-col-boq" value="${extracted.color_boquilla||''}" style="${inpStyle}" oninput="syncImportData()"></div>
         </div>
-        <div class="pdf-preview"><div class="pdf-preview-title">💰 Venta calculada (editable)</div>
+        <div class="pdf-preview">
+          <div class="pdf-preview-title">💰 Venta calculada (editable)</div>
           <div class="pdf-field"><span class="pdf-field-key">Corrida botellas</span>
-            <select id="imp-corrida-bot" onchange="recalcImport()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;color:var(--text);font-size:11px">
+            <select id="imp-corrida-bot" onchange="recalcImport()" style="${selStyle}">
               <option value="run500">Run 500 pzas</option>
               <option value="stock2500" selected>Stock / +2500 pzas</option>
             </select>
           </div>
           <div class="pdf-field"><span class="pdf-field-key">Corrida tapas</span>
-            <select id="imp-corrida-tap" onchange="recalcImport()" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;color:var(--text);font-size:11px">
+            <select id="imp-corrida-tap" onchange="recalcImport()" style="${selStyle}">
               <option value="500">500 pzas</option>
               <option value="1000">1,000 pzas</option>
               <option value="2500" selected>2,500 pzas</option>
@@ -811,6 +831,7 @@ async function procesarPDFs(){
 
 async function importarAPipeline(){
   const d=window._importedData;const c=window._cotCalc;if(!d)return;
+  syncImportData();
   try{
     // Verificar duplicado por PO
     if(d.po){
