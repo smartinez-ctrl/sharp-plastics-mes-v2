@@ -1655,6 +1655,26 @@ function recalcCosto(id, val, qty){
   const totMoEl=document.getElementById('costo-total-mo-display');
   if(totMoEl)totMoEl.textContent=mxn(total+mo);
 }
+function calcCostoTotal(){
+  const p=window._pedidoActual;
+  let sinMO=0;
+  ['bot','tap','tintas','pant','pos','emp'].forEach(function(k){
+    const inp=document.getElementById('costo-inp-'+k);
+    const qty=k==='tintas'?1:(p?(['pant','pos'].includes(k)?p.colores||0:p.piezas||0):0);
+    if(inp)sinMO+=(parseFloat(inp.value)||0)*qty;
+  });
+  const horas=parseFloat(document.getElementById('costo-mo-horas')?.value||0);
+  const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||0);
+  const mo=horas*tarifa;
+  const moSubEl=document.getElementById('costo-sub-mo');
+  if(moSubEl)moSubEl.textContent=mxn(mo);
+  const totEl=document.getElementById('costo-total-display');
+  if(totEl)totEl.textContent=mxn(sinMO);
+  const totMoEl=document.getElementById('costo-total-mo-display');
+  if(totMoEl)totMoEl.textContent=mxn(sinMO+mo);
+  return {sinMO,mo,total:sinMO+mo};
+}
+
 
 function recalcMO(){
   calcCostoTotal();
