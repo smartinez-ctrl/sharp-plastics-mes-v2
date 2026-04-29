@@ -640,16 +640,16 @@ async function abrirDetallePedido(id){
             ${costoRow('Empaque',piezas,(tfP+tfT),'','emp')}
             <tr style="border-bottom:1px solid var(--border)">
               <td style="padding:10px 14px;font-size:13px">Mano de obra</td>
-              <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-horas" value="${p.costo_mdo&&p.costo_mdo>0?(p.costo_mdo/70).toFixed(1):0}" min="0" step="0.5" style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()" placeholder="hrs"></td>
-              <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-hora" value="70" min="0" step="0.01" style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()"></td>
-              <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="costo-sub-mo">${mxn(p.costo_mdo||0)}</td>
+              <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-horas" value="${p.mo_horas||0}" min="0" step="0.5" style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()"></td>
+              <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-hora" value="${p.mo_tarifa||70}" min="0" step="0.01" style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()"></td>
+              <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="costo-sub-mo">${mxn((p.mo_horas||0)*(p.mo_tarifa||70))}</td>
             </tr>
           </tbody>
         </table>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg3);border-radius:10px;margin-bottom:12px">
         <span style="font-size:14px;font-weight:700">Total costo (sin MO)</span>
-        <span style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">${mxn(costoTotal)}</span>
+        <span style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">${mxn(costoTotal + (p.mo_horas||0)*(p.mo_tarifa||70))}</span>
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:10px;margin-bottom:10px">
@@ -662,7 +662,7 @@ async function abrirDetallePedido(id){
       <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:16px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em">🎨 Fórmula de tintas — ${formula.length>0?'Estimado guardado':'Sin fórmula aún'}</div>
-          <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-pedido');abrirCotizadorConPedido('${p.id}')">🧮 Ir al cotizador</button>
+          <button class="btn btn-secondary btn-sm" onclick="irACotizadorDesdePedido('${p.id}')">🧮 Ir al cotizador</button>
         </div>
         ${renderFormulaTintas(formula, p.id)}
       </div>
@@ -1440,44 +1440,51 @@ function recalcMO(){
   const horas=parseFloat(document.getElementById('costo-mo-horas')?.value||0);
   const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||0);
   const mo=horas*tarifa;
-  // Actualizar fila MO en tabla
   const moSubEl=document.getElementById('costo-sub-mo');
   if(moSubEl)moSubEl.textContent=mxn(mo);
-  // Recalcular total sin MO
-  let total=0;
+  let sinMO=0;
+  const p=window._pedidoActual;
   ['bot','tap','tintas','pant','pos','emp'].forEach(function(k){
     const inp=document.getElementById('costo-inp-'+k);
-    const p=window._pedidoActual;
     const qty=k==='tintas'?1:(p?(['pant','pos'].includes(k)?p.colores||0:p.piezas||0):0);
-    if(inp)total+=(parseFloat(inp.value)||0)*qty;
+    if(inp)sinMO+=(parseFloat(inp.value)||0)*qty;
   });
   const totEl=document.getElementById('costo-total-display');
-  if(totEl)totEl.textContent=mxn(total);
+  if(totEl)totEl.textContent=mxn(sinMO);
   const totMoEl=document.getElementById('costo-total-mo-display');
-  if(totMoEl)totMoEl.textContent=mxn(total+mo);
+  if(totMoEl)totMoEl.textContent=mxn(sinMO+mo);
 }
 
 async function guardarCostoEdit(id){
-  let total=0;
+  let sinMO=0;
+  const p=window._pedidoActual;
   ['bot','tap','tintas','pant','pos','emp'].forEach(function(k){
     const inp=document.getElementById('costo-inp-'+k);
-    const p=window._pedidoActual;
     const qty=k==='tintas'?1:(p?(['pant','pos'].includes(k)?p.colores||0:p.piezas||0):0);
-    if(inp)total+=(parseFloat(inp.value)||0)*qty;
+    if(inp)sinMO+=(parseFloat(inp.value)||0)*qty;
   });
   const horas=parseFloat(document.getElementById('costo-mo-horas')?.value||0);
-  const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||0);
+  const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||70);
   const mo=horas*tarifa;
-  const costoFinal=total+mo;
-  const venta=window._pedidoActual?.venta_total||0;
+  const costoFinal=sinMO+mo;
+  const venta=p?.venta_total||0;
   const margen=venta>0?((venta-costoFinal)/venta)*100:0;
   try{
-    await sbPatch('pipeline_mf',{costo_total:costoFinal,costo_mdo:mo,margen:margen},`id=eq.${id}`);
-    const p=PIPELINE.find(x=>x.id===id);
-    if(p){p.costo_total=costoFinal;p.costo_mdo=mo;p.margen=margen;}
+    await sbPatch('pipeline_mf',{costo_total:costoFinal,costo_mdo:mo,mo_horas:horas,mo_tarifa:tarifa,margen:margen},`id=eq.${id}`);
+    const row=PIPELINE.find(x=>x.id===id);
+    if(row){row.costo_total=costoFinal;row.costo_mdo=mo;row.mo_horas=horas;row.mo_tarifa=tarifa;row.margen=margen;}
+    if(p){p.costo_total=costoFinal;p.costo_mdo=mo;p.mo_horas=horas;p.mo_tarifa=tarifa;p.margen=margen;}
     toast('Costo actualizado ✓','ok');
     await loadPipeline();
   }catch(e){toast('Error: '+e.message,'err');}
+}
+
+function irACotizadorDesdePedido(id){
+  closeModal('modal-pedido');
+  setTimeout(function(){
+    showPage('cotizador', document.getElementById('nav-cotizador'));
+    abrirCotizadorConPedido(id);
+  }, 150);
 }
 
 async function init(){
