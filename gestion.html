@@ -784,6 +784,14 @@ async function procesarPDFs(){
     });
     const extracted=await response.json();
     if(!response.ok)throw new Error(extracted.error||'Error en servidor');
+    // Normalizar tintas como array de objetos {nombre, pantone}
+    if(extracted.tintas&&Array.isArray(extracted.tintas)){
+      extracted.tintas_info=extracted.tintas.map(function(t){
+        return typeof t==='string'?{nombre:t,pantone:t}:{nombre:t.nombre||t,pantone:t.pantone||t};
+      });
+    } else {
+      extracted.tintas_info=[];
+    }
     window._importedData=extracted;
     // Calcular venta automáticamente con defaults: stock2500 con color
     const piezas=extracted.piezas||0;
@@ -952,6 +960,7 @@ async function importarAPipeline(){
       direccion_envio:d.direccion_envio||null,
       notas:d.notas_packaging||null,
       estado:'Pendiente',
+      tintas_info:d.tintas_info||[],
     };
     // Incluir venta si se calculó
     if(c&&c.ventaTotal>0){
@@ -1014,7 +1023,14 @@ function renderColorBlocks(){
       <div class="cot-val">${a.pct&&tg&&a.precio_kg?mxn((a.pct/100*tg/1000)*a.precio_kg):'$0.00'}</div>
       <button class="del-btn" onclick="remAditivoComp(${ci},${ai})">✕</button></div>`).join('');
     return `<div class="color-block">
-      <div class="color-block-header"><div class="color-block-title">🎨 Color ${ci+1}</div><div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--amber)">${mxn(tc)} · ${tg}g</div></div>
+      <div class="color-block-header">
+        <div style="display:flex;align-items:center;gap:6px;flex:1">
+          <span class="color-block-title">🎨 Color ${ci+1}</span>
+          <input type="text" value="${col.nombre||''}" placeholder="Nombre (ej: REI Blue)" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 7px;color:var(--text);font-size:11px;outline:none;width:120px" oninput="updColorNombre(${ci},'nombre',this.value)">
+          <input type="text" value="${col.pantone||''}" placeholder="Pantone" style="background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 7px;color:var(--text);font-size:11px;outline:none;width:80px" oninput="updColorNombre(${ci},'pantone',this.value)">
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--amber)">${mxn(tc)} · ${tg}g</div>
+      </div>
       <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Tintas base</div>
       ${comps}<button class="add-line-btn" onclick="addTintaComp(${ci})">+ Agregar tinta base</button>
       <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);margin:10px 0 6px">Aditivos (% sobre ${tg}g de tintas)</div>
@@ -1077,7 +1093,24 @@ function abrirCotizadorConPedido(id){
   };
   setCotCliente();
   setTimeout(setCotCliente,500);
-  COT_COLORES=p.formula_tintas&&Array.isArray(p.formula_tintas)&&p.formula_tintas.length?JSON.parse(JSON.stringify(p.formula_tintas)):[];
+  // Cargar fórmula si existe, asignando nombres/pantones desde tintas_info
+  if(p.formula_tintas&&Array.isArray(p.formula_tintas)&&p.formula_tintas.length){
+    COT_COLORES=JSON.parse(JSON.stringify(p.formula_tintas));
+    // Asignar nombres desde tintas_info si los colores no tienen nombre
+    const ti=p.tintas_info||[];
+    COT_COLORES.forEach(function(col,ci){
+      if(!col.nombre&&ti[ci])col.nombre=ti[ci].nombre||'Color '+(ci+1);
+      if(!col.pantone&&ti[ci])col.pantone=ti[ci].pantone||'';
+    });
+  } else {
+    COT_COLORES=[];
+    // Inicializar colores desde tintas_info
+    const n=p.colores||0;
+    const ti=p.tintas_info||[];
+    for(let i=0;i<n;i++){
+      COT_COLORES.push({nombre:ti[i]?ti[i].nombre:'Color '+(i+1),pantone:ti[i]?ti[i].pantone:'',componentes:[],aditivos:[]});
+    }
+  }
   renderColorBlocks();calcCotizador();
   toast('Pedido cargado: '+(p.sub_cliente||p.po),'ok');
 }
@@ -1195,7 +1228,13 @@ async function guardarCotizacion(){
     await sbPost('cotizaciones',cotData);
     const formulaGuardar=COT_COLORES&&COT_COLORES.length>0?COT_COLORES:undefined;
     const upd={costo_total:r?.costoTotal||0,venta_total:ventaTotalFinal,margen:r2.margen,costo_tintas_estimado:r?.costoTintas||0,venta_botellas:pBotCot*piezas,venta_tapas:pTapCot*piezas};
-    if(formulaGuardar)upd.formula_tintas=formulaGuardar;
+    if(formulaGuardar){
+      upd.formula_tintas=formulaGuardar;
+      // Actualizar tintas_info con nombres/pantones del cotizador
+      upd.tintas_info=formulaGuardar.map(function(col,ci){
+        return {nombre:col.nombre||'Color '+(ci+1),pantone:col.pantone||''};
+      });
+    }
     if(pipelineId)await sbPatch('pipeline_mf',upd,`id=eq.${pipelineId}`);
     else if(cotData.po){
       const rows=await sbGet('pipeline_mf',`po=eq.${cotData.po}`);
@@ -2072,6 +2111,12 @@ function verPDFDiseno(){
   if(!url){toast('Sin PDF de diseño guardado','err');return;}
   if(url.startsWith('http'))window.open(url,'_blank');
   else toast('URL: '+url);
+}
+
+
+function updColorNombre(ci, field, val){
+  if(!COT_COLORES[ci])return;
+  COT_COLORES[ci][field]=val;
 }
 
 
