@@ -752,7 +752,8 @@ async function procesarPDFs(){
     const colores=extracted.num_colores||0;
     if(extracted.capacidad===750)extracted.capacidad=700; // 750ml usa misma botella que 700ml
     const cap=extracted.capacidad||0;
-    const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===cap&&p.corrida==='stock2500'&&p.con_color===true);
+    const capN=cap===750?700:cap; // normalizar 750→700
+    const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capN&&p.corrida==='stock2500'&&p.con_color===true)||CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capN&&p.con_color===true);
     const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida==='2500'&&p.con_color===true);
     const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
     let costoMdo=0;
@@ -814,8 +815,8 @@ async function procesarPDFs(){
               <option value="5000">5,000 pzas</option>
             </select>
           </div>
-          <div class="pdf-field"><span class="pdf-field-key">Bot. $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-bot" type="number" value="${pvBot?pvBot.precio.toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-bot" style="color:var(--green)">${mxn(vBot)}</span></div></div>
-          <div class="pdf-field"><span class="pdf-field-key">Tapa $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-tap" type="number" value="${pvTap?pvTap.precio.toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-tap" style="color:var(--green)">${mxn(vTap)}</span></div></div>
+          <div class="pdf-field"><span class="pdf-field-key">Bot. $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-bot" type="number" value="${pvBot?(+pvBot.precio).toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-bot" style="color:var(--green)">${mxn(vBot)}</span></div></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tapa $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-tap" type="number" value="${pvTap?(+pvTap.precio).toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-tap" style="color:var(--green)">${mxn(vTap)}</span></div></div>
           <div class="pdf-field"><span class="pdf-field-key">Tintas+pantallas+MO</span><span class="pdf-field-val" id="imp-v-otros" style="color:var(--green)">${mxn(vTintas+vPant+vMdo+vEmp)}</span></div>
           <div class="pdf-field" style="border:none;padding-top:8px"><span style="font-size:12px;font-weight:700">Total venta</span><span class="pdf-field-val" id="imp-v-total" style="color:var(--green);font-size:14px;font-weight:700">${mxn(ventaTotal)}</span></div>
         </div>
