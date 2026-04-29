@@ -817,7 +817,8 @@ async function procesarPDFs(){
           </div>
           <div class="pdf-field"><span class="pdf-field-key">Bot. $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-bot" type="number" value="${pvBot?(+pvBot.precio).toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-bot" style="color:var(--green)">${mxn(vBot)}</span></div></div>
           <div class="pdf-field"><span class="pdf-field-key">Tapa $/pza</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-tap" type="number" value="${pvTap?(+pvTap.precio).toFixed(2):'0.00'}" step="0.01" oninput="recalcImport()" style="width:60px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-tap" style="color:var(--green)">${mxn(vTap)}</span></div></div>
-          <div class="pdf-field"><span class="pdf-field-key">Tintas+pantallas+MO</span><span class="pdf-field-val" id="imp-v-otros" style="color:var(--green)">${mxn(vTintas+vPant+vMdo+vEmp)}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">Tintas+pantallas+emp</span><span class="pdf-field-val" id="imp-v-otros" style="color:var(--green)">${mxn(vTintas+vPant+vEmp)}</span></div>
+          <div class="pdf-field"><span class="pdf-field-key">MO $/pza (${colores} col)</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--text2);font-size:11px">$</span><input id="imp-p-mdo" type="number" value="${piezas?(vMdo/piezas).toFixed(4):'0'}" step="0.01" oninput="recalcImport()" style="width:70px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:2px 5px;color:var(--text);font-size:11px;outline:none;text-align:center"><span class="pdf-field-val" id="imp-v-mdo" style="color:var(--green)">${mxn(vMdo)}</span></div></div>
           <div class="pdf-field" style="border:none;padding-top:8px"><span style="font-size:12px;font-weight:700">Total venta</span><span class="pdf-field-val" id="imp-v-total" style="color:var(--green);font-size:14px;font-weight:700">${mxn(ventaTotal)}</span></div>
         </div>
       </div>`;
@@ -860,6 +861,9 @@ function recalcImport(){
   const pTapVal=pTapInput?parseFloat(pTapInput.value)||0:(pvTap?.precio||0);
   const vBot=pBotVal*piezas,vTap=pTapVal*piezas;
   const vTintas=tfTintas*piezas,vPant=tfPant*colores,vEmp=(tfP+tfT)*piezas;
+  // Leer MO editable si existe
+  const pMdoInput=document.getElementById('imp-p-mdo');
+  if(pMdoInput&&parseFloat(pMdoInput.value)>=0)vMdo=parseFloat(pMdoInput.value)*piezas;
   const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
   const cPant=500*colores,cPos=230*colores,costoEmp=(tfP+tfT)*piezas;
   const costoTotal=vMdo+cPant+cPos+costoEmp;
@@ -868,7 +872,8 @@ function recalcImport(){
   const el=id=>document.getElementById(id);
   if(el('imp-v-bot'))el('imp-v-bot').textContent=mxn(vBot);
   if(el('imp-v-tap'))el('imp-v-tap').textContent=mxn(vTap);
-  if(el('imp-v-otros'))el('imp-v-otros').textContent=mxn(vTintas+vPant+vMdo+vEmp);
+  if(el('imp-v-otros'))el('imp-v-otros').textContent=mxn(vTintas+vPant+vEmp);
+  if(el('imp-v-mdo'))el('imp-v-mdo').textContent=mxn(vMdo);
   if(el('imp-v-total'))el('imp-v-total').textContent=mxn(ventaTotal);
 }
 
@@ -1481,11 +1486,9 @@ function renderDetallePedido(p) {
   // Buscar precios en catálogo primero (stock2500 con color = default)
   var pvBotDef = CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===cap&&x.corrida==='stock2500'&&x.con_color===true;});
   var pvTapDef = CAT.precios_venta.find(function(x){return x.tipo==='tapa'&&x.corrida==='2500'&&x.con_color===true;});
-  var pBot = pvBotDef ? pvBotDef.precio : 0;
-  var pTap = pvTapDef ? pvTapDef.precio : 0;
-  // Si hay valores guardados por pieza que son coherentes, usarlos
-  if(p.venta_botellas && piezas && (p.venta_botellas/piezas) > 0.5) pBot = p.venta_botellas/piezas;
-  if(p.venta_tapas && piezas && (p.venta_tapas/piezas) > 0.5) pTap = p.venta_tapas/piezas;
+  // Precio desde guardado o catálogo
+  var pBot = (p.venta_botellas>0&&piezas) ? p.venta_botellas/piezas : (pvBotDef ? pvBotDef.precio : 0);
+  var pTap = (p.venta_tapas>0&&piezas) ? p.venta_tapas/piezas : (pvTapDef ? pvTapDef.precio : 0);
   var formula = p.formula_tintas||[];
   var costoTintas = 0;
   formula.forEach(function(col) {
