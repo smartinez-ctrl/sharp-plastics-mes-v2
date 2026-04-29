@@ -536,7 +536,7 @@ function renderPipeline(){
       <td><span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}">${p.estado}</span></td>
       <td>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();eliminarPedido('${p.id}')">🗑</button>`:''}</td>
     </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">Sin completados</td></tr>';
-
+}
 
 function abrirNuevoPedido(){
   document.getElementById('modal-pedido-titulo').textContent='Nuevo pedido';
