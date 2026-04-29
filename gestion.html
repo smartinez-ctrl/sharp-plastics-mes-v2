@@ -490,7 +490,7 @@ async function loadPipeline(){
   }catch(e){document.getElementById('pipeline-activos').innerHTML=`<div style="color:var(--red);padding:20px">Error: ${e.message}</div>`;}
 }
 
-function renderPipeline(){
+function renderPipeline(){try{
   const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
   const completados=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado');
   document.getElementById('badge-pipeline').textContent=activos.length;
@@ -535,7 +535,7 @@ function renderPipeline(){
       <td><span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}">${p.estado}</span></td>
       <td>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();eliminarPedido('${p.id}')">🗑</button>`:''}</td>
     </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">Sin completados</td></tr>';
-}
+}catch(e){console.error("renderPipeline error:",e);}
 
 function abrirNuevoPedido(){
   document.getElementById('modal-pedido-titulo').textContent='Nuevo pedido';
@@ -715,8 +715,8 @@ function resetImport(){
   document.getElementById('drop2').innerHTML='<div class="pdf-drop-icon">🎨</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">..._V2.pdf</div>';
   document.getElementById('pdf-processing').style.display='none';
   document.getElementById('pdf-result').style.display='none';
-  document.getElementById('btn-import-cotizar').style.display='none';
-  document.getElementById('btn-import-guardar').style.display='none';
+  const bic=document.getElementById('btn-import-cotizar');if(bic)bic.style.display='none';
+  const big=document.getElementById('btn-import-guardar');if(big)big.style.display='none';
   document.getElementById('file-po').value='';document.getElementById('file-mockup').value='';
 }
 
