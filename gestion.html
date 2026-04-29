@@ -786,7 +786,7 @@ async function procesarPDFs(){
     const ventaTotal=vBot+vTap+vTintas+vPant+vMdo+vEmp;
     const margen=ventaTotal>0?((ventaTotal-costoTotal)/ventaTotal)*100:0;
     window._cotCalc={costoMdo,cPant,cPos,costoEmp,costoTotal,vBot,vTap,vTintas,vPant,vMdo,vEmp,ventaTotal,margen,corridaBot:'stock2500',colorBot:true,corridaTap:'2500',colorTap:true};
-    window._cotResult={costoTotal,ventaTotal,margen,costoTintas,piezas,colores};
+    window._cotResult={costoTotal,ventaTotal,margen,costoTintas:0,piezas,colores};
     document.getElementById('pdf-result').innerHTML=`
       <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">✓ Claude extrajo — revisa y corrige antes de guardar</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
