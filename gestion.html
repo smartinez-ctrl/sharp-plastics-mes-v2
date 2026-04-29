@@ -797,6 +797,11 @@ async function procesarPDFs(){
     } else {
       extracted.tintas_info=[];
     }
+    // Asegurar que tintas_info tenga exactamente num_colores entradas
+    const numColNorm=extracted.num_colores||0;
+    if(!extracted.tintas_info)extracted.tintas_info=[];
+    while(extracted.tintas_info.length<numColNorm)extracted.tintas_info.push({nombre:'',pantone:''});
+    extracted.tintas_info=extracted.tintas_info.slice(0,numColNorm);
     window._importedData=extracted;
     // Calcular venta automáticamente con defaults: stock2500 con color
     const piezas=extracted.piezas||0;
@@ -848,9 +853,9 @@ async function procesarPDFs(){
           </div>
           <div class="pdf-field" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="pdf-field-key" style="margin-bottom:4px">Colores / Pantones</span>
             <div id="imp-colores-inputs" style="width:100%;display:flex;flex-direction:column;gap:4px">
-              ${(extracted.tintas_info&&extracted.tintas_info.length?extracted.tintas_info:extracted.tintas||[]).map((t,i)=>{
-                const nombre=t.nombre||t;
-                const pantone=t.pantone||t;
+              ${(extracted.tintas_info||[]).map((t,i)=>{
+                const nombre=typeof t==='string'?t:(t.nombre||'');
+                const pantone=typeof t==='string'?'':(t.pantone||'');
                 // Si nombre y pantone son iguales, solo mostrar uno
                 const pantoneDisplay=pantone===nombre?'':pantone;
                 return `<div style="display:flex;gap:4px;align-items:center">
