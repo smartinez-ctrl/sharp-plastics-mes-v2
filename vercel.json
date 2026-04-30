@@ -5,6 +5,12 @@
     },
     "api/generate-pdf.js": {
       "maxDuration": 10
+    },
+    "api/send-approval.js": {
+      "maxDuration": 15
+    },
+    "api/approve-order.js": {
+      "maxDuration": 10
     }
   }
 }

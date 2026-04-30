@@ -395,6 +395,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <input type="file" id="fc1" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(1,this)">
     <input type="file" id="fc2" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(2,this)">
     <input type="file" id="fc3" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(3,this)">
+    <div id="aprobacion-status" style="display:none;margin:0 0 12px"></div>
     <div class="card">
       <div class="card-title">Aprobación</div>
       <div class="field"><label>Aprobado por</label>
@@ -405,7 +406,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       </div>
     </div>
   </div></div>
-  <div class="bottom-bar"><button class="btn btn-primary" onclick="goProduccion()">Iniciar producción →</button></div>
+  <div class="bottom-bar" id="fotos-bottom-bar">
+    <button class="btn btn-secondary" id="btn-enviar-aprobacion" onclick="enviarAprobacion()" style="flex:1">📧 Enviar para aprobación</button>
+    <button class="btn btn-primary" id="btn-iniciar-prod" onclick="goProduccion()" style="flex:1;display:none" disabled>🔒 Esperando aprobación</button>
+  </div>
 </div>
 
 <!-- PRODUCCIÓN -->
@@ -1218,7 +1222,100 @@ function handleFoto(i,input){
   reader.readAsDataURL(file);
   input.value=''; // resetear para poder seleccionar el mismo archivo de nuevo
 }
-function goFotos(){guardarOrden('fotos');showScreen('fotos');renderSteps('steps-fotos','fotos');}
+function goFotos(){
+  guardarOrden('fotos');
+  showScreen('fotos');
+  renderSteps('steps-fotos','fotos');
+  // Resetear estado aprobación al entrar a fotos
+  window._aprobacionPollInterval = null;
+  setAprobacionStatus('idle');
+}
+
+function setAprobacionStatus(state, msg){
+  const statusEl = document.getElementById('aprobacion-status');
+  const btnEnviar = document.getElementById('btn-enviar-aprobacion');
+  const btnIniciar = document.getElementById('btn-iniciar-prod');
+  if(!statusEl) return;
+
+  if(state === 'idle'){
+    statusEl.style.display = 'none';
+    if(btnEnviar){btnEnviar.style.display='';btnEnviar.disabled=false;btnEnviar.textContent='📧 Enviar para aprobación';}
+    if(btnIniciar){btnIniciar.style.display='none';}
+  } else if(state === 'enviando'){
+    statusEl.style.display = 'none';
+    if(btnEnviar){btnEnviar.disabled=true;btnEnviar.textContent='Enviando...';}
+  } else if(state === 'pendiente'){
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<div style="background:#92400e22;border:1px solid #f59e0b55;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">⏳</span><div><div style="font-size:13px;font-weight:600;color:#f59e0b">Esperando aprobación</div><div style="font-size:11px;color:#9ca3af;margin-top:2px">Email enviado a smartinez@sharpplastics.com</div></div></div>';
+    if(btnEnviar){btnEnviar.disabled=false;btnEnviar.textContent='🔄 Reenviar email';}
+    if(btnIniciar){btnIniciar.style.display='';btnIniciar.disabled=true;btnIniciar.textContent='🔒 Esperando aprobación';}
+  } else if(state === 'aprobado'){
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<div style="background:#14532d22;border:1px solid #16a34a55;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">✅</span><div><div style="font-size:13px;font-weight:600;color:#22c55e">¡Aprobado!</div><div style="font-size:11px;color:#9ca3af;margin-top:2px">Producción autorizada por smartinez@sharpplastics.com</div></div></div>';
+    if(btnEnviar){btnEnviar.style.display='none';}
+    if(btnIniciar){btnIniciar.style.display='';btnIniciar.disabled=false;btnIniciar.textContent='🚀 Iniciar producción →';btnIniciar.style.background='var(--green)';}
+    // Detener polling
+    if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
+  } else if(state === 'error'){
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `<div style="background:#7f1d1d22;border:1px solid #ef444455;border-radius:10px;padding:12px 16px;font-size:12px;color:#f87171">${msg||'Error al enviar. Intenta de nuevo.'}</div>`;
+    if(btnEnviar){btnEnviar.disabled=false;btnEnviar.textContent='📧 Reintentar';}
+  }
+}
+
+async function enviarAprobacion(){
+  const fotos = S.fotos || [];
+  const obs = document.getElementById('foto-obs')?.value || '';
+  const ordenId = S.orden?.id;
+
+  if(!ordenId){toast('Guarda la orden primero','err');return;}
+  if(!fotos.some(f=>f)){toast('Sube al menos una foto','err');return;}
+
+  setAprobacionStatus('enviando');
+
+  try {
+    const resp = await fetch('/api/send-approval', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        orden_id: ordenId,
+        orden_op: S.orden.op || '—',
+        cliente: S.orden.cliente || '—',
+        sub_cliente: S.orden.sub_cliente || '',
+        piezas: S.orden.pzas || 0,
+        colores: S.orden.colores?.length || 0,
+        fotos: fotos,
+        observaciones: obs,
+      })
+    });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Error del servidor');
+
+    setAprobacionStatus('pendiente');
+    toast('Email enviado ✓ Esperando aprobación');
+    // Iniciar polling cada 10 segundos
+    window._aprobacionPollInterval = setInterval(pollAprobacion, 10000);
+
+  } catch(e) {
+    setAprobacionStatus('error', e.message);
+    toast('Error: '+e.message, 'err');
+  }
+}
+
+async function pollAprobacion(){
+  const ordenId = S.orden?.id;
+  if(!ordenId) return;
+  try {
+    const resp = await fetch(`${SB_URL}/rest/v1/ordenes_produccion?id=eq.${ordenId}&select=aprobacion_estado`, {
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY}
+    });
+    const rows = await resp.json();
+    if(rows && rows[0] && rows[0].aprobacion_estado === 'aprobado'){
+      setAprobacionStatus('aprobado');
+      toast('✅ ¡Aprobado! Ya puedes iniciar producción', 'ok');
+    }
+  } catch(e){ console.warn('Poll error:', e); }
+}
 
 // ══════════════════════════════════════════════════════
 // PRODUCCIÓN
