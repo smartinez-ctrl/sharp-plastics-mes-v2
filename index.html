@@ -1663,29 +1663,75 @@ function generarPDF(){
     }
   });
   const fotosHTML=S.fotos.some(f=>f)?`<div style="margin-bottom:18px"><div style="font-size:13px;font-weight:700;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-bottom:10px">Fotos de aprobación</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${S.fotos.map((f,i)=>f?`<div><img src="${f}" style="width:100%;border-radius:8px;border:1px solid #e5e7eb"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:4px">${['Frente','Reverso','Detalle tinta','Vista general'][i]}</div></div>`:'').join('')}</div></div>`:'';
+  const coloresStr=(S.orden.colores||[]).map(c=>c.nombre+(c.pantone?' · '+c.pantone:'')).join(' / ')||'—';
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>QA — ${S.orden.op||'Orden'}</title>
-  <style>body{font-family:Arial,sans-serif;color:#111;margin:0;padding:20px;background:#fff}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #111;padding-bottom:14px;margin-bottom:18px}.company{font-size:22px;font-weight:800}.meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px}.meta-box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px}.meta-label{font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:3px}.meta-val{font-size:14px;font-weight:700}.section-title{font-size:13px;font-weight:700;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin:18px 0 10px}table{width:100%;border-collapse:collapse}.results-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px}.result-box{border-radius:8px;padding:12px;text-align:center}.result-val{font-size:26px;font-weight:800}.result-label{font-size:10px;color:#6b7280;margin-top:2px}.footer{margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:20px}.sign-box{border-top:2px solid #111;padding-top:8px;font-size:11px;color:#6b7280}@media print{body{margin:0;padding:15px}}</style></head><body>
-  <div class="header"><div><div class="company">SHARP PLASTICS</div><div style="font-size:13px;color:#6b7280">Reporte de Control de Calidad — Serigrafía UV</div></div><div style="text-align:right;font-size:11px;color:#6b7280">${fecha}<br><strong style="color:#111">${S.orden.op||'—'}</strong></div></div>
-  ${fotosHTML}
-  <div class="meta-grid">
-    <div class="meta-box"><div class="meta-label">Cliente</div><div class="meta-val">${S.orden.cliente||'—'}</div></div>
-    <div class="meta-box"><div class="meta-label">Producto</div><div class="meta-val">${S.orden.producto||'—'}</div></div>
-    <div class="meta-box"><div class="meta-label">Piezas totales</div><div class="meta-val">${(S.orden.pzas||0).toLocaleString()}</div></div>
-    <div class="meta-box"><div class="meta-label">Máquina</div><div class="meta-val">${S.orden.maquina||'—'}</div></div>
-    <div class="meta-box"><div class="meta-label">Crosshatch</div><div class="meta-val" style="color:${xhatch.includes('Aprobado')?'#16a34a':'#dc2626'}">${xhatch}</div></div>
-    <div class="meta-box"><div class="meta-label">Prueba de agua</div><div class="meta-val" style="color:${agua.includes('Aprobado')?'#16a34a':'#dc2626'}">${agua}</div></div>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;color:#111;margin:0;padding:20px;background:#fff;font-size:12px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #111;padding-bottom:12px;margin-bottom:16px}
+    .company{font-size:20px;font-weight:800;letter-spacing:-.5px}
+    .company span{color:#f59e0b}
+    .subtitle{font-size:11px;color:#6b7280;margin-top:2px}
+    .info-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    .info-table td{padding:5px 8px;border:1px solid #e5e7eb;vertical-align:top}
+    .info-table .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;display:block;margin-bottom:1px}
+    .info-table .val{font-size:13px;font-weight:700}
+    .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #111;padding-bottom:4px;margin:14px 0 8px;color:#374151}
+    .fotos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+    .foto-item img{width:100%;border-radius:6px;border:1px solid #e5e7eb;display:block}
+    .foto-label{font-size:9px;color:#6b7280;text-align:center;margin-top:3px}
+    table.qa{width:100%;border-collapse:collapse}
+    table.qa td,table.qa th{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:11px}
+    table.qa .sec-header{background:#f0f4f8;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#374151;padding:5px 8px}
+    .footer{margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .sign-box{border-top:2px solid #111;padding-top:6px;font-size:10px;color:#6b7280}
+    @media print{body{margin:0;padding:12px}@page{margin:10mm}}
+  </style></head><body>
+
+  <!-- 1. ENCABEZADO -->
+  <div class="header">
+    <div>
+      <div class="company">SHARP <span>PLASTICS</span></div>
+      <div class="subtitle">Reporte de Control de Calidad · Serigrafía UV</div>
+    </div>
+    <div style="text-align:right;font-size:11px;color:#6b7280">
+      ${fecha}<br>
+      <strong style="font-size:13px;color:#111">${S.orden.op||'—'}</strong>
+    </div>
   </div>
-  <div class="results-grid">
-    <div class="result-box" style="background:#f0fdf4;border:1px solid #86efac"><div class="result-val" style="color:#16a34a">${buenas.toLocaleString()}</div><div class="result-label">Piezas buenas</div></div>
-    <div class="result-box" style="background:#fef2f2;border:1px solid #fca5a5"><div class="result-val" style="color:#dc2626">${merma}</div><div class="result-label">Merma</div></div>
-    <div class="result-box" style="background:#fffbeb;border:1px solid #fcd34d"><div class="result-val" style="color:#d97706">${S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1)+'%':'—'}</div><div class="result-label">Rendimiento</div></div>
-  </div>
-  <div class="section-title">Checklist QA (${pass}/${tot} aprobados)</div>
-  <table>${qaRows}</table>
-  ${tintasRows?`<div class="section-title">Fórmula de tintas (costo: $${costoTotal.toFixed(2)})</div><table><thead><tr style="background:#f0f4f8"><th style="padding:6px 10px;text-align:left;font-size:11px">Tinta</th><th style="text-align:center;font-size:11px">Gramos</th><th style="text-align:right;font-size:11px">Costo</th></tr></thead><tbody>${tintasRows}</tbody></table>`:''}
-  ${obs?`<div class="section-title">Observaciones</div><p style="font-size:12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px">${obs}</p>`:''}
+
+  <!-- 2. DATOS DEL PEDIDO Y PRUEBAS -->
+  <table class="info-table">
+    <tr>
+      <td width="25%"><span class="lbl">Cliente</span><span class="val">${S.orden.cliente||'—'}</span></td>
+      <td width="25%"><span class="lbl">Producto</span><span class="val">${S.orden.producto||'—'}</span></td>
+      <td width="25%"><span class="lbl">Piezas</span><span class="val">${(S.orden.pzas||0).toLocaleString()}</span></td>
+      <td width="25%"><span class="lbl">Máquina</span><span class="val">${S.orden.maquina||'—'}</span></td>
+    </tr>
+    <tr>
+      <td colspan="2"><span class="lbl">Colores / Pantone</span><span class="val">${coloresStr}</span></td>
+      <td><span class="lbl">Crosshatch</span><span class="val" style="color:${xhatch.includes('Aprobado')?'#16a34a':'#dc2626'}">${xhatch}</span></td>
+      <td><span class="lbl">Prueba de agua</span><span class="val" style="color:${agua.includes('Aprobado')?'#16a34a':'#dc2626'}">${agua}</span></td>
+    </tr>
+  </table>
+
+  <!-- 3. FOTOS DE APROBACIÓN -->
+  ${S.fotos.some(f=>f)?`
+  <div class="section-title">Fotos de aprobación</div>
+  <div class="fotos-grid">
+    ${S.fotos.map((f,i)=>f?`<div class="foto-item"><img src="${f}"><div class="foto-label">${['Frente','Reverso','Detalle tinta','Vista general'][i]}</div></div>`:'').join('')}
+  </div>`:''}
+
+  <!-- 4. QA CHECKLIST -->
+  <div class="section-title">Checklist QA — ${pass}/${tot} aprobados</div>
+  <table class="qa">
+    <tbody>${qaRows}</tbody>
+  </table>
+
+  ${obs?`<div class="section-title">Observaciones</div><p style="font-size:11px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;margin:0 0 14px">${obs}</p>`:''}
+
   <div class="footer">
-    <div class="sign-box">Aprobado por: <strong>${firma}</strong></div>
+    <div class="sign-box">Liberado por: <strong>${firma}</strong></div>
     <div class="sign-box">Firma: ________________</div>
   </div>
   </body></html>`;
