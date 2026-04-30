@@ -1140,7 +1140,12 @@ function timerPlay(name){
   // Mandar email de monitor solo al primer inicio del cronómetro de producción
   if(esPrimerInicio){
     window._monitorEmailEnviado=true;
-    guardarOrden('produccion').then(()=>enviarEmailMonitor());
+    console.log('🔴 Iniciando producción — enviando email monitor...');
+    console.log('S.ordenId:', S.ordenId, 'S.orden.op:', S.orden.op);
+    guardarOrden('produccion').then(()=>{
+      console.log('Orden guardada, S.ordenId:', S.ordenId);
+      enviarEmailMonitor();
+    }).catch(e=>console.error('Error guardando:', e));
   }
 }
 function timerPause(name){
