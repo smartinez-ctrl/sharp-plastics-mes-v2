@@ -95,7 +95,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .tm-time{font-family:'Space Mono',monospace;font-size:10px;color:var(--text3);margin-top:1px}
 .tm-live{font-size:9px;font-weight:700;padding:1px 5px;border-radius:999px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
 .merma-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
-.merma-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:space-between}
+.merma-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:space-between;touch-action:manipulation}
 .merma-item.has-val{border-color:var(--red-border);background:var(--red-bg)}
 .merma-name{font-size:11px;font-weight:500;color:var(--text)}
 .merma-count{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--red)}
@@ -133,7 +133,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .progress-wrap{background:var(--bg3);border-radius:999px;height:4px;overflow:hidden;margin:6px 0 12px}
 .progress-fill{height:100%;border-radius:999px;background:var(--green);transition:width 0.5s}
 .counter-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0}
-.counter-btn{border:none;border-radius:var(--r);cursor:pointer;font-size:22px;font-weight:700;transition:opacity 0.15s}
+.counter-btn{border:none;border-radius:var(--r);cursor:pointer;font-size:22px;font-weight:700;transition:opacity 0.15s;touch-action:manipulation}
 .counter-btn:active{opacity:0.7}
 .counter-minus{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);width:56px;height:56px;border-radius:50%}
 .counter-plus{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);width:56px;height:56px;border-radius:50%}
@@ -284,7 +284,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 </div>
 
 <!-- AJUSTE -->
-<div class="screen" id="screen-ajuste">
+<div class="screen" id="screen-ajuste" onclick="dismissKeyboard()">
   <div class="topbar">
     <div class="topbar-left">
       <button class="back-btn" onclick="showScreen('orden')">←</button>
@@ -441,6 +441,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <div class="tbar-item"><span class="tbar-label">seg/bot</span><span class="tbar-val" id="t-seg-bot" style="color:var(--amber)">—</span></div>
   </div>
   <div class="scroll"><div class="scroll-narrow">
+    <div class="timer-card">
+      <div class="timer-label" style="color:var(--blue)">Cronómetro de producción</div>
+      <div class="timer-display stopped mono" id="timer-prod">00:00:00</div>
+      <div class="timer-btns" id="timer-prod-btns">
+        <button class="tbtn tbtn-play" id="btn-prod-play" onclick="timerPlay('prod')">▶ Iniciar</button>
+        <button class="tbtn tbtn-pause" id="btn-prod-pause" onclick="timerPause('prod')" style="display:none">⏸ Pausar</button>
+        <button class="tbtn tbtn-stop" id="btn-prod-stop" onclick="timerStop('prod')" style="display:none">■ Detener</button>
+      </div>
+    </div>
     <div class="stats-grid">
       <div class="stat"><div class="stat-val" id="stat-buenas" style="color:var(--green)">0</div><div class="stat-label">Buenas</div></div>
       <div class="stat"><div class="stat-val" id="stat-merma" style="color:var(--red)">0</div><div class="stat-label">Merma</div></div>
@@ -454,28 +463,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <div class="card">
       <div class="card-title">Piezas buenas producidas</div>
       <div class="counter-row">
-        <button class="counter-btn counter-minus" id="btn-minus-buenas" onclick="adjBuenas(-1)">−</button>
+        <button class="counter-btn counter-minus" id="btn-minus-buenas" onclick="adjBuenas(-1)" style="touch-action:manipulation">−</button>
         <div style="flex:1;text-align:center">
           <input type="number" id="buenas-input" value="0" min="0" inputmode="numeric"
             style="font-family:'Space Mono',monospace;font-size:48px;font-weight:700;color:var(--green);background:transparent;border:none;outline:none;text-align:center;width:100%"
             oninput="onBuenasInput(this.value)">
           <div style="font-size:10px;color:var(--text3)">piezas buenas</div>
         </div>
-        <button class="counter-btn counter-plus" id="btn-plus-buenas" onclick="adjBuenas(1)">+</button>
+        <button class="counter-btn counter-plus" id="btn-plus-buenas" onclick="adjBuenas(1)" style="touch-action:manipulation">+</button>
       </div>
       <div class="quick-btns" id="quick-btns-prod">
-        <button class="btn btn-ghost btn-sm" onclick="adjBuenas(10)">+10</button>
-        <button class="btn btn-ghost btn-sm" onclick="adjBuenas(50)">+50</button>
-        <button class="btn btn-ghost btn-sm" onclick="adjBuenas(100)">+100</button>
-      </div>
-    </div>
-    <div class="timer-card">
-      <div class="timer-label" style="color:var(--blue)">Cronómetro de producción</div>
-      <div class="timer-display stopped mono" id="timer-prod">00:00:00</div>
-      <div class="timer-btns" id="timer-prod-btns">
-        <button class="tbtn tbtn-play" id="btn-prod-play" onclick="timerPlay('prod')">▶ Iniciar</button>
-        <button class="tbtn tbtn-pause" id="btn-prod-pause" onclick="timerPause('prod')" style="display:none">⏸ Pausar</button>
-        <button class="tbtn tbtn-stop" id="btn-prod-stop" onclick="timerStop('prod')" style="display:none">■ Detener</button>
+        <button class="btn btn-ghost btn-sm" onclick="adjBuenas(10)" style="touch-action:manipulation">+10</button>
+        <button class="btn btn-ghost btn-sm" onclick="adjBuenas(50)" style="touch-action:manipulation">+50</button>
+        <button class="btn btn-ghost btn-sm" onclick="adjBuenas(100)" style="touch-action:manipulation">+100</button>
       </div>
     </div>
     <div class="card">
@@ -683,6 +683,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 function chex(n){const m={azul:'#4a9eff',verde:'#34d399',negro:'#555',rojo:'#f87171',amarillo:'#fbbf24',blanco:'#e8eaf0',naranja:'#fb923c',morado:'#a78bfa',rosa:'#f472b6'};return m[(n||'').toLowerCase()]||'#8890a4';}
 function mxn(n){return'$'+(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const el=document.getElementById('screen-'+id);if(el)el.classList.add('active');}
+function dismissKeyboard(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();}
 function renderSteps(elId,current){const el=document.getElementById(elId);if(!el)return;const cur=STEPS.indexOf(current);el.innerHTML=STEPS.map((s,i)=>`<div class="step-dot ${i<cur?'done':i===cur?'active':''}"></div>`).join('');}
 function updateOrderStrip(){const el=document.getElementById('strip-nombre-ajuste');if(el)el.textContent=(S.orden.cliente?S.orden.cliente+' · ':'')+S.orden.op+' · '+(S.orden.pzas||0).toLocaleString()+' pzas';}
 
