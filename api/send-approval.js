@@ -2,50 +2,14 @@ const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
 const SB_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
 const APPROVAL_EMAIL = 'smartinez@sharpplastics.com';
 const BASE_URL = 'https://sharp-plastics-mes-v2.vercel.app';
-const BUCKET = 'fotos-aprobacion';
-
-async function uploadFoto(base64, ordenId, index) {
-  if (!base64) return null;
-  try {
-    const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    const filename = `${ordenId}/foto-${index}-${Date.now()}.jpg`;
-    const res = await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${filename}`, {
-      method: 'POST',
-      headers: {
-        'apikey': SB_KEY,
-        'Authorization': `Bearer ${SB_KEY}`,
-        'Content-Type': 'image/jpeg',
-        'x-upsert': 'true',
-      },
-      body: buffer,
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      console.error(`Upload foto ${index} error:`, err);
-      return null;
-    }
-    const url = `${SB_URL}/storage/v1/object/public/${BUCKET}/${filename}`;
-    console.log(`Foto ${index} subida:`, url);
-    return url;
-  } catch(e) {
-    console.error(`Upload foto ${index} exception:`, e.message);
-    return null;
-  }
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { orden_id, orden_op, cliente, sub_cliente, piezas, colores, fotos = [], observaciones } = req.body;
+  const { orden_id, orden_op, cliente, sub_cliente, piezas, colores, foto_urls = [], observaciones } = req.body;
   if (!orden_id) return res.status(400).json({ error: 'orden_id requerido' });
 
-  console.log('send-approval: orden_id=', orden_id, 'fotos recibidas:', fotos.length, fotos.map(f=>f?'data:'+f.length:'null'));
-
-  // Subir fotos a Storage
-  const fotoLabels = ['Frente', 'Reverso', 'Detalle tinta', 'Vista general'];
-  const fotoUrls = await Promise.all(fotos.map((f, i) => uploadFoto(f, orden_id, i)));
-  console.log('URLs generadas:', fotoUrls);
+  console.log('send-approval: orden_id=', orden_id, 'foto_urls:', foto_urls.length, foto_urls.map(u => u ? 'OK' : 'null'));
 
   // Token de aprobación
   const token = Buffer.from(`${orden_id}:${Date.now()}:approve`).toString('base64url');
@@ -56,16 +20,16 @@ export default async function handler(req, res) {
   });
 
   const approveUrl = `${BASE_URL}/api/approve-order?token=${token}&id=${orden_id}`;
-
-  // Link único a página de fotos
-  const fotosExitosas = fotoUrls.filter(Boolean);
   const verFotosUrl = `${BASE_URL}/api/ver-fotos?id=${orden_id}`;
-  const fotosHTML = fotosExitosas.length > 0
+  const fotoLabels = ['Frente', 'Reverso', 'Detalle tinta', 'Vista general'];
+  const fotosOk = foto_urls.filter(Boolean);
+
+  const fotosHTML = fotosOk.length > 0
     ? `<div style="padding:0 32px;margin-bottom:24px;text-align:center">
         <a href="${verFotosUrl}" target="_blank" style="display:inline-block;background:#0d0f12;color:#fff;font-size:14px;font-weight:600;padding:12px 32px;border-radius:10px;text-decoration:none">
-          📷 Ver ${fotosExitosas.length} fotos de aprobación
+          📷 Ver ${fotosOk.length} fotos de aprobación
         </a>
-        <p style="font-size:11px;color:#9ca3af;margin:8px 0 0">Se abre una página con todas las fotos · puedes imprimirla o guardarla como PDF</p>
+        <p style="font-size:11px;color:#9ca3af;margin:8px 0 0">Se abre una página con todas las fotos</p>
       </div>`
     : '';
 
@@ -117,5 +81,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Error enviando email', detail: err });
   }
 
-  return res.status(200).json({ ok: true, fotos_subidas: fotosExitosas.length });
+  return res.status(200).json({ ok: true, fotos_subidas: fotosOk.length });
 }

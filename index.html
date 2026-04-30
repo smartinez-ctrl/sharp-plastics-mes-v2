@@ -1362,19 +1362,32 @@ async function enviarAprobacion(){
   const uploadPct = document.getElementById('fotos-upload-pct');
   if(uploadStatus) uploadStatus.style.display='block';
 
-  // Comprimir fotos — siempre 4 slots
-  const fotosComprimidas = [null,null,null,null];
+  // Comprimir y subir fotos DIRECTAMENTE a Supabase Storage desde el browser
+  const fotoUrls = [null,null,null,null];
+  const fotoLabelsUp = ['Frente','Reverso','Detalle-tinta','Vista-general'];
   for(let i=0;i<4;i++){
     if(fotos[i]){
-      fotosComprimidas[i] = await comprimirFoto(fotos[i]);
+      const compressed = await comprimirFoto(fotos[i]);
+      const base64Data = compressed.replace(/^data:image\/\w+;base64,/, '');
+      const byteStr = atob(base64Data);
+      const arr = new Uint8Array(byteStr.length);
+      for(let j=0;j<byteStr.length;j++) arr[j]=byteStr.charCodeAt(j);
+      const blob = new Blob([arr], {type:'image/jpeg'});
+      const filename = `${finalOrdenId}/foto-${i}-${fotoLabelsUp[i]}-${Date.now()}.jpg`;
+      const upRes = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${filename}`, {
+        method: 'POST',
+        headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true'},
+        body: blob,
+      });
+      if(upRes.ok) fotoUrls[i] = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
     }
     const pct = Math.round(((i+1)/4)*80);
     if(uploadBar) uploadBar.style.width=pct+'%';
     if(uploadPct) uploadPct.textContent=pct+'%';
   }
-  console.log('Fotos comprimidas:', fotosComprimidas.map((f,i)=>f?'foto-'+i+' OK':'null'));
+  console.log('URLs subidas:', fotoUrls);
   if(uploadBar) uploadBar.style.width='95%';
-  if(uploadPct) uploadPct.textContent='Enviando...';
+  if(uploadPct) uploadPct.textContent='Enviando email...';
 
   try {
     const resp = await fetch('/api/send-approval', {
@@ -1387,7 +1400,7 @@ async function enviarAprobacion(){
         sub_cliente: S.orden.sub_cliente || '',
         piezas: S.orden.pzas || 0,
         colores: S.orden.colores?.length || 0,
-        fotos: fotosComprimidas,
+        foto_urls: fotoUrls,
         observaciones: obs,
       })
     });
