@@ -14,19 +14,20 @@ export default async function handler(req, res) {
   const orden = (await ordenRes.json())[0] || {};
 
   // Listar fotos del bucket para esta orden
-  const listRes = await fetch(`${SB_URL}/storage/v1/object/list/${BUCKET}/${id}`, {
+  const listRes = await fetch(`${SB_URL}/storage/v1/object/list/${BUCKET}`, {
     method: 'POST',
     headers: {
       'apikey': SB_KEY,
       'Authorization': `Bearer ${SB_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ limit: 10, offset: 0, sortBy: { column: 'created_at', order: 'asc' } }),
+    body: JSON.stringify({ prefix: id+'/', limit: 10, offset: 0, sortBy: { column: 'name', order: 'asc' } }),
   });
 
   const files = await listRes.json();
+  console.log('Files found:', JSON.stringify(files));
   const fotoLabels = ['Frente', 'Reverso', 'Detalle tinta', 'Vista general'];
-  const fotoUrls = Array.isArray(files)
+  const fotoUrls = Array.isArray(files) && files.length
     ? files.map((f, i) => ({
         url: `${SB_URL}/storage/v1/object/public/${BUCKET}/${id}/${f.name}`,
         label: fotoLabels[i] || `Foto ${i+1}`,
