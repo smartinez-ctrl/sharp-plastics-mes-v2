@@ -17,6 +17,12 @@
     },
     "api/send-cierre.js": {
       "maxDuration": 15
+    },
+    "api/monitor.js": {
+      "maxDuration": 10
+    },
+    "api/send-monitor.js": {
+      "maxDuration": 10
     }
   }
 }

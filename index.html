@@ -922,6 +922,7 @@ function resetOrden(){
   if(window._timerRespuestaIv){clearInterval(window._timerRespuestaIv);window._timerRespuestaIv=null;}
   window._aprobacionEnviadaAt=null;
   if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
+  if(window._autosaveIv){clearInterval(window._autosaveIv);window._autosaveIv=null;}
   S.ordenId=null;
   setAprobacionStatus('idle');
   // Reset observaciones y aprobado por
@@ -1430,6 +1431,20 @@ async function enviarAprobacion(){
   }
 }
 
+async function enviarEmailMonitor(){
+  const ordenId=S.ordenId;
+  if(!ordenId)return;
+  try{
+    const r=await fetch('/api/send-monitor',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({orden_id:ordenId,orden_op:S.orden.op||'—',cliente:S.orden.cliente||'—',piezas:S.orden.pzas||0})
+    });
+    const d=await r.json();
+    if(r.ok)console.log('Monitor email enviado:',d.url);
+    else console.warn('Monitor email error:',d);
+  }catch(e){console.warn('Monitor email error:',e);}
+}
 async function pollAprobacion(){
   const ordenId = S.ordenId || S.orden?.id;
   if(!ordenId) return;
@@ -1452,6 +1467,11 @@ function goProduccion(){
   // Detener poll de aprobación — ya no estamos en pantalla fotos
   if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
   if(window._timerRespuestaIv){clearInterval(window._timerRespuestaIv);window._timerRespuestaIv=null;}
+  // Autosave cada 30s durante producción
+  if(window._autosaveIv){clearInterval(window._autosaveIv);}
+  window._autosaveIv=setInterval(()=>guardarOrden('produccion'),30000);
+  // Mandar email con link de monitor
+  setTimeout(enviarEmailMonitor, 2000);
   guardarOrden('produccion');
   // Restaurar tiempo pausado si existe
   if(S.orden&&S.orden.tiempo_pausado&&S.orden.tiempo_pausado>0&&S.timers.prod.s===0){
@@ -1600,10 +1620,11 @@ async function finalizarYCerrar(){
 
 function goCierre(){
   timerStop('prod');
+  // Detener autosave
+  if(window._autosaveIv){clearInterval(window._autosaveIv);window._autosaveIv=null;}
   guardarOrden('completado');
   showScreen('cierre');
   renderCierre();
-  // Enviar email de cierre después de que renderCierre inicialice consumoReal
   setTimeout(enviarEmailCierre, 1500);
 }
 
