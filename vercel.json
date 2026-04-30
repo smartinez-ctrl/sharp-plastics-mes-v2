@@ -14,6 +14,9 @@
     },
     "api/ver-fotos.js": {
       "maxDuration": 10
+    },
+    "api/send-cierre.js": {
+      "maxDuration": 15
     }
   }
 }
