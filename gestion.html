@@ -1598,24 +1598,54 @@ function renderFormulaTintas(formula, pedidoId) {
       + '<button class="btn btn-secondary btn-sm" onclick="closeModal(\'modal-pedido\');abrirCotizadorConPedido(\'' + pedidoId + '\')">🧮 Ir al cotizador</button>'
       + '</div>';
   }
-  return formula.map(function(col, ci) {
+  var totalCosto = 0;
+  var html = formula.map(function(col, ci) {
     var tg = (col.componentes||[]).reduce(function(s,x){return s+(parseFloat(x.gramos)||0);}, 0);
-    var tc = (col.componentes||[]).reduce(function(s,x){return s+(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);}, 0)
-           + (col.aditivos||[]).reduce(function(s,a){return s+(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0);}, 0);
+    var tgAdits = 0;
+    var tcComps = (col.componentes||[]).reduce(function(s,x){return s+(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);}, 0);
+    var tcAdits = (col.aditivos||[]).reduce(function(s,a){
+      var gr = a.pct!==undefined ? (a.pct/100*tg) : (parseFloat(a.gramos)||0);
+      tgAdits += gr;
+      return s+(gr&&a.precio_kg?(gr/1000)*a.precio_kg:0);
+    }, 0);
+    var tc = tcComps + tcAdits;
+    totalCosto += tc;
+    var nombreColor = (col.nombre||('Color '+(ci+1))) + (col.pantone?' · '+col.pantone:'');
     var comps = (col.componentes||[]).map(function(x) {
-      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:var(--text2)">'
-        + '<span>' + (x.nombre||'—') + '</span><span>' + (x.gramos||0) + 'g</span></div>';
+      var sub = x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">'
+        + '<span style="font-size:11px;color:var(--text2);flex:1">' + (x.codigo?'<span style="color:var(--text3);margin-right:4px">'+x.codigo+'</span>':'') + (x.nombre||'—') + '</span>'
+        + '<span style="font-size:11px;color:var(--text3);margin:0 8px">' + (parseFloat(x.gramos||0).toFixed(1)) + 'g</span>'
+        + '<span style="font-family:monospace;font-size:11px;color:var(--amber);min-width:48px;text-align:right">' + mxn(sub) + '</span>'
+        + '</div>';
     }).join('');
     var adits = (col.aditivos||[]).map(function(a) {
-      return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:var(--text3)">'
-        + '<span>' + (a.nombre||'Aditivo') + '</span><span>' + (parseFloat(a.gramos||0).toFixed(2).replace(/\.?0+$/,'')) + 'g</span></div>';
+      var gr = a.pct!==undefined ? (a.pct/100*tg) : (parseFloat(a.gramos)||0);
+      var sub = gr&&a.precio_kg?(gr/1000)*a.precio_kg:0;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">'
+        + '<span style="font-size:10px;color:var(--text3);flex:1">↳ ' + (a.nombre||'Aditivo') + (a.pct!==undefined?' ('+a.pct+'%)':'') + '</span>'
+        + '<span style="font-size:10px;color:var(--text3);margin:0 8px">' + (parseFloat(gr).toFixed(2).replace(/\.?0+$/,'')) + 'g</span>'
+        + '<span style="font-family:monospace;font-size:10px;color:var(--text3);min-width:48px;text-align:right">' + mxn(sub) + '</span>'
+        + '</div>';
     }).join('');
-    return '<div style="background:var(--bg4);border-radius:9px;padding:10px;margin-bottom:8px">'
-      + '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'
-      + '<span style="font-size:12px;font-weight:700">Color ' + (ci+1) + '</span>'
-      + '<span style="font-family:monospace;font-size:11px;color:var(--amber)">' + mxn(tc) + ' · ' + tg + 'g</span>'
-      + '</div>' + comps + adits + '</div>';
+    return '<div style="background:var(--bg4);border-radius:9px;padding:12px;margin-bottom:8px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      + '<div><span style="font-size:12px;font-weight:700">Color ' + (ci+1) + '</span>'
+      + (nombreColor!==('Color '+(ci+1))?'<span style="font-size:10px;color:var(--text3);margin-left:6px">'+col.pantone||col.nombre||''+'</span>':'')
+      + '</div>'
+      + '<span style="font-family:monospace;font-size:11px;color:var(--amber)">' + mxn(tc) + ' · ' + (tg+tgAdits).toFixed(1) + 'g</span>'
+      + '</div>'
+      + (comps||adits
+        ? '<div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:grid;grid-template-columns:1fr auto auto"><span>Componente</span><span style="margin-right:8px">Gramos</span><span>Costo</span></div>'
+          + comps + adits
+        : '<div style="font-size:11px;color:var(--text3);text-align:center;padding:8px">Sin componentes</div>')
+      + '</div>';
   }).join('');
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:8px;margin-top:4px">'
+    + '<span style="font-size:12px;font-weight:700">Total tintas</span>'
+    + '<span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--amber)">' + mxn(totalCosto) + '</span>'
+    + '</div>';
+  return html;
 }
 
 function renderDetallePedido(p) {
@@ -1821,20 +1851,31 @@ function abrirPDFs_menu(event, id){
   event.stopPropagation();
   const p = window._pipeline ? window._pipeline.find(x=>x.id===id) : null;
   if(!p){toast('Pedido no encontrado','err');return;}
-  // Crear mini-menú contextual
   const existing = document.getElementById('pdfs-ctx-menu');
   if(existing)existing.remove();
   const menu = document.createElement('div');
   menu.id = 'pdfs-ctx-menu';
   menu.style.cssText = 'position:fixed;z-index:9999;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:160px';
-  menu.innerHTML = '<div style="padding:5px 10px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">PDFs</div>'
-    + '<div style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--text)" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''" onclick="abrirPDFCliente(window._pipeline.find(x=>x.id===''+id+''));document.getElementById('pdfs-ctx-menu').remove()">📤 PDF cliente</div>'
-    + '<div style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--text)" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''" onclick="abrirPDFInterno(window._pipeline.find(x=>x.id===''+id+''));document.getElementById('pdfs-ctx-menu').remove()">📊 PDF interno</div>';
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'padding:5px 10px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px';
+  hdr.textContent = 'PDFs';
+  const mkBtn = function(label, fn){
+    const b = document.createElement('div');
+    b.style.cssText = 'padding:8px 12px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--text)';
+    b.textContent = label;
+    b.onmouseenter = function(){this.style.background='var(--bg3)';};
+    b.onmouseleave = function(){this.style.background='';};
+    b.onclick = function(){fn();menu.remove();};
+    return b;
+  };
+  menu.appendChild(hdr);
+  menu.appendChild(mkBtn('📤 PDF cliente', function(){abrirPDFCliente(p);}));
+  menu.appendChild(mkBtn('📊 PDF interno', function(){abrirPDFInterno(p);}));
   const rect = event.target.getBoundingClientRect();
   menu.style.left = rect.left + 'px';
   menu.style.top = (rect.bottom + 4) + 'px';
   document.body.appendChild(menu);
-  setTimeout(()=>document.addEventListener('click', function h(){menu.remove();document.removeEventListener('click',h);}, {once:true}), 0);
+  setTimeout(function(){document.addEventListener('click', function h(){menu.remove();document.removeEventListener('click',h);},{once:true});}, 0);
 }
 
 function abrirPDFCliente(p){
