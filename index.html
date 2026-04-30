@@ -1272,7 +1272,7 @@ function goFotos(){
   showScreen('fotos');
   renderSteps('steps-fotos','fotos');
   // Resetear estado aprobación al entrar a fotos
-  window._aprobacionPollInterval = null;
+  if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
   setAprobacionStatus('idle');
 }
 
@@ -1449,6 +1449,9 @@ async function pollAprobacion(){
 // PRODUCCIÓN
 // ══════════════════════════════════════════════════════
 function goProduccion(){
+  // Detener poll de aprobación — ya no estamos en pantalla fotos
+  if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
+  if(window._timerRespuestaIv){clearInterval(window._timerRespuestaIv);window._timerRespuestaIv=null;}
   guardarOrden('produccion');
   // Restaurar tiempo pausado si existe
   if(S.orden&&S.orden.tiempo_pausado&&S.orden.tiempo_pausado>0&&S.timers.prod.s===0){
@@ -1521,9 +1524,16 @@ async function finalizarYCerrar(){
   if(btn){btn.disabled=true;btn.textContent='Guardando...';}
   await guardarOrden('completado');
   if(S.pipelineId){
+    const tintasInfo=S.orden.colores.map((col,i)=>{
+      const t=S.tintas[i]||{componentes:[],aditivos:[]};
+      const cr=S.consumoReal&&S.consumoReal[i]||{};
+      return {nombre:col.nombre,pantone:col.pantone,componentes:t.componentes,aditivos:t.aditivos,consumo_real:cr};
+    });
     await sbPatch('pipeline_mf',{
       estado:'Completado',
-      consumo_real_tintas:S.consumoReal||[]
+      consumo_real_tintas:S.consumoReal||[],
+      formula_tintas:S.tintas||[],
+      tintas_info:tintasInfo,
     },'id=eq.'+S.pipelineId);
   }
   await enviarEmailCierre();
@@ -1874,6 +1884,31 @@ function generarPDFInterno(){
     <tbody>${consumoRows}</tbody>
   </table>`:''}
 
+  <!-- FOTOS -->
+  ${S.fotos&&S.fotos.some(f=>f)?`
+  <div class="section">Fotos de producción</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+    ${S.fotos.map((f,i)=>f?`<div style="text-align:center"><img src="${f}" style="width:100%;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;margin-top:3px">${['Frente','Reverso','Lado izquierdo','Lado derecho'][i]}</div></div>`:'').join('')}
+  </div>`:''}
+
+  <!-- QA -->
+  ${Object.keys(S.qa||{}).length?`
+  <div class="section">Checklist QA</div>
+  <table>
+    <thead><tr><th>Punto de control</th><th style="text-align:right">Resultado</th></tr></thead>
+    <tbody>
+    ${Object.entries(QA_ITEMS).map(([sec,items])=>{
+      const rows=items.map(item=>{
+        const v=S.qa[item]||'';
+        const color=v==='P'?'#16a34a':v==='NC'?'#dc2626':'#6b7280';
+        const label=v==='P'?'✓ OK':v==='NC'?'✗ No conforme':v==='NA'?'N/A':'—';
+        return `<tr><td style="padding:3px 10px;font-size:10px">${item}</td><td style="padding:3px 10px;font-size:10px;font-weight:600;color:${color};text-align:right">${label}</td></tr>`;
+      }).join('');
+      return `<tr style="background:#f0f4f8"><td colspan="2" style="padding:4px 10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#374151">${sec}</td></tr>${rows}`;
+    }).join('')}
+    </tbody>
+  </table>`:''}
+
   ${obs?`<div class="section">Observaciones</div><p style="font-size:11px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;margin:0 0 12px">${obs}</p>`:''}
 
   <div class="footer">
@@ -2036,212 +2071,6 @@ function actualizarConsumo(){
   });
 }
 
-function generarPDFInterno(){
-  const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
-  const mermaAjuste=Object.entries(S.merma.ajuste||{}).filter(([,v])=>v>0);
-  const mermaProd=Object.entries(S.merma.prod||{}).filter(([,v])=>v>0);
-  const totalMerma=mermaProd.reduce((s,[,v])=>s+v,0)+mermaAjuste.reduce((s,[,v])=>s+v,0);
-  const tAjuste=fmt(S.timers.ajuste.total||S.timers.ajuste.s||0);
-  const tProd=fmt(S.timers.prod.total||S.timers.prod.s||0);
-  const tGlobal=fmt((S.timers.ajuste.total||S.timers.ajuste.s||0)+(S.timers.prod.total||S.timers.prod.s||0));
-  const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
-  const fecha=new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'});
-  const firma=document.getElementById('cierre-firma')?.value||'—';
-  const obs=document.getElementById('cierre-obs')?.value||'';
-
-  // Tiempos muertos
-  const tmRows=Object.entries({...S.tm.ajuste||{},...S.tm.prod||{}})
-    .filter(([,v])=>v>0)
-    .map(([k,v])=>{
-      const tipos={comida:'Salida a comer',tintas:'Prep. tintas',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
-      return `<tr><td style="padding:5px 10px;font-size:12px">${tipos[k]||k}</td><td style="padding:5px 10px;font-size:12px;font-family:monospace;text-align:right">${fmt(v)}</td></tr>`;
-    }).join('');
-
-  // Merma detalle
-  const mermaRows=[
-    ...mermaAjuste.map(([k,v])=>`<tr><td style="padding:5px 10px;font-size:12px">${k} <span style="font-size:10px;color:#6b7280">(ajuste)</span></td><td style="padding:5px 10px;font-size:12px;font-family:monospace;text-align:right;color:#dc2626">${v}</td></tr>`),
-    ...mermaProd.map(([k,v])=>`<tr><td style="padding:5px 10px;font-size:12px">${k} <span style="font-size:10px;color:#6b7280">(producción)</span></td><td style="padding:5px 10px;font-size:12px;font-family:monospace;text-align:right;color:#dc2626">${v}</td></tr>`)
-  ].join('');
-
-  // Consumo real de tintas
-  const consumoRows=(S.consumoReal||[]).map((cr,i)=>{
-    const col=S.orden.colores[i]||{nombre:'Color '+(i+1)};
-    const t=S.tintas[i]||{componentes:[]};
-    const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-    const usado=parseFloat(cr.gramos_usados)||0;
-    const sobra=parseFloat(cr.gramos_sobrante)||0;
-    const real=usado-sobra;
-    const diff=real-tgEst;
-    const sign=diff>=0?'+':'';
-    return `<tr style="border-bottom:1px solid #e5e7eb">
-      <td style="padding:6px 10px;font-size:12px;font-weight:600">${col.nombre}${col.pantone?' · '+col.pantone:''}</td>
-      <td style="padding:6px 10px;font-size:12px;text-align:center;font-family:monospace">${tgEst}g</td>
-      <td style="padding:6px 10px;font-size:12px;text-align:center;font-family:monospace">${usado>0?real.toFixed(1)+'g':'—'}</td>
-      <td style="padding:6px 10px;font-size:12px;text-align:center;font-family:monospace;color:${Math.abs(diff)<tgEst*0.1?'#16a34a':'#dc2626'}">${usado>0?sign+diff.toFixed(1)+'g':'—'}</td>
-    </tr>`;
-  }).join('');
-
-  const seg_bot=S.timers.prod.s&&buenas?(S.timers.prod.s/buenas).toFixed(1)+'s':'—';
-  const coloresStr=(S.orden.colores||[]).map(c=>c.nombre+(c.pantone?' · '+c.pantone:'')).join(' / ')||'—';
-
-  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte interno — ${S.orden.op||'Orden'}</title>
-  <style>
-    *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;margin:0;padding:20px;background:#fff;font-size:12px}
-    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #111;padding-bottom:12px;margin-bottom:16px}
-    .company{font-size:20px;font-weight:800;letter-spacing:-.5px}.company span{color:#f59e0b}
-    .section{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #111;padding-bottom:4px;margin:14px 0 8px;color:#374151}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
-    .box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px}
-    .box-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px}
-    .box-val{font-size:16px;font-weight:700;font-family:monospace}
-    table{width:100%;border-collapse:collapse}
-    th{padding:6px 10px;background:#f0f4f8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#374151;text-align:left}
-    tr:nth-child(even){background:#fafafa}
-    .footer{margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
-    .sign-box{border-top:2px solid #111;padding-top:6px;font-size:10px;color:#6b7280}
-    @media print{body{padding:12px}@page{margin:10mm}}
-  </style></head><body>
-
-  <div class="header">
-    <div><div class="company">SHARP <span>PLASTICS</span></div><div style="font-size:11px;color:#6b7280">Reporte interno de producción</div></div>
-    <div style="text-align:right;font-size:11px;color:#6b7280">${fecha}<br><strong style="font-size:13px;color:#111">${S.orden.op||'—'}</strong></div>
-  </div>
-
-  <div class="grid2">
-    <div class="box"><div class="box-lbl">Cliente</div><div class="box-val" style="font-size:14px">${S.orden.cliente||'—'}</div></div>
-    <div class="box"><div class="box-lbl">Producto</div><div class="box-val" style="font-size:14px">${S.orden.producto||'—'}</div></div>
-  </div>
-  <div class="box" style="margin-bottom:12px"><div class="box-lbl">Colores / Pantone</div><div style="font-size:13px;font-weight:600;margin-top:2px">${coloresStr}</div></div>
-
-  <div class="section">Tiempos</div>
-  <div class="grid3">
-    <div class="box"><div class="box-lbl">Tiempo total</div><div class="box-val">${tGlobal}</div></div>
-    <div class="box"><div class="box-lbl">Ajuste</div><div class="box-val" style="color:#d97706">${tAjuste}</div></div>
-    <div class="box"><div class="box-lbl">Producción</div><div class="box-val" style="color:#2563eb">${tProd}</div></div>
-    <div class="box"><div class="box-lbl">Reajustes</div><div class="box-val" style="color:#dc2626">${S.reajustes}</div></div>
-    <div class="box"><div class="box-lbl">seg / botella</div><div class="box-val">${seg_bot}</div></div>
-    <div class="box"><div class="box-lbl">Piezas / hora</div><div class="box-val">${S.timers.prod.s&&buenas?Math.round(buenas/(S.timers.prod.s/3600)):' —'}</div></div>
-  </div>
-
-  ${tmRows?`<div class="section">Tiempos muertos</div>
-  <table><thead><tr><th>Razón</th><th style="text-align:right">Duración</th></tr></thead><tbody>${tmRows}</tbody></table>`:''}
-
-  <div class="section">Productividad</div>
-  <div class="grid3">
-    <div class="box" style="border-color:#86efac"><div class="box-lbl">Piezas buenas</div><div class="box-val" style="color:#16a34a">${buenas.toLocaleString()}</div></div>
-    <div class="box" style="border-color:#fca5a5"><div class="box-lbl">Merma total</div><div class="box-val" style="color:#dc2626">${totalMerma}</div></div>
-    <div class="box" style="border-color:#fcd34d"><div class="box-lbl">Rendimiento</div><div class="box-val" style="color:#d97706">${pct}%</div></div>
-  </div>
-
-  ${mermaRows?`<div class="section">Detalle de merma</div>
-  <table><thead><tr><th>Causa</th><th style="text-align:right">Piezas</th></tr></thead><tbody>${mermaRows}</tbody></table>`:''}
-
-  ${consumoRows?`<div class="section">Consumo real de tintas</div>
-  <table><thead><tr><th>Color</th><th style="text-align:center">Estimado</th><th style="text-align:center">Real</th><th style="text-align:center">Diferencia</th></tr></thead><tbody>${consumoRows}</tbody></table>`:''}
-
-  ${obs?`<div class="section">Observaciones</div><p style="font-size:11px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;margin:0 0 14px">${obs}</p>`:''}
-
-  <div class="footer">
-    <div class="sign-box">Elaborado por: <strong>${firma}</strong></div>
-    <div class="sign-box">Firma: ________________</div>
-  </div>
-  </body></html>`;
-
-  const w=window.open('','_blank','width=800,height=900');
-  w.document.write(html);w.document.close();
-  setTimeout(()=>w.print(),600);
-}
-
-function renderQA(){
-  const el=document.getElementById('qa-checklist');if(!el)return;
-  let total=0,passed=0,html='';
-  Object.entries(QA_ITEMS).forEach(([section,items])=>{
-    html+=`<div class="qa-section-title">${section}</div>`;
-    items.forEach(item=>{
-      total++;const val=S.qa[item]||'';if(val==='P')passed++;
-      html+=`<div class="qa-item">
-        <div style="font-size:12px;flex:1">${item}</div>
-        <div class="qa-btns">
-          <button class="qa-btn qa-ok ${val==='P'?'sel':''}" data-item="${item}" data-val="P" onclick="setQA(this)">✓ OK</button>
-          <button class="qa-btn qa-nc ${val==='NC'?'sel':''}" data-item="${item}" data-val="NC" onclick="setQA(this)">✗ NC</button>
-          <button class="qa-btn qa-na ${val==='NA'?'sel':''}" data-item="${item}" data-val="NA" onclick="setQA(this)">N/A</button>
-        </div>
-      </div>`;
-    });
-  });
-  el.innerHTML=html;
-  const badge=document.getElementById('qa-badge');if(badge)badge.textContent=passed+'/'+total;
-}
-function setQA(btn){
-  const item=btn.dataset.item,val=btn.dataset.val;
-  S.qa[item]=val;
-  btn.closest('.qa-item').querySelectorAll('.qa-btn').forEach(b=>b.classList.remove('sel'));
-  btn.classList.add('sel');
-  const passed=Object.values(S.qa).filter(v=>v==='P').length;
-  const badge=document.getElementById('qa-badge');if(badge)badge.textContent=passed+'/25';
-}
-
-// ══════════════════════════════════════════════════════
-// GUARDAR EN SUPABASE
-// ══════════════════════════════════════════════════════
-async function guardarOrden(estado){
-  const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
-  const data={
-    op:S.orden.op||('OP-'+Date.now()),
-    cliente:S.orden.cliente||'',
-    producto:S.orden.producto||'',
-    piezas_total:S.orden.pzas||0,
-    lote_botella:S.orden.loteBot||'',
-    lote_tapa:S.orden.loteTap||'',
-    maquina:S.orden.maquina||'Shuttle',
-    colores:S.orden.colores||[],
-    ajustadores:S.orden.ajustadores||[],
-    operadores:S.orden.operadores||[],
-    estado,
-    tiempo_ajuste_seg:S.timers.ajuste.total||S.timers.ajuste.s||0,
-    tiempo_produccion_seg:S.timers.prod.total||S.timers.prod.s||0,
-    piezas_buenas:buenas,
-    merma_ajuste:S.merma.ajuste||{},
-    merma_produccion:S.merma.prod||{},
-    tintas:S.tintas||[],
-    consumo_real_tintas:S.consumoReal||[],
-    qa_resultados:S.qa||{},
-    reajustes:S.reajustes||0,
-    uv_intensidad:parseInt(document.getElementById('uv-int')?.value)||null,
-    uv_velocidad:parseInt(document.getElementById('uv-vel')?.value)||null,
-    proceso_alcohol:document.getElementById('proc-alcohol')?.checked||false,
-    proceso_primer:document.getElementById('proc-primer')?.checked||false,
-    crosshatch:document.getElementById('cierreXhatch')?.value||null,
-    prueba_agua:document.getElementById('cierreAgua')?.value||null,
-    pipeline_id:S.pipelineId||null,
-  };
-  try{
-    let rows;
-    if(S.ordenId){
-      // Ya existe — actualizar
-      await sbPatch('ordenes_produccion',data,'id=eq.'+S.ordenId);
-      rows=[{id:S.ordenId}];
-    } else {
-      // Nueva orden — INSERT sin upsert
-      rows=await sbPost('ordenes_produccion',data);
-      if(rows&&rows[0]&&rows[0].id)S.ordenId=rows[0].id;
-    }
-    if(estado==='completado'&&S.pipelineId){
-      await sbPatch('pipeline_mf',{estado:'Completado'},'id=eq.'+S.pipelineId);
-    }
-    toast('Guardado ✓');
-  }catch(e){
-    console.error('Save error:',e);
-    const msg=e.message||'';
-    if(msg.includes('413')||msg.includes('large')||msg.length>200)toast('Error: payload muy grande, contacta soporte');
-    else toast('Error al guardar: '+msg.slice(0,60));
-  }
-}
-
-// ══════════════════════════════════════════════════════
-// PDF
-// ══════════════════════════════════════════════════════
 function generarPDF(){
   const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
   const merma=Object.values(S.merma.prod||{}).reduce((a,b)=>a+b,0);
