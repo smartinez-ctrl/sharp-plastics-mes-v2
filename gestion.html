@@ -543,6 +543,7 @@ function renderPipeline(){
           </div>
           <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:${(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)'};min-width:42px;text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
           <span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴 Urgente':p.estado}</span>
+          ${p.costo_revisado?'<span class="badge badge-green" style="font-size:9px">✓ Costo</span>':''}
           <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
             <button class="btn btn-primary btn-xs" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button>
             <button class="btn btn-ghost btn-xs" onclick="abrirPDFs_menu(event,'${p.id}')">📄</button>
@@ -1851,9 +1852,9 @@ async function guardarCostoEdit(id){
   const venta=ped.venta_total||0;
   const margen=venta>0?((venta-costoFinal)/venta)*100:0;
   try{
-    await sbPatch('pipeline_mf',{costo_total:costoFinal,costo_mdo:mo,mo_horas:horas,mo_tarifa:tarifa,margen:margen},`id=eq.${id}`);
+    await sbPatch('pipeline_mf',{costo_total:costoFinal,costo_mdo:mo,mo_horas:horas,mo_tarifa:tarifa,margen:margen,costo_revisado:true},`id=eq.${id}`);
     const row=PIPELINE.find(x=>x.id===id);
-    if(row){row.costo_total=costoFinal;row.costo_mdo=mo;row.mo_horas=horas;row.mo_tarifa=tarifa;row.margen=margen;}
+    if(row){row.costo_total=costoFinal;row.costo_mdo=mo;row.mo_horas=horas;row.mo_tarifa=tarifa;row.margen=margen;row.costo_revisado=true;}
     if(window._pedidoActual&&window._pedidoActual.id===id){
       window._pedidoActual.costo_total=costoFinal;
       window._pedidoActual.costo_mdo=mo;
