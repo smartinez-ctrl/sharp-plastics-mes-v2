@@ -923,6 +923,7 @@ function resetOrden(){
   window._aprobacionEnviadaAt=null;
   if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
   if(window._autosaveIv){clearInterval(window._autosaveIv);window._autosaveIv=null;}
+  window._monitorEmailEnviado=false;
   S.ordenId=null;
   setAprobacionStatus('idle');
   // Reset observaciones y aprobado por
@@ -1121,6 +1122,7 @@ function removeAdit(ti,ai){if(S.tintas[ti])S.tintas[ti].aditivos.splice(ai,1);re
 // ══════════════════════════════════════════════════════
 function timerPlay(name){
   const t=S.timers[name];if(t.running)return;
+  const esPrimerInicio=name==='prod'&&t.s===0&&!window._monitorEmailEnviado;
   t.running=true;
   t.startTs=Date.now()-(t.s*1000); // reanudar desde donde quedó
   clearInterval(t.iv);
@@ -1135,6 +1137,11 @@ function timerPlay(name){
   document.getElementById('btn-'+name+'-pause').style.display='flex';
   document.getElementById('btn-'+name+'-stop').style.display='flex';
   startGlobalTimer();
+  // Mandar email de monitor solo al primer inicio del cronómetro de producción
+  if(esPrimerInicio){
+    window._monitorEmailEnviado=true;
+    guardarOrden('produccion').then(()=>enviarEmailMonitor());
+  }
 }
 function timerPause(name){
   const t=S.timers[name];
@@ -1472,8 +1479,7 @@ async function goProduccion(){
   // Autosave cada 30s durante producción
   if(window._autosaveIv){clearInterval(window._autosaveIv);}
   window._autosaveIv=setInterval(()=>guardarOrden('produccion'),30000);
-  // Mandar email con link de monitor (ya tenemos S.ordenId)
-  enviarEmailMonitor();
+  // Email de monitor se manda cuando inicia el cronómetro de producción
   // Restaurar tiempo pausado si existe
   if(S.orden&&S.orden.tiempo_pausado&&S.orden.tiempo_pausado>0&&S.timers.prod.s===0){
     S.timers.prod.s=S.orden.tiempo_pausado;
