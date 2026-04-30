@@ -138,10 +138,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .counter-minus{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);width:56px;height:56px;border-radius:50%}
 .counter-plus{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);width:56px;height:56px;border-radius:50%}
 .quick-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:10px}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center}
 .modal-overlay.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:420px;animation:slideUp 0.18s ease}
-@keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px 20px;width:90%;max-width:380px;animation:fadeScaleIn 0.18s ease}
+@keyframes fadeScaleIn{from{transform:scale(0.93);opacity:0}to{transform:scale(1);opacity:1}}
 .modal-title{font-size:15px;font-weight:600;margin-bottom:14px;text-align:center}
 .modal-counter{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding:0 10px}
 .photo-menu{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,0.6)}
@@ -278,15 +278,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       <div class="field"><label>Ajustador(es)</label><div class="chips" id="chips-ajust"></div></div>
       <div class="field"><label>Operador(es)</label><div class="chips" id="chips-oper"></div></div>
     </div>
-    <div class="card">
-      <div class="card-title">Colores a imprimir</div>
-      <div id="colores-list" style="margin-bottom:10px"></div>
-      <div class="field-row" style="margin-bottom:7px">
-        <div class="field" style="margin:0"><label>Nombre del color</label><input type="text" id="new-color-nombre" placeholder="Ej: Azul"></div>
-        <div class="field" style="margin:0"><label>Pantone / código</label><input type="text" id="new-color-pantone" placeholder="456 C"></div>
-      </div>
-      <button class="btn btn-ghost btn-full" style="font-size:12px" onclick="addColor()">+ Agregar color</button>
-    </div>
+<!-- Colores movidos a pantalla de ajuste -->
   </div></div>
   <div class="bottom-bar"><button class="btn btn-primary" onclick="goAjuste()">Continuar a ajuste →</button></div>
 </div>
@@ -335,6 +327,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
         <div class="badge badge-red" id="tm-total-badge-ajuste">00:00:00</div>
       </div>
       <div class="tm-grid" id="tm-ajuste-grid"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Colores a imprimir</div>
+      <div id="colores-list" style="margin-bottom:10px"></div>
+      <div class="field-row" style="margin-bottom:7px">
+        <div class="field" style="margin:0"><label>Nombre del color</label><input type="text" id="new-color-nombre" placeholder="Ej: Azul"></div>
+        <div class="field" style="margin:0"><label>Pantone / código</label><input type="text" id="new-color-pantone" placeholder="456 C"></div>
+      </div>
+      <button class="btn btn-ghost btn-full" style="font-size:12px" onclick="addColor()">+ Agregar color</button>
     </div>
     <div class="card">
       <div class="card-title">Fórmula de tintas</div>
