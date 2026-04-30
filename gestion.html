@@ -693,7 +693,7 @@ async function abrirDetallePedido(id){
 
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:10px;margin-bottom:10px">
         <span style="font-size:14px;font-weight:700">Total costo (con MO)</span>
-        <span id="costo-total-mo-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--amber)">${mxn(costoTotal)}</span>
+        <span id="costo-total-mo-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--amber)">${mxn(costoTotal+(p.mo_horas||0)*(p.mo_tarifa||70))}</span>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" onclick="guardarCostoEdit('${p.id}')">💾 Guardar cambios de costo</button>
@@ -1213,6 +1213,25 @@ function calcCotizador(){
   if(pr && piezas > 0) {
     const margenColor = margen >= 50 ? 'var(--green)' : margen >= 35 ? 'var(--amber)' : 'var(--red)';
     const rowR=(label,val,color='var(--text)')=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-size:11px;color:var(--text2)">${label}</span><span style="font-family:'Space Mono',monospace;font-size:11px;font-weight:600;color:${color}">${val}</span></div>`;
+    // Calcular desglose de tintas por color
+    let costoTintasBase=0, costoAditivosTotal=0, grTintasTotal=0, grAditivosTotal=0;
+    const tintasDesglose = COT_COLORES.map((col,ci)=>{
+      const tg = (col.componentes||[]).reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+      const tgAdits = (col.aditivos||[]).reduce((s,a)=>{
+        const gr = a.pct!==undefined?(a.pct/100*tg):(parseFloat(a.gramos)||0);
+        return s+gr;
+      },0);
+      const cComp = (col.componentes||[]).reduce((s,x)=>s+(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0),0);
+      const cAdit = (col.aditivos||[]).reduce((s,a)=>{
+        const gr = a.pct!==undefined?(a.pct/100*tg):(parseFloat(a.gramos)||0);
+        return s+(gr&&a.precio_kg?(gr/1000)*a.precio_kg:0);
+      },0);
+      costoTintasBase+=cComp; costoAditivosTotal+=cAdit;
+      grTintasTotal+=tg; grAditivosTotal+=tgAdits;
+      const nombre=(col.nombre||('Color '+(ci+1)))+(col.pantone?' · '+col.pantone:'');
+      return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="font-size:10px;color:var(--text3)">${nombre}</span><span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--amber)">${mxn(cComp+cAdit)} · ${(tg+tgAdits).toFixed(1)}g</span></div>`;
+    }).join('');
+    const costoImpresion = costoTintas + cPant + cPos;
     pr.innerHTML = `
       <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Resumen cotización</div>
       <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px">
@@ -1225,8 +1244,19 @@ function calcCotizador(){
         <div style="display:flex;justify-content:space-between;padding:6px 0;margin-top:4px"><span style="font-size:12px;font-weight:700">Total venta</span><span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--green)">${mxn(ventaTotal)}</span></div>
       </div>
       <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--text2)">Costo estimado</span><span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--red)">${mxn(costoTotal)}</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--text2)">Precio/pieza</span><span style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--amber)">${mxn(piezas?ventaTotal/piezas:0)}</span></div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">🎨 Desglose impresión</div>
+        ${tintasDesglose||'<div style="font-size:10px;color:var(--text3);padding:4px 0">Sin fórmula aún</div>'}
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border2)">
+          ${rowR('Tintas base',mxn(costoTintasBase),'var(--amber)')}
+          ${rowR('Aditivos',mxn(costoAditivosTotal),'var(--amber)')}
+          ${rowR('Pantallas ('+colores+')',mxn(cPant),'var(--amber)')}
+          ${rowR('Positivos ('+colores+')',mxn(cPos),'var(--amber)')}
+          <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:2px"><span style="font-size:11px;font-weight:700">Total impresión</span><span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--amber)">${mxn(costoImpresion)}</span></div>
+        </div>
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:10px;margin-bottom:10px">
+        ${rowR('Costo estimado',mxn(costoTotal),'var(--red)')}
+        ${rowR('Precio/pieza',mxn(piezas?ventaTotal/piezas:0),'var(--amber)')}
       </div>
       <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:14px;text-align:center">
         <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Margen</div>
