@@ -1,158 +1,104 @@
-// api/monitor.js — página de monitoreo en tiempo real de producción
+// api/monitor.js — Monitor en tiempo real usando pipeline_id
 const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
 
 export default async function handler(req, res) {
   const { id } = req.query;
   if (!id) return res.status(400).send('ID requerido');
+  // id = pipeline_mf.id
 
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Monitor de producción</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0d0f12;color:#fff;font-family:'DM Sans',Arial,sans-serif;min-height:100vh}
-    .header{background:#111318;border-bottom:1px solid #1e2028;padding:14px 24px;display:flex;justify-content:space-between;align-items:center}
-    .logo{font-size:16px;font-weight:800;letter-spacing:-.5px}
-    .logo span{color:#f59e0b}
-    .status-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:6px;animation:pulse 2s infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-    .container{max-width:600px;margin:0 auto;padding:20px 16px}
-    .order-card{background:#111318;border:1px solid #1e2028;border-radius:14px;padding:16px 20px;margin-bottom:16px}
-    .order-title{font-size:18px;font-weight:700;margin-bottom:4px}
-    .order-meta{font-size:12px;color:#6b7280}
-    .timer-card{background:#111318;border:1px solid #1e2028;border-radius:14px;padding:20px;text-align:center;margin-bottom:16px}
-    .timer-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin-bottom:8px}
-    .timer-val{font-family:'Space Mono',monospace;font-size:48px;font-weight:700;color:#22c55e;letter-spacing:2px}
-    .timer-val.paused{color:#f59e0b}
-    .timer-val.stopped{color:#374151}
-    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-    .stat-card{background:#111318;border:1px solid #1e2028;border-radius:12px;padding:16px;text-align:center}
-    .stat-val{font-family:'Space Mono',monospace;font-size:32px;font-weight:700;margin-bottom:4px}
-    .stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280}
-    .progress-wrap{background:#1e2028;border-radius:999px;height:10px;overflow:hidden;margin-bottom:16px}
-    .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#16a34a);transition:width .5s ease}
-    .progress-label{display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:6px}
-    .merma-card{background:#111318;border:1px solid #1e2028;border-radius:14px;padding:16px 20px;margin-bottom:16px}
-    .merma-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:10px}
-    .merma-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1e2028;font-size:13px}
-    .merma-row:last-child{border-bottom:none}
-    .merma-val{font-family:monospace;color:#ef4444;font-weight:600}
-    .colors-card{background:#111318;border:1px solid #1e2028;border-radius:14px;padding:16px 20px;margin-bottom:16px}
-    .color-chip{display:inline-flex;align-items:center;gap:6px;background:#1e2028;border-radius:20px;padding:4px 10px;font-size:12px;margin:3px}
-    .footer{text-align:center;padding:20px;font-size:11px;color:#374151}
-    .last-update{font-size:10px;color:#374151;text-align:center;margin-bottom:8px}
-    .completado-banner{background:#14532d;border:1px solid #16a34a;border-radius:12px;padding:16px;text-align:center;margin-bottom:16px}
-  </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-</head>
+  const sbHeaders = {apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY};
+
+  // Buscar orden de produccion con este pipeline_id
+  const r1 = await fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+id+'&order=created_at.desc&limit=1&select=*', {headers: sbHeaders});
+  const ordenes = await r1.json();
+
+  // Buscar datos del pipeline
+  const r2 = await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+id+'&select=*', {headers: sbHeaders});
+  const pipes = await r2.json();
+  const pipe = pipes && pipes[0] ? pipes[0] : null;
+  const orden = ordenes && ordenes[0] ? ordenes[0] : null;
+
+  const pzas = orden ? (orden.piezas_total||0) : (pipe ? (pipe.piezas||0) : 0);
+  const cliente = orden ? (orden.cliente||'—') : (pipe ? (pipe.sub_cliente||pipe.cliente||'—') : '—');
+  const op = orden ? (orden.op||'—') : (pipe ? (pipe.po||'—') : '—');
+  const producto = orden ? (orden.producto||'—') : (pipe ? (pipe.capacidad ? pipe.capacidad+'ml' : '—') : '—');
+  const maquina = orden ? (orden.maquina||'—') : '—';
+  const colores = orden ? (orden.colores||[]) : (pipe ? (pipe.tintas_info||[]) : []);
+  const buenas = orden ? (orden.piezas_buenas||0) : 0;
+  const mermaPr = orden ? (orden.merma_produccion||{}) : {};
+  const totalMerma = Object.values(mermaPr).reduce((s,v)=>s+(v||0),0);
+  const avance = pzas ? Math.min(100, buenas/pzas*100).toFixed(1) : 0;
+  const tProd = orden ? (orden.tiempo_produccion_seg||0) : 0;
+  const tAj = orden ? (orden.tiempo_ajuste_seg||0) : 0;
+  const estado = orden ? (orden.estado||'ajuste') : 'ajuste';
+  const done = estado === 'completado';
+  const enProd = estado === 'produccion';
+
+  function fmt(s){s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return [h,m,ss].map(x=>String(x).padStart(2,'0')).join(':');}
+
+  const coloresHTML = colores.map(c=>'<span style="display:inline-block;background:#1e2028;border-radius:16px;padding:3px 10px;font-size:11px;margin:2px">🎨 '+(c.nombre||c.pantone||'')+(c.pantone&&c.nombre?' · '+c.pantone:'')+'</span>').join('');
+  const mermaRows = Object.entries(mermaPr).filter(([,v])=>v>0).map(([k,v])=>
+    '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1e2028;font-size:12px"><span>'+k+'</span><span style="color:#ef4444;font-family:monospace;font-weight:600">'+v+'</span></div>'
+  ).join('');
+
+  const statusColor = done?'#6b7280':enProd?'#22c55e':'#f59e0b';
+  const statusText = done?'Completado':enProd?'En producción':'En ajuste';
+
+  const html = \`<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="8">
+<title>Monitor · \${op}</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0f12;color:#fff;font-family:Arial,sans-serif;min-height:100vh}
+.hdr{background:#111318;border-bottom:1px solid #1e2028;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+.card{background:#111318;border:1px solid #1e2028;border-radius:12px;padding:14px 18px;margin-bottom:12px}
+.mono{font-family:'Space Mono',monospace}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat{background:#111318;border:1px solid #1e2028;border-radius:12px;padding:14px;text-align:center}
+.prog-wrap{background:#1e2028;border-radius:999px;height:8px;overflow:hidden;margin-bottom:12px}
+.prog-fill{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a)}
+.prog-label{display:flex;justify-content:space-between;font-size:10px;color:#6b7280;margin-bottom:4px}
+.ts{font-size:9px;color:#374151;text-align:center;padding:8px}
+</style></head>
 <body>
-  <div class="header">
-    <div class="logo">SHARP <span>PLASTICS</span> <span style="font-size:11px;font-weight:400;color:#6b7280;margin-left:6px">// Monitor</span></div>
-    <div style="font-size:12px;color:#6b7280"><span class="status-dot" id="dot"></span><span id="status-txt">Conectando...</span></div>
+<div class="hdr">
+  <div style="font-size:15px;font-weight:800">SHARP <span style="color:#f59e0b">PLASTICS</span> <span style="font-size:10px;font-weight:400;color:#4b5563;margin-left:4px">// Monitor</span></div>
+  <div style="font-size:11px"><span style="width:8px;height:8px;border-radius:50%;background:\${statusColor};display:inline-block;margin-right:5px"></span>\${statusText}</div>
+</div>
+<div class="wrap">
+  \${done?'<div style="background:#14532d;border:1px solid #16a34a;border-radius:10px;padding:12px;text-align:center;margin-bottom:12px"><div style=\"font-size:22px;margin-bottom:4px\">✅</div><div style=\"font-weight:700;color:#22c55e\">Completado — '+buenas.toLocaleString()+' pzas · '+avance+'%</div></div>':''}
+  \${!orden?'<div style="background:#1c1a0a;border:1px solid #f59e0b55;border-radius:10px;padding:10px;text-align:center;margin-bottom:12px;color:#f59e0b;font-size:12px">⚙️ Ajuste en proceso — producción no ha iniciado</div>':''}
+
+  <div class="card">
+    <div style="font-size:17px;font-weight:700;margin-bottom:3px">\${cliente} — \${producto}</div>
+    <div style="font-size:11px;color:#6b7280;margin-bottom:\${coloresHTML?'8px':'0'}">\${op} · \${pzas.toLocaleString()} pzas\${maquina!=='—'?' · '+maquina:''}</div>
+    \${coloresHTML?'<div>'+coloresHTML+'</div>':''}
   </div>
-  <div class="container">
-    <div id="content"><div style="text-align:center;padding:60px;color:#374151">Cargando...</div></div>
-    <div class="last-update" id="last-update"></div>
-  </div>
-  <div class="footer">Sharp Plastics MES · Solo lectura</div>
 
-  <script>
-    const SB_URL='${SB_URL}';
-    const SB_KEY='${SB_KEY}';
-    const ID='${id}';
-    let prevEstado=null;
+  \${orden && !done?
+    '<div class="card" style="text-align:center"><div style="font-size:10px;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">⏱ Producción</div><div class="mono" style="font-size:44px;font-weight:700;color:#22c55e">'+fmt(tProd)+'</div></div>'
+  :done?
+    '<div class="grid2"><div class="stat"><div class="mono" style="font-size:20px;font-weight:700;color:#f59e0b;margin-bottom:3px">'+fmt(tAj)+'</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280">Ajuste</div></div><div class="stat"><div class="mono" style="font-size:20px;font-weight:700;color:#22c55e;margin-bottom:3px">'+fmt(tProd)+'</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280">Producción</div></div></div>'
+  :''}
 
-    function fmt(s){
-      s=Math.floor(s||0);
-      const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;
-      return [h,m,ss].map(x=>String(x).padStart(2,'0')).join(':');
-    }
+  \${orden?
+    '<div class="grid2">'+
+      '<div class="stat"><div class="mono" style="font-size:30px;font-weight:700;color:#22c55e;margin-bottom:3px">'+buenas.toLocaleString()+'</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280">Piezas buenas</div></div>'+
+      '<div class="stat"><div class="mono" style="font-size:30px;font-weight:700;color:#ef4444;margin-bottom:3px">'+totalMerma+'</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280">Merma</div></div>'+
+    '</div>'+
+    '<div class="prog-label"><span>'+buenas.toLocaleString()+' de '+pzas.toLocaleString()+' pzas</span><span>'+avance+'%</span></div>'+
+    '<div class="prog-wrap"><div class="prog-fill" style="width:'+avance+'%"></div></div>'+
+    (mermaRows?'<div class="card"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">Merma por causa</div>'+mermaRows+'</div>':'')
+  :''}
 
-    async function load(){
-      try{
-        const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ID+'&select=*',{
-          headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
-        });
-        const rows=await r.json();
-        if(!rows||!rows.length){
-          document.getElementById('content').innerHTML='<div style="text-align:center;padding:60px;color:#374151">Orden no encontrada</div>';
-          return;
-        }
-        const d=rows[0];
-        render(d);
-        document.getElementById('dot').style.background=d.estado==='completado'?'#6b7280':'#22c55e';
-        document.getElementById('status-txt').textContent=d.estado==='completado'?'Completado':'En vivo';
-        document.getElementById('last-update').textContent='Última actualización: '+new Date().toLocaleTimeString('es-MX');
-      }catch(e){
-        document.getElementById('dot').style.background='#ef4444';
-        document.getElementById('status-txt').textContent='Sin conexión';
-      }
-    }
-
-    function render(d){
-      const pzas=d.piezas_total||0;
-      const buenas=d.piezas_buenas||0;
-      const mermaAj=d.merma_ajuste||{};
-      const mermaPr=d.merma_produccion||{};
-      const allMerma={...mermaAj,...mermaPr};
-      const totalMerma=Object.values(mermaPr).reduce((s,v)=>s+(v||0),0);
-      const avance=pzas?Math.min(100,(buenas/pzas*100)).toFixed(1):0;
-      const tProd=d.tiempo_produccion_seg||0;
-      const tAj=d.tiempo_ajuste_seg||0;
-      const colores=(d.colores||[]);
-      const completado=d.estado==='completado';
-      const mermaRows=Object.entries(allMerma).filter(([,v])=>v>0)
-        .map(([k,v])=>'<div class="merma-row"><span>'+k+'</span><span class="merma-val">'+v+'</span></div>').join('');
-
-      document.getElementById('content').innerHTML=\`
-        \${completado?\`<div class="completado-banner">
-          <div style="font-size:24px;margin-bottom:6px">✅</div>
-          <div style="font-size:16px;font-weight:700;color:#22c55e">Producción completada</div>
-          <div style="font-size:13px;color:#86efac;margin-top:4px">\${buenas.toLocaleString()} piezas buenas · \${avance}% rendimiento</div>
-        </div>\`:''}
-
-        <div class="order-card">
-          <div class="order-title">\${d.cliente||'—'} — \${d.producto||'—'}</div>
-          <div class="order-meta">\${d.op||'—'} · \${pzas.toLocaleString()} pzas · \${d.maquina||'—'}</div>
-          \${colores.length?\`<div style="margin-top:8px">\${colores.map(c=>\`<span class="color-chip">🎨 \${c.nombre}\${c.pantone?' · '+c.pantone:''}</span>\`).join('')}</div>\`:''}
-        </div>
-
-        \${!completado?\`<div class="timer-card">
-          <div class="timer-label">⏱ Producción</div>
-          <div class="timer-val">\${fmt(tProd)}</div>
-        </div>\`:\`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-          <div class="stat-card"><div class="stat-val" style="font-size:20px;color:#f59e0b">\${fmt(tAj)}</div><div class="stat-label">Tiempo ajuste</div></div>
-          <div class="stat-card"><div class="stat-val" style="font-size:20px;color:#22c55e">\${fmt(tProd)}</div><div class="stat-label">Tiempo producción</div></div>
-        </div>\`}
-
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-val" style="color:#22c55e">\${buenas.toLocaleString()}</div>
-            <div class="stat-label">Piezas buenas</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-val" style="color:#ef4444">\${totalMerma}</div>
-            <div class="stat-label">Merma</div>
-          </div>
-        </div>
-
-        <div class="progress-label"><span>\${buenas.toLocaleString()} de \${pzas.toLocaleString()} pzas</span><span>\${avance}%</span></div>
-        <div class="progress-wrap"><div class="progress-fill" style="width:\${avance}%"></div></div>
-
-        \${mermaRows?\`<div class="merma-card"><div class="merma-title">Detalle de merma</div>\${mermaRows}</div>\`:''}
-      \`;
-    }
-
-    load();
-    setInterval(load, 8000);
-  </script>
-</body>
-</html>`;
+  <div class="ts">Actualizado: \${new Date().toLocaleTimeString('es-MX')} · Se recarga cada 8s</div>
+</div>
+</body></html>\`;
 
   res.setHeader('Content-Type', 'text/html');
   return res.status(200).send(html);

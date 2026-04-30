@@ -867,12 +867,13 @@ function goNuevaOrden(idx){
     } else if(p.tintas_info&&p.tintas_info.length){
       S.orden.colores=p.tintas_info.map(t=>({nombre:t.nombre||t.pantone||'Color',pantone:t.pantone||''}));
     } else if(p.color_botella||p.color_tapa){
-      // Fallback: usar colores de botella/tapa
       const cols=[];
       if(p.color_botella&&p.color_botella.toLowerCase()!=='see mock up')cols.push({nombre:p.color_botella,pantone:p.color_botella});
       if(p.color_tapa&&p.color_tapa.toLowerCase()!=='see mock up'&&p.color_tapa!==p.color_botella)cols.push({nombre:'Tapa: '+p.color_tapa,pantone:p.color_tapa});
       if(cols.length)S.orden.colores=cols;
     }
+    // Mandar email de notificación de inicio
+    setTimeout(()=>enviarEmailInicioOrden(p), 500);
   }
   showScreen('orden');
   renderSteps('steps-orden','orden');
@@ -1441,6 +1442,28 @@ async function enviarAprobacion(){
     setAprobacionStatus('error', e.message);
     toast('Error: '+e.message, 'err');
   }
+}
+
+async function enviarEmailInicioOrden(p){
+  try{
+    const coloresStr=(p.tintas_info||[]).map(t=>t.nombre+(t.pantone?' · '+t.pantone:'')).join(', ')||
+      (p.color_botella||'—');
+    const r=await fetch('/api/send-monitor',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        orden_id: p.id,
+        orden_op: p.po||'—',
+        cliente: p.sub_cliente||p.cliente||'—',
+        piezas: p.piezas||0,
+        colores: coloresStr,
+        capacidad: p.capacidad||'—',
+      })
+    });
+    const d=await r.json();
+    if(r.ok) console.log('Email inicio orden enviado, monitor:', d.url);
+    else console.warn('Error email inicio:', d);
+  }catch(e){console.warn('enviarEmailInicioOrden error:',e);}
 }
 
 async function enviarEmailMonitor(){
