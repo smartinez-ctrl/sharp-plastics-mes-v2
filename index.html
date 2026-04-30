@@ -1519,6 +1519,62 @@ function pausarYSalir(){
   },1000);
 }
 
+async function guardarOrden(estado){
+  const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
+  const data={
+    op:S.orden.op||('OP-'+Date.now()),
+    cliente:S.orden.cliente||'',
+    producto:S.orden.producto||'',
+    piezas_total:S.orden.pzas||0,
+    lote_botella:S.orden.loteBot||'',
+    lote_tapa:S.orden.loteTap||'',
+    maquina:S.orden.maquina||'Shuttle',
+    colores:S.orden.colores||[],
+    ajustadores:S.orden.ajustadores||[],
+    operadores:S.orden.operadores||[],
+    estado,
+    tiempo_ajuste_seg:S.timers.ajuste.total||S.timers.ajuste.s||0,
+    tiempo_produccion_seg:S.timers.prod.total||S.timers.prod.s||0,
+    piezas_buenas:buenas,
+    merma_ajuste:S.merma.ajuste||{},
+    merma_produccion:S.merma.prod||{},
+    tintas:S.tintas||[],
+    consumo_real_tintas:S.consumoReal||[],
+    qa_resultados:S.qa||{},
+    reajustes:S.reajustes||0,
+    uv_intensidad:parseInt(document.getElementById('uv-int')?.value)||null,
+    uv_velocidad:parseInt(document.getElementById('uv-vel')?.value)||null,
+    proceso_alcohol:document.getElementById('proc-alcohol')?.checked||false,
+    proceso_primer:document.getElementById('proc-primer')?.checked||false,
+    presion_aire:parseInt(document.getElementById('presion-aire')?.value)||null,
+    flameo_tipo:document.getElementById('flameo-tipo')?.value||null,
+    flameo_tiempo:parseInt(document.getElementById('flameo-tiempo')?.value)||null,
+    flameo_vueltas:parseInt(document.getElementById('flameo-vueltas')?.value)||null,
+    crosshatch:document.getElementById('cierreXhatch')?.value||null,
+    prueba_agua:document.getElementById('cierreAgua')?.value||null,
+    observaciones:document.getElementById('cierre-obs')?.value||null,
+    pipeline_id:S.pipelineId||null,
+    tm_ajuste:S.tm.ajuste||{},
+    tm_produccion:S.tm.prod||{},
+  };
+  try{
+    let rows;
+    if(S.ordenId){
+      await sbPatch('ordenes_produccion',data,'id=eq.'+S.ordenId);
+      rows=[{id:S.ordenId}];
+    } else {
+      rows=await sbPost('ordenes_produccion',data);
+      if(rows&&rows[0]&&rows[0].id)S.ordenId=rows[0].id;
+    }
+    toast('Guardado ✓');
+  }catch(e){
+    console.error('Save error:',e);
+    const msg=e.message||'';
+    toast('Error al guardar: '+msg.slice(0,50));
+  }
+}
+
+
 async function finalizarYCerrar(){
   const btn = document.querySelector('[onclick="finalizarYCerrar()"]');
   if(btn){btn.disabled=true;btn.textContent='Guardando...';}
@@ -1924,34 +1980,6 @@ function generarPDFInterno(){
 }
 
 
-async function finalizarYCerrar(){
-  const btn = document.querySelector('[onclick="finalizarYCerrar()"]');
-  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
-  try{
-    await guardarOrden('completado');
-    if(S.pipelineId){
-      const tintasInfo=S.orden.colores.map((col,i)=>{
-        const t=S.tintas[i]||{componentes:[],aditivos:[]};
-        const cr=(S.consumoReal&&S.consumoReal[i])||{};
-        return {nombre:col.nombre,pantone:col.pantone,componentes:t.componentes,aditivos:t.aditivos,consumo_real:cr};
-      });
-      await sbPatch('pipeline_mf',{
-        estado:'Completado',
-        consumo_real_tintas:S.consumoReal||[],
-        formula_tintas:S.tintas||[],
-        tintas_info:tintasInfo,
-      },'id=eq.'+S.pipelineId);
-    }
-    enviarEmailCierre(); // no await — no bloquear por el email
-    toast('Orden finalizada ✓','ok');
-  }catch(e){
-    console.error('finalizarYCerrar error:',e);
-    toast('Guardado con errores: '+e.message.slice(0,40),'err');
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='✅ Guardado';}
-    setTimeout(()=>{showScreen('dashboard');renderDashboard();},1200);
-  }
-}
 
 function goCierre(){
   timerStop('prod');
@@ -1962,54 +1990,6 @@ function goCierre(){
   setTimeout(enviarEmailCierre, 1500);
 }
 
-async function enviarEmailCierre(){
-  try{
-    const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
-    const mermaAjuste=Object.entries(S.merma.ajuste||{}).filter(([,v])=>v>0);
-    const mermaProd=Object.entries(S.merma.prod||{}).filter(([,v])=>v>0);
-    const totalMerma=mermaAjuste.reduce((s,[,v])=>s+v,0)+mermaProd.reduce((s,[,v])=>s+v,0);
-    const tAjusteSeg=S.timers.ajuste.total||S.timers.ajuste.s||0;
-    const tProdSeg=S.timers.prod.total||S.timers.prod.s||0;
-    const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
-    const seg_bot=tProdSeg&&buenas?(tProdSeg/buenas).toFixed(1)+'s':'—';
-    const pzas_hora=tProdSeg&&buenas?Math.round(buenas/(tProdSeg/3600)):'—';
-    const tipos={comida:'Salida a comer',tintas:'Prep. tintas',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
-    const consumoConEst=(S.consumoReal||[]).map((cr,i)=>{
-      const t=S.tintas[i]||{componentes:[]};
-      const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-      return {...cr, gramos_estimado:tgEst};
-    });
-    const payload={
-      orden_id:S.ordenId||null,
-      orden_op:S.orden.op||'—',
-      cliente:S.orden.cliente||'—',
-      sub_cliente:S.orden.sub_cliente||'',
-      producto:S.orden.producto||'—',
-      piezas_total:S.orden.pzas||0,
-      piezas_buenas:buenas,
-      merma_total:totalMerma,
-      rendimiento:pct,
-      tiempo_ajuste:fmt(tAjusteSeg),
-      tiempo_produccion:fmt(tProdSeg),
-      tiempo_total:fmt(tAjusteSeg+tProdSeg),
-      reajustes:S.reajustes||0,
-      seg_bot, pzas_hora,
-      colores:S.orden.colores||[],
-      consumo_real:consumoConEst,
-      merma_detalle:[...mermaAjuste.map(([k,v])=>[k+' (ajuste)',v]),...mermaProd.map(([k,v])=>[k+' (prod)',v])],
-      tiempos_muertos:Object.entries({...S.tm.ajuste||{},...S.tm.prod||{}}).filter(([,v])=>v>0).map(([k,v])=>[tipos[k]||k,fmt(v)]),
-      crosshatch:document.getElementById('cierreXhatch')?.value||'—',
-      prueba_agua:document.getElementById('cierreAgua')?.value||'—',
-      firma:document.getElementById('cierre-firma')?.value||'—',
-      observaciones:document.getElementById('cierre-obs')?.value||'',
-      foto_urls:S.fotos||[],
-    };
-    const resp=await fetch('/api/send-cierre',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const data=await resp.json();
-    if(resp.ok)toast('📧 Reporte enviado a producción','ok');
-    else console.error('send-cierre error:',data);
-  }catch(e){console.error('enviarEmailCierre error:',e);}
-}
 
 function renderCierre(){
   const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
