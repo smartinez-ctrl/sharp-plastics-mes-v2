@@ -395,6 +395,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <input type="file" id="fc1" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(1,this)">
     <input type="file" id="fc2" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(2,this)">
     <input type="file" id="fc3" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(3,this)">
+    <div id="fotos-upload-status" style="display:none;margin:0 0 12px">
+      <div style="background:var(--bg3);border-radius:10px;padding:12px 16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:600">Subiendo fotos...</span>
+          <span id="fotos-upload-pct" style="font-family:monospace;font-size:12px;color:var(--amber)">0%</span>
+        </div>
+        <div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden">
+          <div id="fotos-upload-bar" style="height:100%;background:var(--amber);border-radius:4px;width:0%;transition:width .3s"></div>
+        </div>
+      </div>
+    </div>
     <div id="aprobacion-status" style="display:none;margin:0 0 12px"></div>
     <div class="card" style="padding:12px 16px">
       <div class="field" style="margin:0"><label>Observaciones (opcional)</label>
@@ -626,15 +637,7 @@ const TINTAS={
     {sku:'NOR-1056K',nombre:'Opaque Bright White',precio:2204.00},
   ]
 };
-const ADITIVOS=[
-  {nombre:'Promotor de Adherencia R-12',prov:'Rodatec',precio:939.60},
-  {nombre:'Retardante UV',prov:'Rodatec',precio:0},
-  {nombre:'Adhesivo UV',prov:'Rodatec',precio:0},
-  {nombre:'Catalizador',prov:'Norcote',precio:0},
-  {nombre:'Diluyente',prov:'Rodatec',precio:0},
-  {nombre:'Brillo UV',prov:'Norcote',precio:0},
-  {nombre:'Mate UV',prov:'Rodatec',precio:0},
-];
+let ADITIVOS=[];
 const MERMA_TIPOS=['Shadow','Descuadre','Falta tinta','Mal flameo','Perforada/deforme','Soleo','Otro 1','Otro 2'];
 const TM_TIPOS=[
   {k:'comida',icon:'🍽',label:'Salida a comer'},
@@ -747,6 +750,7 @@ function checkPin(){
     applyRoleRestrictions();
     showScreen('dashboard');
     renderDashboard();
+    loadAditivosSB();
     return;
   }
   document.getElementById('pin-error').textContent='Rol sin acceso';
@@ -786,6 +790,13 @@ function applyRoleRestrictions(){
 // ══════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════
+async function loadAditivosSB(){
+  try{
+    const rows=await sbGet('aditivos','activo=eq.true&order=nombre.asc');
+    ADITIVOS=rows.map(r=>({nombre:r.nombre,prov:r.proveedor||'',precio:parseFloat(r.precio_kg)||0,id:r.id}));
+  }catch(e){console.warn('No se cargaron aditivos:',e);}
+}
+
 async function renderDashboard(){
   const el=document.getElementById('dash-pedidos');if(!el)return;
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)"><div style="font-size:20px;margin-bottom:8px">⏳</div>Cargando...</div>';
@@ -1078,7 +1089,7 @@ function renderTintaRow(col,i){
       <div class="field" style="margin:0"><label style="margin-bottom:2px;font-size:10px">$/kg c/IVA</label>
         <input type="number" value="${a.precio||''}" placeholder="0" inputmode="numeric"
           oninput="updAdit(${i},${ai},'precio',parseFloat(this.value)||0);renderTintasAjuste()" style="text-align:center;font-size:12px"></div>
-      <div class="costo-display">${c}</div>
+      <div style="font-size:11px;color:var(--text3);text-align:center;min-width:40px">${gramos>0?gramos+"g":""}</div>
       <button class="del-btn" onclick="removeAdit(${i},${ai})">✕</button>
     </div>`;
   }).join('');
@@ -1310,6 +1321,21 @@ function setAprobacionStatus(state, msg){
   }
 }
 
+async function comprimirFoto(dataUrl, maxW=600){
+  if(!dataUrl)return null;
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1,maxW/img.width);
+      const c=document.createElement('canvas');
+      c.width=img.width*scale; c.height=img.height*scale;
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      res(c.toDataURL('image/jpeg',0.72));
+    };
+    img.src=dataUrl;
+  });
+}
+
 async function enviarAprobacion(){
   const fotos = S.fotos || [];
   const obs = document.getElementById('foto-obs')?.value || '';
@@ -1327,6 +1353,24 @@ async function enviarAprobacion(){
 
   setAprobacionStatus('enviando');
 
+  // Mostrar barra de progreso mientras se comprimen
+  const uploadStatus = document.getElementById('fotos-upload-status');
+  const uploadBar = document.getElementById('fotos-upload-bar');
+  const uploadPct = document.getElementById('fotos-upload-pct');
+  if(uploadStatus) uploadStatus.style.display='block';
+
+  // Comprimir fotos
+  const fotosComprimidas = [];
+  for(let i=0;i<fotos.length;i++){
+    if(fotos[i]) fotosComprimidas.push(await comprimirFoto(fotos[i]));
+    else fotosComprimidas.push(null);
+    const pct = Math.round(((i+1)/4)*80);
+    if(uploadBar) uploadBar.style.width=pct+'%';
+    if(uploadPct) uploadPct.textContent=pct+'%';
+  }
+  if(uploadBar) uploadBar.style.width='95%';
+  if(uploadPct) uploadPct.textContent='Enviando...';
+
   try {
     const resp = await fetch('/api/send-approval', {
       method: 'POST',
@@ -1338,7 +1382,7 @@ async function enviarAprobacion(){
         sub_cliente: S.orden.sub_cliente || '',
         piezas: S.orden.pzas || 0,
         colores: S.orden.colores?.length || 0,
-        fotos: fotos,
+        fotos: fotosComprimidas,
         observaciones: obs,
       })
     });
@@ -1355,12 +1399,14 @@ async function enviarAprobacion(){
       if(el) el.textContent = str;
     }, 1000);
 
+    if(uploadStatus)uploadStatus.style.display='none';
     setAprobacionStatus('pendiente');
     toast('Email enviado ✓ Esperando aprobación');
     // Iniciar polling cada 10 segundos
     window._aprobacionPollInterval = setInterval(pollAprobacion, 10000);
 
   } catch(e) {
+    if(uploadStatus)uploadStatus.style.display='none';
     setAprobacionStatus('error', e.message);
     toast('Error: '+e.message, 'err');
   }
@@ -1568,7 +1614,12 @@ async function guardarOrden(estado){
       await sbPatch('pipeline_mf',{estado:'Completado'},'id=eq.'+S.pipelineId);
     }
     toast('Guardado ✓');
-  }catch(e){console.error('Save error:',e);toast('Error al guardar');}
+  }catch(e){
+    console.error('Save error:',e);
+    const msg=e.message||'';
+    if(msg.includes('413')||msg.includes('large')||msg.length>200)toast('Error: payload muy grande, contacta soporte');
+    else toast('Error al guardar: '+msg.slice(0,60));
+  }
 }
 
 // ══════════════════════════════════════════════════════
