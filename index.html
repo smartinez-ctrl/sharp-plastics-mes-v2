@@ -396,15 +396,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <input type="file" id="fc2" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(2,this)">
     <input type="file" id="fc3" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(3,this)">
     <div id="aprobacion-status" style="display:none;margin:0 0 12px"></div>
-    <div class="card">
-      <div class="card-title">Aprobación</div>
-      <div class="field"><label>Aprobado por</label>
-        <select id="foto-aprueba"><option value="">Seleccionar...</option></select>
-      </div>
-      <div class="field"><label>Observaciones</label>
-        <textarea id="foto-obs" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none"></textarea>
+    <div class="card" style="padding:12px 16px">
+      <div class="field" style="margin:0"><label>Observaciones (opcional)</label>
+        <textarea id="foto-obs" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none;margin-top:6px" placeholder="Notas para el aprobador..."></textarea>
       </div>
     </div>
+    <!-- hidden select for compat -->
+    <select id="foto-aprueba" style="display:none"><option value="">—</option></select>
   </div></div>
   <div class="bottom-bar" id="fotos-bottom-bar">
     <button class="btn btn-secondary" id="btn-enviar-aprobacion" onclick="enviarAprobacion()" style="flex:1">📧 Enviar para aprobación</button>
@@ -906,7 +904,11 @@ function resetOrden(){
     var slot=document.getElementById('foto-'+i);
     if(slot){slot.className='foto-slot';slot.innerHTML='<div class="foto-icon">📷</div><div class="foto-label">'+label+'</div>';}
   });
-  // Reset aprobacion status
+  // Reset aprobacion status y timers
+  if(window._timerRespuestaIv){clearInterval(window._timerRespuestaIv);window._timerRespuestaIv=null;}
+  window._aprobacionEnviadaAt=null;
+  if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
+  S.ordenId=null;
   setAprobacionStatus('idle');
   // Reset observaciones y aprobado por
   var obs=document.getElementById('foto-obs');if(obs)obs.value='';
@@ -986,8 +988,9 @@ function addColor(){
   document.getElementById('new-color-nombre').value='';
   document.getElementById('new-color-pantone').value='';
   renderColores();
+  renderTintasAjuste();
 }
-function removeColor(i){S.orden.colores.splice(i,1);renderColores();}
+function removeColor(i){S.orden.colores.splice(i,1);renderColores();renderTintasAjuste();}
 
 // ══════════════════════════════════════════════════════
 // AJUSTE
@@ -1282,12 +1285,20 @@ function setAprobacionStatus(state, msg){
     if(btnEnviar){btnEnviar.disabled=true;btnEnviar.textContent='Enviando...';}
   } else if(state === 'pendiente'){
     statusEl.style.display = 'block';
-    statusEl.innerHTML = '<div style="background:#92400e22;border:1px solid #f59e0b55;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">⏳</span><div><div style="font-size:13px;font-weight:600;color:#f59e0b">Esperando aprobación</div><div style="font-size:11px;color:#9ca3af;margin-top:2px">Email enviado a smartinez@sharpplastics.com</div></div></div>';
+    statusEl.innerHTML = '<div style="background:#92400e22;border:1px solid #f59e0b55;border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">⏳</span><div><div style="font-size:13px;font-weight:600;color:#f59e0b">Esperando aprobación</div><div style="font-size:11px;color:#9ca3af;margin-top:2px">Email enviado a smartinez@sharpplastics.com</div></div></div><div style="text-align:right"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Tiempo de respuesta</div><div id="timer-respuesta" style="font-family:monospace;font-size:18px;font-weight:700;color:#f59e0b">00:00:00</div></div></div>';
     if(btnEnviar){btnEnviar.disabled=false;btnEnviar.textContent='🔄 Reenviar email';}
     if(btnIniciar){btnIniciar.style.display='';btnIniciar.disabled=true;btnIniciar.textContent='🔒 Esperando aprobación';}
   } else if(state === 'aprobado'){
+    // Calcular tiempo de respuesta final
+    let tiempoResp = '—';
+    if(window._aprobacionEnviadaAt){
+      const seg = Math.floor((Date.now() - window._aprobacionEnviadaAt) / 1000);
+      const h = Math.floor(seg/3600), m = Math.floor((seg%3600)/60), s = seg%60;
+      tiempoResp = [h,m,s].map(x=>String(x).padStart(2,'0')).join(':');
+    }
+    if(window._timerRespuestaIv){clearInterval(window._timerRespuestaIv);window._timerRespuestaIv=null;}
     statusEl.style.display = 'block';
-    statusEl.innerHTML = '<div style="background:#14532d22;border:1px solid #16a34a55;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">✅</span><div><div style="font-size:13px;font-weight:600;color:#22c55e">¡Aprobado!</div><div style="font-size:11px;color:#9ca3af;margin-top:2px">Producción autorizada por smartinez@sharpplastics.com</div></div></div>';
+    statusEl.innerHTML = '<div style="background:#14532d22;border:1px solid #16a34a55;border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">✅</span><div><div style="font-size:13px;font-weight:600;color:#22c55e">¡Aprobado!</div><div style="font-size:11px;color:#9ca3af;margin-top:2px">Autorizado por smartinez@sharpplastics.com</div></div></div><div style="text-align:right"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Tiempo de respuesta</div><div style="font-family:monospace;font-size:18px;font-weight:700;color:#22c55e">'+tiempoResp+'</div></div></div>';
     if(btnEnviar){btnEnviar.style.display='none';}
     if(btnIniciar){btnIniciar.style.display='';btnIniciar.disabled=false;btnIniciar.textContent='🚀 Iniciar producción →';btnIniciar.style.background='var(--green)';}
     // Detener polling
@@ -1302,9 +1313,16 @@ function setAprobacionStatus(state, msg){
 async function enviarAprobacion(){
   const fotos = S.fotos || [];
   const obs = document.getElementById('foto-obs')?.value || '';
-  const ordenId = S.orden?.id;
+  const ordenId = S.ordenId || S.orden?.id;
 
-  if(!ordenId){toast('Guarda la orden primero','err');return;}
+  if(!ordenId){
+    toast('Guardando orden...');
+    await guardarOrden('fotos');
+    const ordenId2 = S.ordenId;
+    if(!ordenId2){toast('Error al guardar la orden','err');return;}
+  }
+  const finalOrdenId = S.ordenId || S.orden?.id;
+  if(!finalOrdenId){toast('Error: sin ID de orden','err');return;}
   if(!fotos.some(f=>f)){toast('Sube al menos una foto','err');return;}
 
   setAprobacionStatus('enviando');
@@ -1314,7 +1332,7 @@ async function enviarAprobacion(){
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
-        orden_id: ordenId,
+        orden_id: finalOrdenId,
         orden_op: S.orden.op || '—',
         cliente: S.orden.cliente || '—',
         sub_cliente: S.orden.sub_cliente || '',
@@ -1326,6 +1344,16 @@ async function enviarAprobacion(){
     });
     const data = await resp.json();
     if(!resp.ok) throw new Error(data.error || 'Error del servidor');
+
+    // Iniciar timer de tiempo de respuesta
+    window._aprobacionEnviadaAt = Date.now();
+    window._timerRespuestaIv = setInterval(function(){
+      const seg = Math.floor((Date.now() - window._aprobacionEnviadaAt) / 1000);
+      const h = Math.floor(seg/3600), m = Math.floor((seg%3600)/60), s = seg%60;
+      const str = [h,m,s].map(x=>String(x).padStart(2,'0')).join(':');
+      const el = document.getElementById('timer-respuesta');
+      if(el) el.textContent = str;
+    }, 1000);
 
     setAprobacionStatus('pendiente');
     toast('Email enviado ✓ Esperando aprobación');
@@ -1534,7 +1562,8 @@ async function guardarOrden(estado){
     pipeline_id:S.pipelineId||null,
   };
   try{
-    await sbPost('ordenes_produccion',data,'op');
+    const rows=await sbPost('ordenes_produccion',data,'op');
+    if(rows&&rows[0]&&rows[0].id)S.ordenId=rows[0].id;
     if(estado==='completado'&&S.pipelineId){
       await sbPatch('pipeline_mf',{estado:'Completado'},'id=eq.'+S.pipelineId);
     }
