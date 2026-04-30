@@ -586,6 +586,7 @@ let USERS=[];
 async function loadUsers(){
   try{
     const rows=await sbGet('usuarios','activo=eq.true&order=nombre.asc');
+    window._allUsers=rows;
     USERS=rows.map(u=>({
       id:u.id,
       name:u.nombre,
@@ -1520,6 +1521,379 @@ function pausarYSalir(){
     renderDashboard();
   },1000);
 }
+
+async function finalizarYCerrar(){
+  const btn = document.querySelector('[onclick="finalizarYCerrar()"]');
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  await guardarOrden('completado');
+  if(S.pipelineId){
+    await sbPatch('pipeline_mf',{
+      estado:'Completado',
+      consumo_real_tintas:S.consumoReal||[]
+    },'id=eq.'+S.pipelineId);
+  }
+  await enviarEmailCierre();
+  if(btn){btn.disabled=false;btn.textContent='✅ Guardado';}
+  toast('Orden finalizada ✓','ok');
+  setTimeout(()=>{showScreen('dashboard');renderDashboard();},1500);
+}
+
+function goCierre(){
+  timerStop('prod');
+  guardarOrden('completado');
+  showScreen('cierre');
+  renderCierre();
+  // Enviar email de cierre después de que renderCierre inicialice consumoReal
+  setTimeout(enviarEmailCierre, 1500);
+}
+
+async function enviarEmailCierre(){
+  try{
+    const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
+    const mermaAjuste=Object.entries(S.merma.ajuste||{}).filter(([,v])=>v>0);
+    const mermaProd=Object.entries(S.merma.prod||{}).filter(([,v])=>v>0);
+    const totalMerma=mermaAjuste.reduce((s,[,v])=>s+v,0)+mermaProd.reduce((s,[,v])=>s+v,0);
+    const tAjusteSeg=S.timers.ajuste.total||S.timers.ajuste.s||0;
+    const tProdSeg=S.timers.prod.total||S.timers.prod.s||0;
+    const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
+    const seg_bot=tProdSeg&&buenas?(tProdSeg/buenas).toFixed(1)+'s':'—';
+    const pzas_hora=tProdSeg&&buenas?Math.round(buenas/(tProdSeg/3600)):'—';
+    const tipos={comida:'Salida a comer',tintas:'Prep. tintas',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
+    const consumoConEst=(S.consumoReal||[]).map((cr,i)=>{
+      const t=S.tintas[i]||{componentes:[]};
+      const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+      return {...cr, gramos_estimado:tgEst};
+    });
+    const payload={
+      orden_id:S.ordenId||null,
+      orden_op:S.orden.op||'—',
+      cliente:S.orden.cliente||'—',
+      sub_cliente:S.orden.sub_cliente||'',
+      producto:S.orden.producto||'—',
+      piezas_total:S.orden.pzas||0,
+      piezas_buenas:buenas,
+      merma_total:totalMerma,
+      rendimiento:pct,
+      tiempo_ajuste:fmt(tAjusteSeg),
+      tiempo_produccion:fmt(tProdSeg),
+      tiempo_total:fmt(tAjusteSeg+tProdSeg),
+      reajustes:S.reajustes||0,
+      seg_bot, pzas_hora,
+      colores:S.orden.colores||[],
+      consumo_real:consumoConEst,
+      merma_detalle:[...mermaAjuste.map(([k,v])=>[k+' (ajuste)',v]),...mermaProd.map(([k,v])=>[k+' (prod)',v])],
+      tiempos_muertos:Object.entries({...S.tm.ajuste||{},...S.tm.prod||{}}).filter(([,v])=>v>0).map(([k,v])=>[tipos[k]||k,fmt(v)]),
+      crosshatch:document.getElementById('cierreXhatch')?.value||'—',
+      prueba_agua:document.getElementById('cierreAgua')?.value||'—',
+      firma:document.getElementById('cierre-firma')?.value||'—',
+      observaciones:document.getElementById('cierre-obs')?.value||'',
+      foto_urls:S.fotos||[],
+    };
+    const resp=await fetch('/api/send-cierre',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await resp.json();
+    if(resp.ok)toast('📧 Reporte enviado a producción','ok');
+    else console.error('send-cierre error:',data);
+  }catch(e){console.error('enviarEmailCierre error:',e);}
+}
+
+function renderCierre(){
+  const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
+  const merma=Object.values(S.merma.prod).reduce((a,b)=>a+b,0);
+  const r=document.getElementById('cierre-resumen');
+  if(r)r.innerHTML=`<div class="card-title">Resumen del pedido</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Cliente</div><div style="font-size:14px;font-weight:600;margin-top:2px">${S.orden.cliente||'—'}</div></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Orden</div><div style="font-size:14px;font-weight:600;margin-top:2px">${S.orden.op||'—'}</div></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Producto</div><div style="font-size:13px;margin-top:2px">${S.orden.producto||'—'}</div></div>
+      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Colores</div><div style="margin-top:4px">${S.orden.colores.map(c=>`<span class="color-tag" style="font-size:10px"><span class="color-swatch" style="background:${chex(c.nombre)}"></span>${c.nombre}</span>`).join('')||'—'}</div></div>
+    </div>`;
+  const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
+  const cs=document.getElementById('cierre-stats');
+  if(cs)cs.innerHTML=`<div class="card-title">Resultados</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:10px;padding:12px;text-align:center"><div style="font-family:monospace;font-size:22px;font-weight:700;color:var(--green)">${buenas.toLocaleString()}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Buenas</div></div>
+      <div style="background:var(--red-bg);border:1px solid var(--red-border);border-radius:10px;padding:12px;text-align:center"><div style="font-family:monospace;font-size:22px;font-weight:700;color:var(--red)">${merma}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Merma</div></div>
+      <div style="background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:10px;padding:12px;text-align:center"><div style="font-family:monospace;font-size:22px;font-weight:700;color:var(--amber)">${pct}%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rendimiento</div></div>
+    </div>
+    <div style="display:flex;gap:16px;font-size:12px;color:var(--text2)">
+      <span>⏱ Ajuste: ${fmt(S.timers.ajuste.total||S.timers.ajuste.s)}</span>
+      <span>⏱ Prod: ${fmt(S.timers.prod.total||S.timers.prod.s)}</span>
+      <span>↺ Reajustes: ${S.reajustes}</span>
+    </div>`;
+  // Consumo real de tintas
+  if(!S.consumoReal)S.consumoReal=S.orden.colores.map(()=>({gramos_usados:0,gramos_sobrante:0}));
+  const cc=document.getElementById('cierre-costos');
+  if(cc){
+    let html='<div class="card-title" style="margin-bottom:10px">Consumo real de tintas</div>';
+    html+='<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Registra cuánto se usó realmente en producción para tener el costo final exacto.</div>';
+    S.orden.colores.forEach((col,i)=>{
+      const t=S.tintas[i]||{componentes:[]};
+      const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+      const cr=S.consumoReal[i]||{gramos_usados:0,gramos_sobrante:0};
+      html+=`<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px">${col.nombre}${col.pantone?' · <span style="font-family:monospace;color:var(--text3)">${col.pantone}</span>':''} <span style="font-size:10px;color:var(--text3);font-weight:400">· estimado: ${tgEst}g</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="field" style="margin:0"><label style="font-size:10px">Gramos usados</label>
+            <input type="number" value="${cr.gramos_usados||''}" placeholder="0" inputmode="numeric" style="text-align:center" oninput="S.consumoReal[${i}].gramos_usados=parseFloat(this.value)||0;actualizarConsumo()"></div>
+          <div class="field" style="margin:0"><label style="font-size:10px">Gramos sobrante</label>
+            <input type="number" value="${cr.gramos_sobrante||''}" placeholder="0" inputmode="numeric" style="text-align:center" oninput="S.consumoReal[${i}].gramos_sobrante=parseFloat(this.value)||0;actualizarConsumo()"></div>
+        </div>
+        <div id="consumo-diff-${i}" style="font-size:10px;color:var(--text3);margin-top:6px;text-align:right"></div>
+      </div>`;
+    });
+    cc.innerHTML=html;
+    actualizarConsumo();
+  }
+  renderQA();
+}
+
+// ══════════════════════════════════════════════════════
+// QA
+// ══════════════════════════════════════════════════════
+function actualizarConsumo(){
+  if(!S.consumoReal)return;
+  S.orden.colores.forEach((_,i)=>{
+    const t=S.tintas[i]||{componentes:[]};
+    const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+    const cr=S.consumoReal[i]||{};
+    const usado=parseFloat(cr.gramos_usados)||0;
+    const sobra=parseFloat(cr.gramos_sobrante)||0;
+    const real=usado-sobra;
+    const diff=real-tgEst;
+    const el=document.getElementById('consumo-diff-'+i);
+    if(el&&usado>0){
+      const sign=diff>0?'+':'';
+      const color=Math.abs(diff)<tgEst*0.1?'var(--green)':Math.abs(diff)<tgEst*0.2?'var(--amber)':'var(--red)';
+      el.innerHTML=`Consumo neto: <strong style="color:${color}">${real.toFixed(1)}g</strong> (${sign}${diff.toFixed(1)}g vs estimado)`;
+    }
+  });
+}
+
+function generarPDFInterno(){
+  const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
+  const mermaAjuste=Object.entries(S.merma.ajuste||{}).filter(([,v])=>v>0);
+  const mermaProd=Object.entries(S.merma.prod||{}).filter(([,v])=>v>0);
+  const totalMermaAj=mermaAjuste.reduce((s,[,v])=>s+v,0);
+  const totalMermaProd=mermaProd.reduce((s,[,v])=>s+v,0);
+  const totalMerma=totalMermaAj+totalMermaProd;
+  const tAjusteSeg=S.timers.ajuste.total||S.timers.ajuste.s||0;
+  const tProdSeg=S.timers.prod.total||S.timers.prod.s||0;
+  const tTotalSeg=tAjusteSeg+tProdSeg;
+  const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
+  const seg_bot=tProdSeg&&buenas?(tProdSeg/buenas).toFixed(1):'—';
+  const pzas_hora=tProdSeg&&buenas?Math.round(buenas/(tProdSeg/3600)):'—';
+  const fecha=new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const firma=document.getElementById('cierre-firma')?.value||'—';
+  const obs=document.getElementById('cierre-obs')?.value||'';
+  const xhatch=document.getElementById('cierreXhatch')?.value||'—';
+  const agua=document.getElementById('cierreAgua')?.value||'—';
+  const uvInt=document.getElementById('uv-int')?.value||'—';
+  const uvVel=document.getElementById('uv-vel')?.value||'—';
+  const flamTipo=document.getElementById('flameo-tipo')?.value||'Sin flameado';
+  const flamTiempo=document.getElementById('flameo-tiempo')?.value||'0';
+  const flamVueltas=document.getElementById('flameo-vueltas')?.value||'0';
+  const alcohol=document.getElementById('proc-alcohol')?.checked?'Sí':'No';
+  const primer=document.getElementById('proc-primer')?.checked?'Sí':'No';
+  const presion=document.getElementById('presion-aire')?.value||'—';
+  const coloresStr=(S.orden.colores||[]).map(c=>c.nombre+(c.pantone?' · '+c.pantone:'')).join(' / ')||'—';
+  const tipos={comida:'Salida a comer',tintas:'Prep. tintas',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
+
+  // Personal
+  const USERS_ALL=window._allUsers||[];
+  const ajust=(S.orden.ajustadores||[]).map(id=>{const u=USERS_ALL.find(x=>x.id===id);return u?u.name:id;}).join(', ')||'—';
+  const opers=(S.orden.operadores||[]).map(id=>{const u=USERS_ALL.find(x=>x.id===id);return u?u.name:id;}).join(', ')||'—';
+
+  // Tiempos muertos por fase
+  const tmAjRows=Object.entries(S.tm.ajuste||{}).filter(([,v])=>v>0)
+    .map(([k,v])=>`<tr><td style="padding:4px 10px;font-size:11px">${tipos[k]||k}</td><td style="padding:4px 10px;font-size:11px;color:#6b7280;text-align:center">Ajuste</td><td style="padding:4px 10px;font-size:11px;font-family:monospace;text-align:right">${fmt(v)}</td></tr>`).join('');
+  const tmPrRows=Object.entries(S.tm.prod||{}).filter(([,v])=>v>0)
+    .map(([k,v])=>`<tr><td style="padding:4px 10px;font-size:11px">${tipos[k]||k}</td><td style="padding:4px 10px;font-size:11px;color:#6b7280;text-align:center">Producción</td><td style="padding:4px 10px;font-size:11px;font-family:monospace;text-align:right">${fmt(v)}</td></tr>`).join('');
+  const tmTotal=Object.values({...S.tm.ajuste||{},...S.tm.prod||{}}).reduce((s,v)=>s+v,0);
+
+  // Merma
+  const mermaRows=[
+    totalMermaAj>0?`<tr style="background:#fef9f0"><td colspan="2" style="padding:4px 10px;font-size:10px;font-weight:700;color:#d97706;text-transform:uppercase">Ajuste (${totalMermaAj} pzas)</td></tr>`:'',
+    ...mermaAjuste.map(([k,v])=>`<tr><td style="padding:4px 10px 4px 20px;font-size:11px">${k}</td><td style="padding:4px 10px;font-size:11px;font-family:monospace;text-align:right;color:#dc2626">${v}</td></tr>`),
+    totalMermaProd>0?`<tr style="background:#fef2f2"><td colspan="2" style="padding:4px 10px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase">Producción (${totalMermaProd} pzas)</td></tr>`:'',
+    ...mermaProd.map(([k,v])=>`<tr><td style="padding:4px 10px 4px 20px;font-size:11px">${k}</td><td style="padding:4px 10px;font-size:11px;font-family:monospace;text-align:right;color:#dc2626">${v}</td></tr>`)
+  ].join('');
+
+  // Fórmula de tintas completa
+  const tintasRows=(S.tintas||[]).map((t,i)=>{
+    const col=S.orden.colores[i]||{nombre:'Color '+(i+1)};
+    const comps=t.componentes||[];
+    const adits=t.aditivos||[];
+    const tg=comps.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+    const tgAdits=adits.reduce((s,a)=>{const g=a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0);return s+g;},0);
+    let rows=`<tr style="background:#f0f4f8"><td colspan="3" style="padding:5px 10px;font-size:11px;font-weight:700">${col.nombre}${col.pantone?' · '+col.pantone:''} — ${tg}g tintas + ${tgAdits.toFixed(1)}g aditivos</td></tr>`;
+    comps.forEach(x=>{rows+=`<tr><td style="padding:3px 10px 3px 20px;font-size:11px">${x.nombre||x.sku||'—'}</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:center">${x.gramos}g</td><td style="padding:3px 10px;font-size:11px;color:#6b7280;text-align:right">${x.prov||''}</td></tr>`;});
+    adits.forEach(a=>{const g=a.pct?(a.pct/100*tg).toFixed(1):(a.gramos||0);rows+=`<tr style="color:#6b7280"><td style="padding:3px 10px 3px 20px;font-size:10px">↳ ${a.nombre||'Aditivo'}${a.pct?' ('+a.pct+'%)':''}</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:center">${g}g</td><td style="padding:3px 10px;font-size:10px;text-align:right">${a.prov||''}</td></tr>`;});
+    return rows;
+  }).join('');
+
+  // Consumo real
+  const consumoRows=(S.consumoReal||[]).map((cr,i)=>{
+    const col=S.orden.colores[i]||{nombre:'Color '+(i+1)};
+    const t=S.tintas[i]||{componentes:[]};
+    const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+    const usado=parseFloat(cr.gramos_usados)||0;
+    const sobra=parseFloat(cr.gramos_sobrante)||0;
+    const real=usado-sobra;
+    const diff=real-tgEst;
+    const sign=diff>=0?'+':'';
+    const color=Math.abs(diff)<=tgEst*0.1?'#16a34a':Math.abs(diff)<=tgEst*0.2?'#d97706':'#dc2626';
+    return `<tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:5px 10px;font-size:11px;font-weight:600">${col.nombre}${col.pantone?' · '+col.pantone:''}</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${tgEst}g</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${usado}g preparados</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${sobra}g sobrante</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;font-weight:700;color:${color}">${usado>0?real.toFixed(1)+'g':' —'}</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;color:${color}">${usado>0?sign+diff.toFixed(1)+'g':' —'}</td>
+    </tr>`;
+  }).join('');
+
+  const rendColor=parseFloat(pct)>=95?'#16a34a':parseFloat(pct)>=85?'#d97706':'#dc2626';
+
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte interno — ${S.orden.op||'Orden'}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;color:#111;margin:0;padding:20px;background:#fff;font-size:12px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #111;padding-bottom:12px;margin-bottom:16px}
+    .company{font-size:20px;font-weight:800}.company span{color:#f59e0b}
+    .section{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #111;padding-bottom:3px;margin:14px 0 8px;color:#374151}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:8px}
+    .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px;margin-bottom:8px}
+    .box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:7px;padding:8px 10px}
+    .lbl{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:1px}
+    .val{font-size:14px;font-weight:700;font-family:monospace}
+    .val-sm{font-size:12px;font-weight:600}
+    table{width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:10px}
+    th{padding:5px 10px;background:#f0f4f8;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#374151;text-align:left}
+    td{border-bottom:1px solid #f0f0f0}
+    .footer{margin-top:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+    .sign{border-top:1.5px solid #111;padding-top:5px;font-size:10px;color:#6b7280}
+    @media print{body{padding:10px}@page{margin:8mm}tr{page-break-inside:avoid}}
+  </style></head><body>
+
+  <div class="header">
+    <div>
+      <div class="company">SHARP <span>PLASTICS</span></div>
+      <div style="font-size:11px;color:#6b7280;margin-top:1px">Reporte interno de producción · Serigrafía UV</div>
+    </div>
+    <div style="text-align:right;font-size:10px;color:#6b7280">${fecha}<br><strong style="font-size:14px;color:#111">${S.orden.op||'—'}</strong></div>
+  </div>
+
+  <!-- DATOS DEL PEDIDO -->
+  <div class="section">Datos del pedido</div>
+  <div class="grid4">
+    <div class="box"><div class="lbl">Cliente</div><div class="val-sm">${S.orden.cliente||'—'}</div></div>
+    <div class="box"><div class="lbl">Producto</div><div class="val-sm">${S.orden.producto||'—'}</div></div>
+    <div class="box"><div class="lbl">Piezas totales</div><div class="val">${(S.orden.pzas||0).toLocaleString()}</div></div>
+    <div class="box"><div class="lbl">Máquina</div><div class="val-sm">${S.orden.maquina||'—'}</div></div>
+  </div>
+  <div class="grid2" style="margin-bottom:8px">
+    <div class="box"><div class="lbl">Lote botella</div><div class="val-sm">${S.orden.loteBot||'—'}</div></div>
+    <div class="box"><div class="lbl">Lote tapa</div><div class="val-sm">${S.orden.loteTap||'—'}</div></div>
+  </div>
+  <div class="box" style="margin-bottom:8px"><div class="lbl">Colores / Pantone</div><div class="val-sm" style="margin-top:2px">${coloresStr}</div></div>
+
+  <!-- PERSONAL -->
+  <div class="section">Personal asignado</div>
+  <div class="grid2">
+    <div class="box"><div class="lbl">Ajustador(es)</div><div class="val-sm">${ajust}</div></div>
+    <div class="box"><div class="lbl">Operador(es)</div><div class="val-sm">${opers}</div></div>
+  </div>
+
+  <!-- TIEMPOS -->
+  <div class="section">Tiempos de producción</div>
+  <div class="grid3">
+    <div class="box"><div class="lbl">Tiempo total</div><div class="val">${fmt(tTotalSeg)}</div></div>
+    <div class="box"><div class="lbl">Ajuste</div><div class="val" style="color:#d97706">${fmt(tAjusteSeg)}</div></div>
+    <div class="box"><div class="lbl">Producción</div><div class="val" style="color:#2563eb">${fmt(tProdSeg)}</div></div>
+    <div class="box"><div class="lbl">Tiempos muertos</div><div class="val" style="color:#dc2626">${fmt(tmTotal)}</div></div>
+    <div class="box"><div class="lbl">Reajustes</div><div class="val" style="color:#dc2626">${S.reajustes||0}</div></div>
+    <div class="box"><div class="lbl">seg / botella</div><div class="val">${seg_bot}${seg_bot!=='—'?'s':''}</div></div>
+    <div class="box"><div class="lbl">Piezas / hora</div><div class="val">${pzas_hora}</div></div>
+  </div>
+
+  ${tmAjRows||tmPrRows?`
+  <table>
+    <thead><tr><th>Tiempo muerto</th><th style="text-align:center">Fase</th><th style="text-align:right">Duración</th></tr></thead>
+    <tbody>${tmAjRows}${tmPrRows}</tbody>
+  </table>`:''}
+
+  <!-- PRODUCTIVIDAD -->
+  <div class="section">Productividad</div>
+  <div class="grid4">
+    <div class="box" style="border-color:#86efac"><div class="lbl">Piezas buenas</div><div class="val" style="color:#16a34a">${buenas.toLocaleString()}</div></div>
+    <div class="box" style="border-color:#fca5a5"><div class="lbl">Merma total</div><div class="val" style="color:#dc2626">${totalMerma}</div></div>
+    <div class="box" style="border-color:#fcd34d"><div class="lbl">Rendimiento</div><div class="val" style="color:${rendColor}">${pct}%</div></div>
+    <div class="box"><div class="lbl">% merma</div><div class="val" style="color:#dc2626">${buenas+totalMerma>0?((totalMerma/(buenas+totalMerma))*100).toFixed(1):0}%</div></div>
+  </div>
+
+  ${mermaRows?`
+  <table>
+    <thead><tr><th>Causa de merma</th><th style="text-align:right">Piezas</th></tr></thead>
+    <tbody>${mermaRows}</tbody>
+  </table>`:''}
+
+  <!-- PROCESO -->
+  <div class="section">Parámetros de proceso</div>
+  <div class="grid4">
+    <div class="box"><div class="lbl">UV Intensidad</div><div class="val-sm">${uvInt}%</div></div>
+    <div class="box"><div class="lbl">UV Velocidad</div><div class="val-sm">${uvVel} rpm</div></div>
+    <div class="box"><div class="lbl">Presión de aire</div><div class="val-sm">${presion} PSI</div></div>
+    <div class="box"><div class="lbl">Flameado</div><div class="val-sm">${flamTipo}</div></div>
+    ${flamTipo&&flamTipo!=='Sin flameado'?`
+    <div class="box"><div class="lbl">Tiempo flameo</div><div class="val-sm">${flamTiempo}s · ${flamVueltas} vueltas</div></div>`:''}
+    <div class="box"><div class="lbl">Alcohol</div><div class="val-sm">${alcohol}</div></div>
+    <div class="box"><div class="lbl">Primer</div><div class="val-sm">${primer}</div></div>
+  </div>
+
+  <!-- PRUEBAS -->
+  <div class="section">Pruebas de adherencia</div>
+  <div class="grid2">
+    <div class="box" style="border-color:${xhatch.includes('Aprobado')?'#86efac':'#fca5a5'}">
+      <div class="lbl">Crosshatch</div>
+      <div class="val-sm" style="color:${xhatch.includes('Aprobado')?'#16a34a':'#dc2626'}">${xhatch}</div>
+    </div>
+    <div class="box" style="border-color:${agua.includes('Aprobado')?'#86efac':'#fca5a5'}">
+      <div class="lbl">Prueba de agua</div>
+      <div class="val-sm" style="color:${agua.includes('Aprobado')?'#16a34a':'#dc2626'}">${agua}</div>
+    </div>
+  </div>
+
+  <!-- FÓRMULA DE TINTAS -->
+  ${tintasRows?`
+  <div class="section">Fórmula de tintas (igualación)</div>
+  <table>
+    <thead><tr><th>Componente</th><th style="text-align:center">Gramos</th><th style="text-align:right">Proveedor</th></tr></thead>
+    <tbody>${tintasRows}</tbody>
+  </table>`:''}
+
+  <!-- CONSUMO REAL -->
+  ${consumoRows?`
+  <div class="section">Consumo real de tintas</div>
+  <table>
+    <thead><tr><th>Color</th><th style="text-align:center">Estimado</th><th style="text-align:center">Preparado</th><th style="text-align:center">Sobrante</th><th style="text-align:center">Consumo neto</th><th style="text-align:center">Diferencia</th></tr></thead>
+    <tbody>${consumoRows}</tbody>
+  </table>`:''}
+
+  ${obs?`<div class="section">Observaciones</div><p style="font-size:11px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;margin:0 0 12px">${obs}</p>`:''}
+
+  <div class="footer">
+    <div class="sign">Elaborado por: <strong>${firma}</strong></div>
+    <div class="sign">Revisado por: ________________</div>
+    <div class="sign">Firma: ________________</div>
+  </div>
+  </body></html>`;
+
+  const w=window.open('','_blank','width=900,height=1000');
+  w.document.write(html);w.document.close();
+  setTimeout(()=>w.print(),600);
+}
+
 
 async function finalizarYCerrar(){
   const btn = document.querySelector('[onclick="finalizarYCerrar()"]');
