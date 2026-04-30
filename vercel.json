@@ -11,6 +11,9 @@
     },
     "api/approve-order.js": {
       "maxDuration": 10
+    },
+    "api/ver-fotos.js": {
+      "maxDuration": 10
     }
   }
 }

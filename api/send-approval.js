@@ -57,24 +57,17 @@ export default async function handler(req, res) {
 
   const approveUrl = `${BASE_URL}/api/approve-order?token=${token}&id=${orden_id}`;
 
-  // Links de fotos — un botón por foto
+  // Link único a página de fotos
   const fotosExitosas = fotoUrls.filter(Boolean);
-  const fotosLinksHTML = fotosExitosas.length > 0
-    ? `<div style="padding:0 32px;margin-bottom:24px">
-        <h2 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em">Fotos de aprobación</h2>
-        <table width="100%" cellpadding="4" cellspacing="0">
-          ${fotoUrls.map((url, i) => url ? `
-          <tr>
-            <td style="padding:4px 0">
-              <a href="${url}" target="_blank" style="display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;text-decoration:none;color:#0f172a;font-size:13px;font-weight:500">
-                📷 Ver foto ${i+1} — ${fotoLabels[i]}
-              </a>
-            </td>
-          </tr>` : '').join('')}
-        </table>
+  const verFotosUrl = `${BASE_URL}/api/ver-fotos?id=${orden_id}`;
+  const fotosHTML = fotosExitosas.length > 0
+    ? `<div style="padding:0 32px;margin-bottom:24px;text-align:center">
+        <a href="${verFotosUrl}" target="_blank" style="display:inline-block;background:#0d0f12;color:#fff;font-size:14px;font-weight:600;padding:12px 32px;border-radius:10px;text-decoration:none">
+          📷 Ver ${fotosExitosas.length} fotos de aprobación
+        </a>
+        <p style="font-size:11px;color:#9ca3af;margin:8px 0 0">Se abre una página con todas las fotos · puedes imprimirla o guardarla como PDF</p>
       </div>`
     : '';
-  const fotosHTML = fotosLinksHTML;
 
   const emailHTML = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
