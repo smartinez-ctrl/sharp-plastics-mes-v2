@@ -1463,16 +1463,17 @@ async function pollAprobacion(){
 // ══════════════════════════════════════════════════════
 // PRODUCCIÓN
 // ══════════════════════════════════════════════════════
-function goProduccion(){
+async function goProduccion(){
   // Detener poll de aprobación — ya no estamos en pantalla fotos
   if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
   if(window._timerRespuestaIv){clearInterval(window._timerRespuestaIv);window._timerRespuestaIv=null;}
+  // Guardar primero para tener S.ordenId
+  await guardarOrden('produccion');
   // Autosave cada 30s durante producción
   if(window._autosaveIv){clearInterval(window._autosaveIv);}
   window._autosaveIv=setInterval(()=>guardarOrden('produccion'),30000);
-  // Mandar email con link de monitor
-  setTimeout(enviarEmailMonitor, 2000);
-  guardarOrden('produccion');
+  // Mandar email con link de monitor (ya tenemos S.ordenId)
+  enviarEmailMonitor();
   // Restaurar tiempo pausado si existe
   if(S.orden&&S.orden.tiempo_pausado&&S.orden.tiempo_pausado>0&&S.timers.prod.s===0){
     S.timers.prod.s=S.orden.tiempo_pausado;
