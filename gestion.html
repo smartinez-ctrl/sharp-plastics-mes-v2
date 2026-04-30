@@ -522,37 +522,45 @@ function renderPipeline(){
   document.getElementById('st-venta').textContent=vTotal>0?mxn(vTotal):'—';
   document.getElementById('st-margen').textContent=mProm>0?mProm.toFixed(1)+'%':'—';
 
-  document.getElementById('pipeline-activos').innerHTML=activos.length?activos.map(p=>{
+  // Header de columnas
+  const pipelineHeader = `<div style="display:grid;grid-template-columns:2fr 80px 60px 60px 90px 90px 60px 100px;gap:0;padding:6px 14px;margin-bottom:2px">
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente / PO</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Piezas</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Col</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">ml</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Venta</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Costo</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Margen</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Estado</span>
+  </div>`;
+
+  document.getElementById('pipeline-activos').innerHTML=activos.length?(pipelineHeader+activos.map(p=>{
     const isUrgent=p.fecha_entrega&&(new Date(p.fecha_entrega+'T12:00:00')-new Date())<4*24*60*60*1000;
-    const tv=p.venta_total>0,tc=p.costo_total>0;
-    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')" style="padding:10px 14px;margin-bottom:6px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;min-width:0">
-          <span style="font-size:14px;font-weight:600">${p.sub_cliente||p.cliente||'—'} — ${p.capacidad?p.capacidad+'ml':'—'}</span>
-          <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3)">🔢 ${p.po||'—'}</span>
-          <span style="font-size:11px;color:var(--text2)">📦 ${p.piezas||0} pzas</span>
-          <span style="font-size:11px;color:var(--text2)">🎨 ${p.colores||0} col</span>
-          ${p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;color:var(--text2)">${t.pantone||t.nombre||''}</span>`).join(''):''}
-          ${p.fecha_inicio?`<span style="font-size:11px;color:var(--text2)">📅 ${new Date(p.fecha_inicio+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>`:''}
-          ${p.fecha_entrega?`<span style="font-size:11px;color:var(--text2)">🏁 ${new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})}</span>`:'<span style="font-size:11px;color:var(--text3)">Sin fecha</span>'}
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-          <div style="text-align:right;min-width:90px">
-            <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--green)">${p.venta_total?'$'+p.venta_total.toLocaleString('es-MX',{minimumFractionDigits:2}):'Sin cotizar'}</div>
-            <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--red)">${p.costo_total?'$'+p.costo_total.toLocaleString('es-MX',{minimumFractionDigits:2}):'—'}</div>
-          </div>
-          <div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:${(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)'};min-width:42px;text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
-          <span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴 Urgente':p.estado}</span>
-          ${p.costo_revisado?'<span class="badge badge-green" style="font-size:9px">✓ Costo</span>':''}
-          <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
-            <button class="btn btn-primary btn-xs" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button>
-            <button class="btn btn-ghost btn-xs" onclick="abrirPDFs_menu(event,'${p.id}')">📄</button>
-            ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
-          </div>
+    const margenColor=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
+    const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;color:var(--text3)">${t.pantone||t.nombre||''}</span>`).join(' '):'';
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:2fr 80px 60px 60px 90px 90px 60px 100px;gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap">
+          <span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--text3)">${p.po||'—'}</span>
+          ${tintas}
         </div>
       </div>
+      <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
+      <div style="font-size:13px;text-align:center;color:var(--text2)">${p.colores||0}</div>
+      <div style="font-size:13px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--red);text-align:right">${p.costo_total?mxn(p.costo_total):'—'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px" onclick="event.stopPropagation()">
+        ${p.costo_revisado?'<span style="font-size:9px;color:var(--green)">✓</span>':''}
+        <span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴':p.estado}</span>
+        <button class="btn btn-primary btn-xs" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button>
+        <button class="btn btn-ghost btn-xs" onclick="abrirPDFs_menu(event,'${p.id}')">📄</button>
+        ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
+      </div>
     </div>`;
-  }).join(''):'<div style="text-align:center;padding:30px;color:var(--text3)">Sin pedidos activos.</div>';
+  }).join('')):'<div style="text-align:center;padding:30px;color:var(--text3)">Sin pedidos activos.</div>';
 
   document.getElementById('pipeline-completados').innerHTML=completados.length?completados.slice(0,10).map(p=>`
     <tr style="cursor:pointer" onclick="abrirDetallePedido('${p.id}')">
@@ -1082,7 +1090,7 @@ function updAditivoComp(ci,ai,f,el){
   if(!COT_COLORES[ci])return;
   if(!COT_COLORES[ci].aditivos[ai])COT_COLORES[ci].aditivos[ai]={aditivo_id:'',nombre:'',pct:5,precio_kg:0};
   const a=COT_COLORES[ci].aditivos[ai];
-  if(f==='aditivo'){a.aditivo_id=el.value;const o=el.options[el.selectedIndex];a.nombre=o.text;a.precio_kg=parseFloat(o.dataset.precio)||0;renderColorBlocks();return;}
+  if(f==='aditivo'){a.aditivo_id=el.value;const o=el.options[el.selectedIndex];a.nombre=o.text;a.precio_kg=parseFloat(o.dataset.precio)||0;if(a.pct===undefined)a.pct=5;const tg0=COT_COLORES[ci].componentes.reduce(function(s,x){return s+(parseFloat(x.gramos)||0);},0);a.gramos=a.pct/100*tg0;renderColorBlocks();return;}
   else if(f==='pct'){a.pct=parseFloat(el.value)||0;}
   else if(f==='precio'){a.precio_kg=parseFloat(el.value)||0;}
   // Calcular gramos y subtotal
@@ -2221,7 +2229,7 @@ function exportarPDFInternoCotizador(){
     venta_total:r.ventaTotal,
     costo_total:r.costoTotal,
     margen:r.margen,
-    mo_horas:0, mo_tarifa:70,
+    mo_horas:piezas, mo_tarifa:r.costoTotal&&piezas?(window._cotCalc?.costoMdo||0)/piezas:0,
     formula_tintas:COT_COLORES||[],
   };
   abrirPDFInterno(p);
