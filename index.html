@@ -1345,8 +1345,13 @@ async function enviarAprobacion(){
   }
   const finalOrdenId = S.ordenId || S.orden?.id;
   if(!finalOrdenId){toast('Error: sin ID de orden','err');return;}
-  const faltantes=['Frente','Reverso','Detalle tinta','Vista general'].filter((_,i)=>!fotos[i]);
-  if(faltantes.length){toast('Faltan fotos: '+faltantes.join(', '),'err');return;}
+  // Validar 4 fotos obligatorias
+  const fotoLabels=['Frente','Reverso','Detalle tinta','Vista general'];
+  const faltantes=fotoLabels.filter((_,i)=>!fotos[i]||fotos[i]===null);
+  if(faltantes.length>0){
+    toast('⚠️ Faltan: '+faltantes.join(', '),'err');
+    return;
+  }
 
   setAprobacionStatus('enviando');
 
@@ -1356,15 +1361,17 @@ async function enviarAprobacion(){
   const uploadPct = document.getElementById('fotos-upload-pct');
   if(uploadStatus) uploadStatus.style.display='block';
 
-  // Comprimir fotos
-  const fotosComprimidas = [];
-  for(let i=0;i<fotos.length;i++){
-    if(fotos[i]) fotosComprimidas.push(await comprimirFoto(fotos[i]));
-    else fotosComprimidas.push(null);
+  // Comprimir fotos — siempre 4 slots
+  const fotosComprimidas = [null,null,null,null];
+  for(let i=0;i<4;i++){
+    if(fotos[i]){
+      fotosComprimidas[i] = await comprimirFoto(fotos[i]);
+    }
     const pct = Math.round(((i+1)/4)*80);
     if(uploadBar) uploadBar.style.width=pct+'%';
     if(uploadPct) uploadPct.textContent=pct+'%';
   }
+  console.log('Fotos comprimidas:', fotosComprimidas.map((f,i)=>f?'foto-'+i+' OK':'null'));
   if(uploadBar) uploadBar.style.width='95%';
   if(uploadPct) uploadPct.textContent='Enviando...';
 
