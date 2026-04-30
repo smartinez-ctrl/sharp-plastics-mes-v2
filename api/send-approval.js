@@ -57,27 +57,24 @@ export default async function handler(req, res) {
 
   const approveUrl = `${BASE_URL}/api/approve-order?token=${token}&id=${orden_id}`;
 
-  // Fotos HTML — usar URLs si disponibles, si no omitir con nota
+  // Links de fotos — un botón por foto
   const fotosExitosas = fotoUrls.filter(Boolean);
-  const fotosHTML = fotosExitosas.length > 0
+  const fotosLinksHTML = fotosExitosas.length > 0
     ? `<div style="padding:0 32px;margin-bottom:24px">
-        <h2 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 12px;text-transform:uppercase;letter-spacing:.06em">Fotos de aprobación</h2>
+        <h2 style="font-size:13px;font-weight:700;color:#374151;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em">Fotos de aprobación</h2>
         <table width="100%" cellpadding="4" cellspacing="0">
+          ${fotoUrls.map((url, i) => url ? `
           <tr>
-            ${fotoUrls.slice(0,2).map((url,i) => url
-              ? `<td width="50%" style="vertical-align:top;padding:4px"><img src="${url}" width="100%" style="border-radius:8px;border:1px solid #e5e7eb;display:block"><p style="font-size:10px;color:#6b7280;text-align:center;margin:4px 0 0">${fotoLabels[i]}</p></td>`
-              : `<td width="50%"></td>`
-            ).join('')}
-          </tr>
-          <tr>
-            ${fotoUrls.slice(2,4).map((url,i) => url
-              ? `<td width="50%" style="vertical-align:top;padding:4px"><img src="${url}" width="100%" style="border-radius:8px;border:1px solid #e5e7eb;display:block"><p style="font-size:10px;color:#6b7280;text-align:center;margin:4px 0 0">${fotoLabels[i+2]}</p></td>`
-              : `<td width="50%"></td>`
-            ).join('')}
-          </tr>
+            <td style="padding:4px 0">
+              <a href="${url}" target="_blank" style="display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;text-decoration:none;color:#0f172a;font-size:13px;font-weight:500">
+                📷 Ver foto ${i+1} — ${fotoLabels[i]}
+              </a>
+            </td>
+          </tr>` : '').join('')}
         </table>
       </div>`
-    : '<p style="padding:0 32px;color:#9ca3af;font-size:12px">Sin fotos adjuntas.</p>';
+    : '';
+  const fotosHTML = fotosLinksHTML;
 
   const emailHTML = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
