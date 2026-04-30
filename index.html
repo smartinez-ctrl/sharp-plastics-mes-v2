@@ -1345,7 +1345,8 @@ async function enviarAprobacion(){
   }
   const finalOrdenId = S.ordenId || S.orden?.id;
   if(!finalOrdenId){toast('Error: sin ID de orden','err');return;}
-  if(!fotos.some(f=>f)){toast('Sube al menos una foto','err');return;}
+  const faltantes=['Frente','Reverso','Detalle tinta','Vista general'].filter((_,i)=>!fotos[i]);
+  if(faltantes.length){toast('Faltan fotos: '+faltantes.join(', '),'err');return;}
 
   setAprobacionStatus('enviando');
 
