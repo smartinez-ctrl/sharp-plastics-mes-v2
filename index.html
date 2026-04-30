@@ -1417,7 +1417,7 @@ async function enviarAprobacion(){
 }
 
 async function pollAprobacion(){
-  const ordenId = S.orden?.id;
+  const ordenId = S.ordenId || S.orden?.id;
   if(!ordenId) return;
   try {
     const resp = await fetch(`${SB_URL}/rest/v1/ordenes_produccion?id=eq.${ordenId}&select=aprobacion_estado`, {
