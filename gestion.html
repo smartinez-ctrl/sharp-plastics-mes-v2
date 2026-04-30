@@ -1009,7 +1009,8 @@ function importarACotizador(){
   const flds={'cot-subcli':d.sub_cliente,'cot-po':d.po,'cot-cap':d.capacidad,'cot-piezas':d.piezas,'cot-colores':d.num_colores,'cot-col-bot':d.color_botella,'cot-col-tap':d.color_tapa,'cot-envio':d.direccion_envio};
   Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
   showPage('cotizador',document.getElementById('nav-cotizador'));
-  renderColorBlocks();calcCotizador();
+  renderColorBlocks();
+  setTimeout(calcCotizador, 50);
   toast('Datos cargados ✓','ok');
 }
 
@@ -1607,7 +1608,7 @@ function renderFormulaTintas(formula, pedidoId) {
     }).join('');
     var adits = (col.aditivos||[]).map(function(a) {
       return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:var(--text3)">'
-        + '<span>' + (a.nombre||'Aditivo') + '</span><span>' + (a.gramos||0) + 'g</span></div>';
+        + '<span>' + (a.nombre||'Aditivo') + '</span><span>' + (parseFloat(a.gramos||0).toFixed(2).replace(/\.?0+$/,'')) + 'g</span></div>';
     }).join('');
     return '<div style="background:var(--bg4);border-radius:9px;padding:10px;margin-bottom:8px">'
       + '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'
@@ -1698,7 +1699,12 @@ function renderDetallePedido(p) {
     + '<button class="btn btn-primary btn-sm" onclick="guardarVentaEdit(\'' + p.id + '\')">💾 Guardar cambios de venta</button>'
     + '</div></div>';
 
+  var costoMdoDet = 0;
+  for (var i2 = 0; i2 < Math.min(colores, tarifas.length); i2++) costoMdoDet += tarifas[i2].precio_pieza * piezas;
+  var costoTotalConMO = costoTotal + costoMdoDet;
   var costoHTML = '<div id="det-costo" style="display:none">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
+    + '<div>'
     + '<div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border);margin-bottom:12px">'
     + '<table style="width:100%;border-collapse:collapse">'
     + '<thead><tr style="background:var(--bg3)">'
@@ -1710,17 +1716,26 @@ function renderDetallePedido(p) {
     + costoRow('Botellas '+cap+'ml', piezas, costBot)
     + costoRow('Tapas', piezas, costTap)
     + costoRow('Tintas (estimado)', 1, costoTintas, costoTintas===0?'— sin fórmula':'')
-    + costoRow('Pantallas ('+colores+' × '+mxn(costPant)+')', colores, costPant)
-    + costoRow('Positivos ('+colores+' × '+mxn(costPos)+')', colores, costPos)
+    + costoRow('Pantallas ('+colores+' col)', colores, costPant)
+    + costoRow('Positivos ('+colores+' col)', colores, costPos)
     + costoRow('Empaque', piezas, tfP+tfT)
+    + costoRow('Mano de obra', piezas, piezas?costoMdoDet/piezas:0)
     + '</tbody></table></div>'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg3);border-radius:10px;margin-bottom:12px">'
-    + '<span style="font-size:14px;font-weight:700">Total costo (con MO)</span>'
-    + '<span style="font-family:\'Space Mono\',monospace;font-size:18px;font-weight:700;color:var(--red)">' + mxn(costoTotal) + '</span>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg3);border-radius:10px;margin-bottom:6px">'
+    + '<span style="font-size:13px;font-weight:600">Total costo (sin MO)</span>'
+    + '<span style="font-family:\'Space Mono\',monospace;font-size:15px;font-weight:700;color:var(--red)">' + mxn(costoTotal) + '</span>'
     + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px">'
+    + '<span style="font-size:14px;font-weight:700">Total costo (con MO)</span>'
+    + '<span style="font-family:\'Space Mono\',monospace;font-size:18px;font-weight:700;color:var(--red)">' + mxn(costoTotalConMO) + '</span>'
+    + '</div>'
+    + '</div>'
+    + '<div>'
     + '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:16px">'
     + '<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px">🎨 Fórmula de tintas — ' + (formula.length>0?'Estimado guardado':'Sin fórmula aún') + '</div>'
     + renderFormulaTintas(formula, p.id)
+    + '</div>'
+    + '</div>'
     + '</div></div>';
 
   return tabsHTML + ventaHTML + costoHTML;
@@ -1801,6 +1816,26 @@ function irACotizadorDesdePedido(id){
 
 // ── GENERACIÓN DE PDFs ──
 function mxnPDF(n){return'$'+(parseFloat(n)||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function abrirPDFs_menu(event, id){
+  event.stopPropagation();
+  const p = window._pipeline ? window._pipeline.find(x=>x.id===id) : null;
+  if(!p){toast('Pedido no encontrado','err');return;}
+  // Crear mini-menú contextual
+  const existing = document.getElementById('pdfs-ctx-menu');
+  if(existing)existing.remove();
+  const menu = document.createElement('div');
+  menu.id = 'pdfs-ctx-menu';
+  menu.style.cssText = 'position:fixed;z-index:9999;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:160px';
+  menu.innerHTML = '<div style="padding:5px 10px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">PDFs</div>'
+    + '<div style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--text)" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''" onclick="abrirPDFCliente(window._pipeline.find(x=>x.id===''+id+''));document.getElementById('pdfs-ctx-menu').remove()">📤 PDF cliente</div>'
+    + '<div style="padding:8px 12px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--text)" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''" onclick="abrirPDFInterno(window._pipeline.find(x=>x.id===''+id+''));document.getElementById('pdfs-ctx-menu').remove()">📊 PDF interno</div>';
+  const rect = event.target.getBoundingClientRect();
+  menu.style.left = rect.left + 'px';
+  menu.style.top = (rect.bottom + 4) + 'px';
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click', function h(){menu.remove();document.removeEventListener('click',h);}, {once:true}), 0);
+}
 
 function abrirPDFCliente(p){
   if(!p)p=window._pedidoActual;
