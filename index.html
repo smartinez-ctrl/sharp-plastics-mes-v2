@@ -284,7 +284,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 </div>
 
 <!-- AJUSTE -->
-<div class="screen" id="screen-ajuste" onclick="dismissKeyboard()">
+<div class="screen" id="screen-ajuste">
   <div class="topbar">
     <div class="topbar-left">
       <button class="back-btn" onclick="showScreen('orden')">←</button>
@@ -1340,14 +1340,11 @@ async function enviarAprobacion(){
   const obs = document.getElementById('foto-obs')?.value || '';
   const ordenId = S.ordenId || S.orden?.id;
 
-  if(!ordenId){
-    toast('Guardando orden...');
-    await guardarOrden('fotos');
-    const ordenId2 = S.ordenId;
-    if(!ordenId2){toast('Error al guardar la orden','err');return;}
-  }
-  const finalOrdenId = S.ordenId || S.orden?.id;
-  if(!finalOrdenId){toast('Error: sin ID de orden','err');return;}
+  // Siempre guardar/actualizar antes de enviar para asegurar que existe en DB
+  toast('Guardando...');
+  await guardarOrden('fotos');
+  const finalOrdenId = S.ordenId;
+  if(!finalOrdenId){toast('Error al guardar la orden — revisa conexión','err');return;}
   // Validar 4 fotos obligatorias
   const fotoLabels=['Frente','Reverso','Lado izquierdo','Lado derecho'];
   const faltantes=fotoLabels.filter((_,i)=>!fotos[i]||fotos[i]===null);
@@ -1390,6 +1387,7 @@ async function enviarAprobacion(){
   console.log('URLs subidas:', fotoUrls);
   const urlsOk = fotoUrls.filter(Boolean).length;
   console.log('Fotos exitosas:', urlsOk, '/ 4');
+  console.log('finalOrdenId:', finalOrdenId);
   if(urlsOk===0){setAprobacionStatus('error','No se pudieron subir las fotos. Revisa la conexión.');if(uploadStatus)uploadStatus.style.display='none';return;}
   if(uploadBar) uploadBar.style.width='95%';
   if(uploadPct) uploadPct.textContent='Enviando email...';
