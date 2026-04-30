@@ -875,11 +875,47 @@ function prefillOrden(){
 }
 
 function resetOrden(){
+  // Reset state
   S.orden={cliente:'',op:'',producto:'',pzas:0,loteBot:'',loteTap:'',maquina:'Shuttle',ajustadores:[],operadores:[],colores:[]};
   S.tintas=[];S.fotos=[null,null,null,null];S.qa={};
   S.merma={ajuste:{},prod:{}};S.tm={ajuste:{},prod:{}};
   S.activeTM={ajuste:null,prod:null};S.reajustes=0;S.pipelineId=null;
-  Object.keys(S.timers).forEach(k=>{clearInterval(S.timers[k].iv);S.timers[k]={s:0,iv:null,running:false,total:0};});
+  // Stop all timers
+  Object.keys(S.timers).forEach(k=>{
+    clearInterval(S.timers[k].iv);
+    S.timers[k]={s:0,iv:null,running:false,total:0};
+  });
+  // Reset timer displays
+  ['ajuste','prod'].forEach(function(k){
+    var d=document.getElementById('timer-'+k);
+    if(d){d.textContent='00:00:00';d.className='timer-display stopped mono';}
+    var pb=document.getElementById('btn-'+k+'-play');
+    var pauseb=document.getElementById('btn-'+k+'-pause');
+    var stopb=document.getElementById('btn-'+k+'-stop');
+    if(pb)pb.style.display='';
+    if(pauseb)pauseb.style.display='none';
+    if(stopb)stopb.style.display='none';
+  });
+  // Reset DOM fields — flameo, UV, proceso
+  var fields={'flameo-tipo':'','flameo-tiempo':'','flameo-vueltas':'','uv-int':'','uv-vel':'','presion-aire':''};
+  Object.entries(fields).forEach(function(e){var el=document.getElementById(e[0]);if(el)el.value=e[1];});
+  var checks=['proc-alcohol','proc-primer'];
+  checks.forEach(function(id){var el=document.getElementById(id);if(el)el.checked=false;});
+  // Reset fotos DOM
+  ['Frente','Reverso','Detalle tinta','Vista general'].forEach(function(label,i){
+    var slot=document.getElementById('foto-'+i);
+    if(slot){slot.className='foto-slot';slot.innerHTML='<div class="foto-icon">📷</div><div class="foto-label">'+label+'</div>';}
+  });
+  // Reset aprobacion status
+  setAprobacionStatus('idle');
+  // Reset observaciones y aprobado por
+  var obs=document.getElementById('foto-obs');if(obs)obs.value='';
+  var apr=document.getElementById('foto-aprueba');if(apr)apr.value='';
+  // Reset new-color inputs
+  var nc=document.getElementById('new-color-nombre');if(nc)nc.value='';
+  var np=document.getElementById('new-color-pantone');if(np)np.value='';
+  // Reset tinka ajuste list
+  var tal=document.getElementById('tintas-ajuste-list');if(tal)tal.innerHTML='';
 }
 
 function addOption(selId,inputId,fieldId){
