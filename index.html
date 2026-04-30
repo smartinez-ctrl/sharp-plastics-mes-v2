@@ -1927,17 +1927,30 @@ function generarPDFInterno(){
 async function finalizarYCerrar(){
   const btn = document.querySelector('[onclick="finalizarYCerrar()"]');
   if(btn){btn.disabled=true;btn.textContent='Guardando...';}
-  await guardarOrden('completado');
-  if(S.pipelineId){
-    await sbPatch('pipeline_mf',{
-      estado:'Completado',
-      consumo_real_tintas:S.consumoReal||[]
-    },'id=eq.'+S.pipelineId);
+  try{
+    await guardarOrden('completado');
+    if(S.pipelineId){
+      const tintasInfo=S.orden.colores.map((col,i)=>{
+        const t=S.tintas[i]||{componentes:[],aditivos:[]};
+        const cr=(S.consumoReal&&S.consumoReal[i])||{};
+        return {nombre:col.nombre,pantone:col.pantone,componentes:t.componentes,aditivos:t.aditivos,consumo_real:cr};
+      });
+      await sbPatch('pipeline_mf',{
+        estado:'Completado',
+        consumo_real_tintas:S.consumoReal||[],
+        formula_tintas:S.tintas||[],
+        tintas_info:tintasInfo,
+      },'id=eq.'+S.pipelineId);
+    }
+    enviarEmailCierre(); // no await — no bloquear por el email
+    toast('Orden finalizada ✓','ok');
+  }catch(e){
+    console.error('finalizarYCerrar error:',e);
+    toast('Guardado con errores: '+e.message.slice(0,40),'err');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='✅ Guardado';}
+    setTimeout(()=>{showScreen('dashboard');renderDashboard();},1200);
   }
-  await enviarEmailCierre();
-  if(btn){btn.disabled=false;btn.textContent='✅ Guardado';}
-  toast('Orden finalizada ✓','ok');
-  setTimeout(()=>{showScreen('dashboard');renderDashboard();},1500);
 }
 
 function goCierre(){
