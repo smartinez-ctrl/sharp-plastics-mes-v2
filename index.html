@@ -540,9 +540,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
-      <button class="btn btn-primary" onclick="generarPDF()">📄 PDF de calidad (cliente)</button>
+      <button class="btn btn-primary btn-full" onclick="finalizarYCerrar()">💾 Guardar y finalizar orden</button>
+      <button class="btn btn-secondary btn-full" onclick="generarPDF()">📄 PDF de calidad (cliente)</button>
       <button class="btn btn-secondary btn-full" onclick="generarPDFInterno()">📊 PDF interno (operaciones)</button>
-      <button class="btn btn-secondary btn-full" onclick="showScreen('dashboard');renderDashboard()">← Volver al dashboard</button>
     </div>
   </div></div>
 </div>
@@ -1519,6 +1519,22 @@ function pausarYSalir(){
     showScreen('dashboard');
     renderDashboard();
   },1000);
+}
+
+async function finalizarYCerrar(){
+  const btn = document.querySelector('[onclick="finalizarYCerrar()"]');
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  await guardarOrden('completado');
+  if(S.pipelineId){
+    await sbPatch('pipeline_mf',{
+      estado:'Completado',
+      consumo_real_tintas:S.consumoReal||[]
+    },'id=eq.'+S.pipelineId);
+  }
+  await enviarEmailCierre();
+  if(btn){btn.disabled=false;btn.textContent='✅ Guardado';}
+  toast('Orden finalizada ✓','ok');
+  setTimeout(()=>{showScreen('dashboard');renderDashboard();},1500);
 }
 
 function goCierre(){
