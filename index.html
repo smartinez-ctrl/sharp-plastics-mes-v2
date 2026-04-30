@@ -1365,7 +1365,7 @@ async function enviarAprobacion(){
 
   // Comprimir y subir fotos DIRECTAMENTE a Supabase Storage desde el browser
   const fotoUrls = [null,null,null,null];
-  const fotoLabelsUp = ['Frente','Reverso','Detalle-tinta','Vista-general'];
+  const fotoLabelsUp = ['Frente','Reverso','Lado-izquierdo','Lado-derecho'];
   for(let i=0;i<4;i++){
     if(fotos[i]){
       const compressed = await comprimirFoto(fotos[i]);
@@ -1409,6 +1409,7 @@ async function enviarAprobacion(){
       })
     });
     const data = await resp.json();
+    console.log('send-approval response:', resp.status, JSON.stringify(data));
     if(!resp.ok) throw new Error(data.error || 'Error del servidor');
 
     // Iniciar timer de tiempo de respuesta
