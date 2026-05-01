@@ -908,11 +908,17 @@ async function procesarPDFs(){
     // Calcular venta automáticamente con defaults: stock2500 con color
     const piezas=extracted.piezas||0;
     const colores=extracted.num_colores||0;
+    // Detectar si botella es natural/sin color
+    const colorBotRaw=(extracted.color_botella||'').toLowerCase();
+    const esNatural=colorBotRaw.includes('natural')||colorBotRaw.includes('clear')||colorBotRaw.includes('transparente')||colorBotRaw===''||colorBotRaw==='—';
+    extracted.con_color_botella = !esNatural;
     if(extracted.capacidad===750)extracted.capacidad=700; // 750ml usa misma botella que 700ml
     const cap=extracted.capacidad||0;
     const capN=cap===750?700:cap; // normalizar 750→700
-    const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capN&&p.corrida==='stock2500'&&p.con_color===true)||CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capN&&p.con_color===true);
-    const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida==='2500'&&p.con_color===true);
+    const colorBotSel=document.getElementById('cot-color-bot')?.value!=='false';
+    const colorTapSel=document.getElementById('cot-color-tap')?.value!=='false';
+    const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capN&&p.corrida==='stock2500'&&p.con_color===colorBotSel)||CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capN&&p.con_color===colorBotSel);
+    const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida==='2500'&&p.con_color===colorTapSel);
     const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
     let costoMdo=0;
     for(let i=0;i<Math.min(colores,tarifas.length);i++)costoMdo+=tarifas[i].precio_pieza*piezas;
@@ -1015,8 +1021,9 @@ function recalcImport(){
   const corridaBot=document.getElementById('imp-corrida-bot')?.value||'stock2500';
   const corridaTap=document.getElementById('imp-corrida-tap')?.value||'2500';
   const capBusq=cap===750?700:cap;
-  let pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capBusq&&p.corrida===corridaBot&&p.con_color===true);
-  if(!pvBot)pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capBusq&&p.con_color===true);
+  const conColB=window._importedData?.con_color_botella!==false;
+  let pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capBusq&&p.corrida===corridaBot&&p.con_color===conColB);
+  if(!pvBot)pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capBusq&&p.con_color===conColB);
   let pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida===corridaTap&&p.con_color===true);
   if(!pvTap)pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.con_color===true);
   const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
