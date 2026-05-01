@@ -39,7 +39,8 @@ export default async function handler(req, res) {
   const buenas = orden ? (orden.piezas_buenas || 0) : 0;
   const mermaPr = orden ? (orden.merma_produccion || {}) : {};
   const totalMerma = Object.values(mermaPr).reduce((s, v) => s + (v || 0), 0);
-  const avance = pzas ? Math.min(100, (buenas / pzas * 100)).toFixed(1) : 0;
+  const totalMermaM = Object.values(mermaPr).reduce((s,v)=>s+(v||0),0);
+  const avance = (buenas + totalMermaM) > 0 ? ((buenas / (buenas + totalMermaM)) * 100).toFixed(1) : 0;
   const tProd = orden ? (orden.tiempo_produccion_seg || 0) : 0;
   const tAj = orden ? (orden.tiempo_ajuste_seg || 0) : 0;
   const estado = orden ? (orden.estado || 'ajuste') : 'ajuste';

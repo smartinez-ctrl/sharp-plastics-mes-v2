@@ -1690,7 +1690,8 @@ async function cargarDatosProduccion(p){
     const o=rows[0];
     const buenas=o.piezas_buenas||0;
     const pzas=o.piezas_total||0;
-    const rend=pzas?((buenas/pzas)*100).toFixed(1):0;
+    const totalMermaD=Object.values(mermaPr).reduce((s,v)=>s+(v||0),0);
+    const rend=(buenas+totalMermaD)>0?((buenas/(buenas+totalMermaD))*100).toFixed(1):0;
     const tAj=fmtSeg(o.tiempo_ajuste_seg||0);
     const tPr=fmtSeg(o.tiempo_produccion_seg||0);
     const mermaPr=o.merma_produccion||{};
