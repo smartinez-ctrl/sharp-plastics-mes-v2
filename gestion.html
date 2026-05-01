@@ -1084,6 +1084,9 @@ async function importarAPipeline(){
       notas:d.notas_packaging||null,
       estado:'Pendiente',
       tintas_info:d.tintas_info||[],
+      fecha_pedido:d.fecha_pedido||null,
+      con_color_botella:d.con_color_botella!==false,
+      con_color_tapa:true,
     };
     // Incluir venta si se calculó
     if(c&&c.ventaTotal>0){
