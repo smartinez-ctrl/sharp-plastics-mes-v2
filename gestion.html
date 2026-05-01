@@ -157,6 +157,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
     <div class="nav-item active" id="nav-pipeline" onclick="showPage('pipeline',this)"><span class="nav-icon">📋</span>Pipeline<span class="nav-badge" id="badge-pipeline">0</span></div>
     <div class="nav-item" id="nav-cotizador" onclick="showPage('cotizador',this)"><span class="nav-icon">🧮</span>Cotizador</div>
     <div class="nav-item" id="nav-proyeccion" onclick="showPage('proyeccion',this)"><span class="nav-icon">📈</span>Proyección</div>
+    <div class="nav-item" id="nav-cobros" onclick="showPage('cobros',this)"><span class="nav-icon">💵</span>Cobros</div>
   </div>
   <div class="nav-section" id="nav-admin-section">
     <div class="nav-label">Administración</div>
@@ -184,6 +185,25 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
   <div class="card"><div class="card-title">Activos</div><div id="pipeline-activos"><div class="loading"><div class="loading-spinner"></div></div></div></div>
   <div class="card"><div class="card-title">Completados recientes</div>
     <div id="pipeline-completados"><div class="loading">Cargando...</div></div>
+  </div>
+</div>
+
+<div id="page-cobros" class="page">
+  <div class="ph-row">
+    <div><div class="page-title">Cobros</div><div class="page-sub">Seguimiento de pagos por pedido</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+    <div class="stat-card"><div class="stat-val" id="cob-pendiente-val" style="color:var(--amber)">—</div><div class="stat-label">Por cobrar</div></div>
+    <div class="stat-card"><div class="stat-val" id="cob-cobrado-val" style="color:var(--green)">—</div><div class="stat-label">Cobrado</div></div>
+    <div class="stat-card"><div class="stat-val" id="cob-total-val" style="color:var(--text)">—</div><div class="stat-label">Total ventas</div></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:12px">⏳ Pendientes de cobro</div>
+    <div id="cobros-pendientes"><div class="loading">Cargando...</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px">✅ Cobrados</div>
+    <div id="cobros-pagados"><div class="loading">Cargando...</div></div>
   </div>
 </div>
 
@@ -371,7 +391,10 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
         <div class="field"><label>Fecha de entrega</label><input type="date" id="mp-fecha-entrega"></div>
       </div>
       <div class="field-row">
+        <div class="field"><label>Fecha de pedido <span style="font-size:9px;color:var(--text3)">(auto)</span></label><input type="date" id="mp-fecha-pedido" readonly style="opacity:0.6;cursor:not-allowed;background:var(--bg3)"></div>
         <div class="field"><label>Fecha inicio estimada</label><input type="date" id="mp-fecha-inicio"></div>
+      </div>
+      <div class="field-row">
         <div class="field"><label>Horas estimadas</label><input type="number" id="mp-horas"></div>
       </div>
       <div class="field-row-3">
@@ -479,6 +502,7 @@ function showPage(id,el){
   if(el)el.classList.add('active');
   if(window.innerWidth<=768)document.getElementById('sidebar').classList.remove('open');
   if(id==='proyeccion')renderProyeccion();
+  if(id==='cobros')renderCobros();
   if(id==='catalogos')loadCatalogTab('ct-tintas');
   if(id==='usuarios')loadUsuarios();
 }
@@ -628,7 +652,7 @@ function renderPipeline(){
 function abrirNuevoPedido(){
   document.getElementById('modal-pedido-titulo').textContent='Nuevo pedido';
   ['mp-po','mp-subcli','mp-envio','mp-notas','mp-col-bot','mp-col-tap','mp-col-boq'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  ['mp-piezas','mp-colores','mp-horas','mp-cap','mp-cliente','mp-fecha-entrega','mp-fecha-inicio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['mp-piezas','mp-colores','mp-horas','mp-cap','mp-cliente','mp-fecha-entrega','mp-fecha-inicio','mp-fecha-pedido'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('mp-estado').value='Pendiente';
   document.getElementById('mp-cotizacion-resumen').style.display='none';
   document.getElementById('btn-mp-pdf-interno').style.display='none';
@@ -640,7 +664,7 @@ function abrirNuevoPedido(){
 async function abrirDetallePedido(id){
   const p=PIPELINE.find(x=>x.id===id);if(!p)return;
   document.getElementById('modal-pedido-titulo').textContent=`${p.sub_cliente||p.cliente||'Pedido'} — ${p.capacidad?p.capacidad+'ml':''}`;
-  const flds={'mp-subcli':p.sub_cliente,'mp-po':p.po,'mp-cap':p.capacidad,'mp-piezas':p.piezas,'mp-colores':p.colores,'mp-fecha-entrega':p.fecha_entrega,'mp-fecha-inicio':p.fecha_inicio,'mp-horas':p.horas_estimadas,'mp-col-bot':p.color_botella,'mp-col-tap':p.color_tapa,'mp-col-boq':p.color_boquilla,'mp-envio':p.direccion_envio,'mp-notas':p.notas,'mp-estado':p.estado||'Pendiente','mp-pdf-diseno':p.pdf_diseno_url||''};
+  const flds={'mp-subcli':p.sub_cliente,'mp-po':p.po,'mp-cap':p.capacidad,'mp-piezas':p.piezas,'mp-colores':p.colores,'mp-fecha-entrega':p.fecha_entrega,'mp-fecha-pedido':p.fecha_pedido,'mp-fecha-inicio':p.fecha_inicio,'mp-horas':p.horas_estimadas,'mp-col-bot':p.color_botella,'mp-col-tap':p.color_tapa,'mp-col-boq':p.color_boquilla,'mp-envio':p.direccion_envio,'mp-notas':p.notas,'mp-estado':p.estado||'Pendiente','mp-pdf-diseno':p.pdf_diseno_url||''};
   Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
   document.getElementById('modal-pedido').dataset.id=id;
   // Mostrar botón ver PDF si hay diseño guardado
@@ -1380,6 +1404,66 @@ async function guardarCotizacion(){
 }
 
 // PROYECCIÓN
+
+function renderCobros(){
+  const todos=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado'||p.venta_total>0);
+  const pendientes=todos.filter(p=>!p.cobrado);
+  const pagados=todos.filter(p=>p.cobrado);
+  const totalPend=pendientes.reduce((s,p)=>s+(p.venta_total||0),0);
+  const totalCob=pagados.reduce((s,p)=>s+(p.venta_total||0),0);
+  const totalAll=todos.reduce((s,p)=>s+(p.venta_total||0),0);
+
+  document.getElementById('cob-pendiente-val').textContent=mxn(totalPend);
+  document.getElementById('cob-cobrado-val').textContent=mxn(totalCob);
+  document.getElementById('cob-total-val').textContent=mxn(totalAll);
+
+  const rowHTML=(p,cobrado)=>{
+    const fecha=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    const fechaCob=p.fecha_cobro?new Date(p.fecha_cobro+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    return `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
+      <div>
+        <div style="font-weight:600">${p.sub_cliente||p.cliente||'—'}</div>
+        <div style="font-size:10px;color:var(--text3)">${p.po||'—'}</div>
+      </div>
+      <div style="font-family:monospace;color:var(--green);font-weight:700">${p.venta_total?mxn(p.venta_total):'—'}</div>
+      <div style="font-size:11px;color:var(--text3)">${p.piezas||0} pzas</div>
+      <div style="font-size:11px;color:var(--text3)">Entrega: ${fecha}</div>
+      <div style="font-size:11px;color:var(--text3)">${cobrado?'Cobrado: '+fechaCob:''}</div>
+      <div>
+        ${cobrado
+          ? `<button class="btn btn-ghost btn-xs" onclick="toggleCobro('${p.id}',false)">↩ Desmarcar</button>`
+          : `<button class="btn btn-primary btn-xs" style="width:100%" onclick="toggleCobro('${p.id}',true)">💵 Marcar cobrado</button>`
+        }
+      </div>
+    </div>`;
+  };
+
+  const headerHTML=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px;gap:8px;padding:6px 14px;margin-bottom:2px">
+    ${['Cliente','Venta','Piezas','Entrega','',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">${h}</span>`).join('')}
+  </div>`;
+
+  document.getElementById('cobros-pendientes').innerHTML=pendientes.length
+    ? headerHTML+pendientes.map(p=>rowHTML(p,false)).join('')
+    : '<div style="text-align:center;padding:20px;color:var(--text3)">Sin pedidos pendientes de cobro</div>';
+
+  document.getElementById('cobros-pagados').innerHTML=pagados.length
+    ? headerHTML+pagados.map(p=>rowHTML(p,true)).join('')
+    : '<div style="text-align:center;padding:20px;color:var(--text3)">Sin cobros registrados</div>';
+}
+
+async function toggleCobro(id, cobrado){
+  try{
+    await sbPatch('pipeline_mf',{
+      cobrado: cobrado,
+      fecha_cobro: cobrado ? new Date().toISOString().split('T')[0] : null
+    },'id=eq.'+id);
+    const p=PIPELINE.find(x=>x.id===id);
+    if(p){p.cobrado=cobrado;p.fecha_cobro=cobrado?new Date().toISOString().split('T')[0]:null;}
+    toast(cobrado?'✅ Marcado como cobrado':'↩ Desmarcado');
+    renderCobros();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
 function renderProyeccion(){
   const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
   if(!activos.length){document.getElementById('timeline-container').innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Sin pedidos activos</div>';document.getElementById('proyeccion-barras').innerHTML='';return;}
