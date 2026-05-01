@@ -2262,7 +2262,7 @@ function abrirPDFs_menu(event, id){
 
 function abrirPDFCliente(p){
   if(!p)p=window._pedidoActual;
-  if(!p){toast('Abre un pedido primero','err');return;}
+  if(!p){toast('Open an order first','err');return;}
   const piezas=p.piezas||0, colores=p.colores||0, cap=p.capacidad||0;
   const tf=CAT.tarifas_fijas;
   const tfTintas=tf['tintas_fijo_por_botella']||4;
@@ -2275,32 +2275,42 @@ function abrirPDFCliente(p){
   for(let i=0;i<Math.min(colores,tarifas.length);i++){
     const sub=tarifas[i].precio_pieza*piezas;
     mdoTotal+=sub;
-    mdoFilas.push({concepto:'Mano de obra Color '+(i+1),cantidad:piezas,precio:tarifas[i].precio_pieza,sub:sub});
+    mdoFilas.push({concepto:'Labor Color '+(i+1),cantidad:piezas,precio:tarifas[i].precio_pieza,sub:sub});
   }
-  // Precio bot/tap desde catálogo si no hay guardado
+  // Use saved venta_* values — these reflect any manual edits
   var capB=(cap===750||cap===700)?700:cap;
-  var pvBotC=CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===capB&&x.corrida==='stock2500'&&x.con_color===true;})||CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===capB&&x.con_color===true;});
+  var conColor=p.con_color_botella!==false;
+  var pvBotC=CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===capB&&x.corrida==='stock2500'&&x.con_color===conColor;})||CAT.precios_venta.find(function(x){return x.tipo==='botella'&&x.capacidad_ml===capB&&x.con_color===conColor;});
   var pvTapC=CAT.precios_venta.find(function(x){return x.tipo==='tapa'&&x.corrida==='2500'&&x.con_color===true;});
   var vBot=p.venta_botellas>0?p.venta_botellas:(pvBotC?pvBotC.precio*piezas:0);
   var vTap=p.venta_tapas>0?p.venta_tapas:(pvTapC?pvTapC.precio*piezas:0);
+  var vTintas=p.venta_tintas>0?p.venta_tintas:(tfTintas*piezas);
+  var vPant=p.venta_pantallas>0?p.venta_pantallas:(tfPant*colores);
+  var vMdo=p.venta_mdo>0?p.venta_mdo:mdoTotal;
+  var vEmp=p.venta_empaque>0?p.venta_empaque:((tfP+tfT)*piezas);
   var pBot=piezas?vBot/piezas:0, pTap=piezas?vTap/piezas:0;
+  var pTintas=piezas?vTintas/piezas:0, pMdo=piezas?vMdo/piezas:0, pEmp=piezas?vEmp/piezas:0;
+  var coloresPant=vPant>0&&tfPant>0?Math.round(vPant/tfPant):colores;
 
   const filasHTML=[
-    {c:'Botellas '+( p.capacidad||'')+'ml',q:piezas,u:pBot,s:vBot},
-    {c:'Tapas',q:piezas,u:pTap,s:vTap},
-    {c:'Tintas (cargo fijo)',q:piezas,u:tfTintas,s:tfTintas*piezas},
-    {c:'Pantallas + Positivos',q:colores,u:tfPant,s:tfPant*colores},
-    ...mdoFilas.map(function(m){return{c:m.concepto,q:m.cantidad,u:m.precio,s:m.sub};}),
-    {c:'Empaque (papel + hangtag)',q:piezas,u:tfP+tfT,s:(tfP+tfT)*piezas},
+    {c:'Bottles '+cap+'ml',q:piezas,u:pBot,s:vBot},
+    {c:'Caps',q:piezas,u:pTap,s:vTap},
+    {c:'Inks (fixed fee)',q:piezas,u:pTintas,s:vTintas},
+    {c:'Screens + Positives',q:coloresPant,u:tfPant,s:vPant},
+    {c:'Labor',q:piezas,u:pMdo,s:vMdo},
+    {c:'Packaging (tissue + hangtag)',q:piezas,u:pEmp,s:vEmp},
   ].map(function(f){
-    return '<tr><td>'+f.c+'</td><td style="text-align:center">'+f.q+'</td><td style="text-align:center">'+mxnPDF(f.u)+'</td><td style="text-align:right;font-weight:600">'+mxnPDF(f.s)+'</td></tr>';
+    return '<tr><td>'+f.c+'</td><td style="text-align:center">'+f.q.toLocaleString()+'</td><td style="text-align:center">'+mxnPDF(f.u)+'</td><td style="text-align:right;font-weight:600">'+mxnPDF(f.s)+'</td></tr>';
   }).join('');
 
-  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cotización — '+( p.sub_cliente||p.po)+'</title><style>'
+  const fecha=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const fechaEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'—';
+
+  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quote — '+(p.sub_cliente||p.po)+'</title><style>'
     +'body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:0;padding:24px}'
-    +'h1{font-size:18px;margin:0 0 2px}h2{font-size:13px;color:#444;margin:0 0 16px;font-weight:normal}'
+    +'h1{font-size:18px;margin:0 0 2px}'
     +'.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}'
-    +'.logo-area h1{color:#1a1a1a}.company{font-size:10px;color:#666;line-height:1.5}'
+    +'.company{font-size:10px;color:#666;line-height:1.5}'
     +'.badge{background:#f5a623;color:#000;padding:4px 12px;border-radius:4px;font-weight:700;font-size:12px}'
     +'.datos{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;background:#f8f8f8;border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:20px}'
     +'.dato-row{display:flex;gap:6px}.dato-key{font-weight:700;min-width:90px;color:#444}.dato-val{color:#111}'
@@ -2312,27 +2322,27 @@ function abrirPDFCliente(p){
     +'.footer{margin-top:30px;font-size:9px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:10px}'
     +'@media print{body{padding:10px}button{display:none}}'
     +'</style></head><body>'
-    +'<div class="header"><div class="logo-area"><h1>SHARP PLASTICS S.A. de C.V.</h1><div class="company">Ote. 10 # 9, Nuevo Parque Industrial<br>76806 San Juan del Río, Qro., México</div></div>'
-    +'<div style="text-align:right"><div class="badge">COTIZACIÓN</div><div style="font-size:10px;color:#666;margin-top:6px">'+new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'})+'</div></div></div>'
+    +'<div class="header">'
+    +'<div><h1>SHARP PLASTICS S.A. de C.V.</h1><div class="company">Ote. 10 # 9, Nuevo Parque Industrial<br>76806 San Juan del Río, Qro., México</div></div>'
+    +'<div style="text-align:right"><div class="badge">QUOTE</div><div style="font-size:10px;color:#666;margin-top:6px">'+fecha+'</div></div>'
+    +'</div>'
     +'<div class="datos">'
-    +'<div class="dato-row"><span class="dato-key">Cliente:</span><span class="dato-val">'+(p.cliente||'MountainFlow')+'</span></div>'
-    +'<div class="dato-row"><span class="dato-key">Sub-cliente:</span><span class="dato-val">'+(p.sub_cliente||'—')+'</span></div>'
+    +'<div class="dato-row"><span class="dato-key">Customer:</span><span class="dato-val">'+(p.cliente||'MountainFlow')+'</span></div>'
+    +'<div class="dato-row"><span class="dato-key">Ship to:</span><span class="dato-val">'+(p.sub_cliente||'—')+'</span></div>'
     +'<div class="dato-row"><span class="dato-key">PO #:</span><span class="dato-val">'+(p.po||'—')+'</span></div>'
-    +'<div class="dato-row"><span class="dato-key">Capacidad:</span><span class="dato-val">'+(p.capacidad?p.capacidad+'ml':'—')+'</span></div>'
-    +'<div class="dato-row"><span class="dato-key">Piezas:</span><span class="dato-val">'+piezas+'</span></div>'
-    +'<div class="dato-row"><span class="dato-key">Colores:</span><span class="dato-val">'+colores+'</span></div>'
-    +(p.fecha_entrega?'<div class="dato-row"><span class="dato-key">Entrega:</span><span class="dato-val">'+p.fecha_entrega+'</span></div>':'')
-    +(p.direccion_envio?'<div class="dato-row" style="grid-column:1/-1"><span class="dato-key">Envío a:</span><span class="dato-val">'+p.direccion_envio+'</span></div>':'')
+    +'<div class="dato-row"><span class="dato-key">Capacity:</span><span class="dato-val">'+(cap?cap+'ml':'—')+'</span></div>'
+    +'<div class="dato-row"><span class="dato-key">Pieces:</span><span class="dato-val">'+piezas.toLocaleString()+'</span></div>'
+    +'<div class="dato-row"><span class="dato-key">Colors:</span><span class="dato-val">'+colores+'</span></div>'
+    +(p.fecha_entrega?'<div class="dato-row"><span class="dato-key">Ship date:</span><span class="dato-val">'+fechaEnt+'</span></div>':'')
+    +(p.direccion_envio?'<div class="dato-row" style="grid-column:1/-1"><span class="dato-key">Ship to address:</span><span class="dato-val">'+p.direccion_envio+'</span></div>':'')
     +(p.notas?'<div class="dato-row" style="grid-column:1/-1"><span class="dato-key">Packaging:</span><span class="dato-val">'+p.notas+'</span></div>':'')
     +'</div>'
-    +'<table><thead><tr><th>Concepto</th><th style="text-align:center">Cantidad</th><th style="text-align:center">Precio unitario</th><th style="text-align:right">Subtotal</th></tr></thead>'
+    +'<table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:center">Unit price</th><th style="text-align:right">Subtotal</th></tr></thead>'
     +'<tbody>'+filasHTML+'</tbody>'
     +'<tfoot><tr class="total-row"><td colspan="3">TOTAL</td><td style="text-align:right">'+mxnPDF(p.venta_total||0)+'</td></tr></tfoot></table>'
-    +'<div style="display:flex;justify-content:space-between;align-items:center">'
-    +'<div style="font-size:10px;color:#666">Precio por pieza: <strong>'+mxnPDF(piezas?(p.venta_total||0)/piezas:0)+'</strong></div>'
-    +'</div>'
-    +'<div class="footer">Sharp Plastics S.A. de C.V. — MES v2 — Documento generado el '+new Date().toLocaleDateString('es-MX')+'</div>'
-    +'<br><button onclick="window.print()" style="background:#f5a623;border:none;padding:8px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨 Imprimir / Guardar PDF</button>'
+    +'<div style="font-size:10px;color:#666;margin-bottom:16px">Unit price per piece: <strong>'+mxnPDF(piezas?(p.venta_total||0)/piezas:0)+'</strong></div>'
+    +'<div class="footer">Sharp Plastics S.A. de C.V. — Document generated on '+fecha+'</div>'
+    +'<br><button onclick="window.print()" style="background:#f5a623;border:none;padding:8px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨 Print / Save PDF</button>'
     +'</body></html>';
 
   const w=window.open('','_blank','width=850,height=700');
