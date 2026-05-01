@@ -184,6 +184,11 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
     <div class="stat-card"><div class="stat-val" style="color:var(--green)" id="st-venta">—</div><div class="stat-label">Venta total pipeline</div></div>
     <div class="stat-card"><div class="stat-val" style="color:var(--green)" id="st-margen">—</div><div class="stat-label">Margen promedio</div></div>
   </div>
+  <div style="margin-bottom:12px">
+    <input type="text" id="pipeline-search" placeholder="🔍  Buscar por cliente, PO, capacidad..." 
+      style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none"
+      oninput="filtrarPipeline(this.value)">
+  </div>
   <div class="card"><div class="card-title">Activos</div><div id="pipeline-activos"><div class="loading"><div class="loading-spinner"></div></div></div></div>
   <div class="card"><div class="card-title">Completados recientes</div>
     <div id="pipeline-completados"><div class="loading">Cargando...</div></div>
@@ -619,9 +624,17 @@ function initPipelineDrag(){
   });
 }
 
+function filtrarPipeline(q){
+  q=(q||'').toLowerCase().trim();
+  window._pipelineQuery=q;
+  renderPipeline();
+}
+
 function renderPipeline(){
-  const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
-  const completados=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado');
+  const q=window._pipelineQuery||'';
+  const matchQ=p=>{if(!q)return true;const s=((p.sub_cliente||'')+' '+(p.cliente||'')+' '+(p.po||'')+' '+(p.capacidad||'')).toLowerCase();return s.includes(q);};
+  const activos=PIPELINE.filter(p=>(p.estado==='Pendiente'||p.estado==='En producción')&&matchQ(p));
+  const completados=PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado')&&matchQ(p));
   document.getElementById('badge-pipeline').textContent=activos.length;
   document.getElementById('pipeline-sub').textContent=`${activos.length} activos · ${completados.length} completados`;
   document.getElementById('st-activos').textContent=activos.length;
