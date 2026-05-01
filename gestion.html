@@ -567,57 +567,66 @@ async function loadPipeline(){
 }
 
 // ── Pipeline drag & drop ─────────────────────────────
-let _dragSrcIdx=null;
+let _dragSrcId=null;
 
 function getCard(el){
-  while(el&&!el.dataset.idx)el=el.parentElement;
+  while(el&&!el.dataset.id)el=el.parentElement;
   return el;
 }
 
 function initPipelineDrag(){
   const container=document.getElementById('pipeline-activos');
-  if(!container||container._dragInit)return;
-  container._dragInit=true;
-  container.addEventListener('dragstart',function(e){
+  if(!container)return;
+  // Re-inicializar siempre (quitar listener viejo)
+  const newContainer=container.cloneNode(true);
+  container.parentNode.replaceChild(newContainer,container);
+
+  newContainer.addEventListener('dragstart',function(e){
     const card=getCard(e.target);
-    if(!card)return;
-    _dragSrcIdx=parseInt(card.dataset.idx);
-    card.classList.add('dragging');
+    if(!card||!card.dataset.id)return;
+    _dragSrcId=card.dataset.id;
+    setTimeout(()=>card.classList.add('dragging'),0);
     e.dataTransfer.effectAllowed='move';
-    e.dataTransfer.setData('text/plain',String(_dragSrcIdx));
+    e.dataTransfer.setData('text/plain',_dragSrcId);
   });
-  container.addEventListener('dragover',function(e){
+  newContainer.addEventListener('dragover',function(e){
     e.preventDefault();
     e.dataTransfer.dropEffect='move';
     const card=getCard(e.target);
-    container.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over'));
-    if(card)card.classList.add('drag-over');
+    newContainer.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over'));
+    if(card&&card.dataset.id&&card.dataset.id!==_dragSrcId)card.classList.add('drag-over');
   });
-  container.addEventListener('dragleave',function(e){
-    if(!container.contains(e.relatedTarget)){
-      container.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over'));
-    }
+  newContainer.addEventListener('dragleave',function(e){
+    if(!newContainer.contains(e.relatedTarget))
+      newContainer.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over'));
   });
-  container.addEventListener('dragend',function(e){
-    container.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over','dragging'));
+  newContainer.addEventListener('dragend',function(){
+    newContainer.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over','dragging'));
+    _dragSrcId=null;
   });
-  container.addEventListener('drop',function(e){
+  newContainer.addEventListener('drop',function(e){
     e.preventDefault();
-    container.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over','dragging'));
+    newContainer.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over','dragging'));
     const card=getCard(e.target);
-    if(!card)return;
-    const tgtIdx=parseInt(card.dataset.idx);
-    if(_dragSrcIdx===null||isNaN(tgtIdx)||_dragSrcIdx===tgtIdx){_dragSrcIdx=null;return;}
+    if(!card||!card.dataset.id||!_dragSrcId||card.dataset.id===_dragSrcId){_dragSrcId=null;return;}
+    const tgtId=card.dataset.id;
+    // Trabajar con el array activos actual
     const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
-    const moved=activos.splice(_dragSrcIdx,1)[0];
+    const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
+    const tgtIdx=activos.findIndex(p=>p.id===tgtId);
+    if(srcIdx<0||tgtIdx<0){_dragSrcId=null;return;}
+    // Mover
+    const [moved]=activos.splice(srcIdx,1);
     activos.splice(tgtIdx,0,moved);
+    // Actualizar orden en PIPELINE
     activos.forEach((p,i)=>{
       p.orden_posicion=i;
       const gp=PIPELINE.find(x=>x.id===p.id);
       if(gp)gp.orden_posicion=i;
     });
-    _dragSrcIdx=null;
+    _dragSrcId=null;
     renderPipeline();
+    // Guardar en Supabase
     Promise.all(activos.map((p,i)=>sbPatch('pipeline_mf',{orden_posicion:i},'id=eq.'+p.id)))
       .then(()=>toast('Orden guardado ✓'))
       .catch(()=>toast('Error guardando orden','err'));
@@ -691,7 +700,7 @@ function renderPipeline(){
     const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;color:var(--text3)">${t.pantone||t.nombre||''}</span>`).join(' '):'';
     const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="true" data-id="${p.id}" data-idx="${activos.indexOf(p)}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;cursor:grab">
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="true" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;cursor:grab">
       <div style="min-width:0;overflow:hidden">
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="margin-top:2px">${tintas}</div>
