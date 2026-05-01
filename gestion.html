@@ -662,6 +662,8 @@ function renderPipeline(){
         <span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴':p.estado}</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
+        ${p.pdf_po_url?`<a href="${p.pdf_po_url}" target="_blank" class="btn btn-ghost btn-xs" title="Orden de compra (PO)">📋</a>`:''}
+        ${p.pdf_diseno_url?`<a href="${p.pdf_diseno_url}" target="_blank" class="btn btn-ghost btn-xs" title="Diseño / Mock up">🎨</a>`:''}
         <button class="btn btn-primary btn-xs" title="Cotizador" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button>
         <button class="btn btn-ghost btn-xs" title="PDFs" onclick="abrirPDFs_menu(event,'${p.id}')">📄</button>
         ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
@@ -1164,7 +1166,36 @@ async function importarAPipeline(){
       data.venta_botellas=pBotUI&&pzUI?parseFloat((pBotUI*pzUI).toFixed(2)):c.vBot;
       data.venta_tapas=pTapUI&&pzUI?parseFloat((pTapUI*pzUI).toFixed(2)):c.vTap;
     }
-    await sbPost('pipeline_mf',data);
+    // Subir PDFs a Storage y guardar URLs
+    const newRows = await sbPost('pipeline_mf', data);
+    const newId = newRows && newRows[0] && newRows[0].id;
+    if(newId && pdfData.po){
+      try{
+        const arrPo = Uint8Array.from(atob(pdfData.po), c=>c.charCodeAt(0));
+        const blobPo = new Blob([arrPo], {type:'application/pdf'});
+        const rPo = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${newId}/orden-compra.pdf`,{
+          method:'POST', headers:{...SB_H,'Content-Type':'application/pdf','x-upsert':'true'}, body:blobPo
+        });
+        if(rPo.ok){
+          const urlPo = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${newId}/orden-compra.pdf`;
+          await sbPatch('pipeline_mf',{pdf_po_url:urlPo},'id=eq.'+newId);
+          data.pdf_po_url = urlPo;
+        }
+      }catch(e){console.warn('Error subiendo PO PDF:',e);}
+    }
+    if(newId && pdfData.mockup){
+      try{
+        const arrMk = Uint8Array.from(atob(pdfData.mockup), c=>c.charCodeAt(0));
+        const blobMk = new Blob([arrMk], {type:'application/pdf'});
+        const rMk = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${newId}/diseno.pdf`,{
+          method:'POST', headers:{...SB_H,'Content-Type':'application/pdf','x-upsert':'true'}, body:blobMk
+        });
+        if(rMk.ok){
+          const urlMk = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${newId}/diseno.pdf`;
+          await sbPatch('pipeline_mf',{pdf_diseno_url:urlMk},'id=eq.'+newId);
+        }
+      }catch(e){console.warn('Error subiendo mockup PDF:',e);}
+    }
     toast('Pedido creado ✓','ok');
     closeModal('modal-import');resetImport();
     await loadPipeline();
