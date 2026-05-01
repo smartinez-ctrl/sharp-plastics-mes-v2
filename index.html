@@ -1992,7 +1992,8 @@ async function enviarEmailCierre(){
     const totalMerma=mermaAjuste.reduce((s,[,v])=>s+v,0)+mermaProd.reduce((s,[,v])=>s+v,0);
     const tAjusteSeg=S.timers.ajuste.total||S.timers.ajuste.s||0;
     const tProdSeg=S.timers.prod.total||S.timers.prod.s||0;
-    const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
+    const totalMermaE=mermaProd.reduce((s,[,v])=>s+v,0)+mermaAjuste.reduce((s,[,v])=>s+v,0);
+    const pct=(buenas+totalMermaE)>0?((buenas/(buenas+totalMermaE))*100).toFixed(1):0;
     const seg_bot=tProdSeg&&buenas?(tProdSeg/buenas).toFixed(1)+'s':'—';
     const pzas_hora=tProdSeg&&buenas?Math.round(buenas/(tProdSeg/3600)):'—';
     const tipos={comida:'Salida a comer',tintas:'Prep. tintas',reajuste:'Reajuste',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
@@ -2044,7 +2045,8 @@ function renderCierre(){
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Producto</div><div style="font-size:13px;margin-top:2px">${S.orden.producto||'—'}</div></div>
       <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Colores</div><div style="margin-top:4px">${S.orden.colores.map(c=>`<span class="color-tag" style="font-size:10px"><span class="color-swatch" style="background:${chex(c.nombre)}"></span>${c.nombre}</span>`).join('')||'—'}</div></div>
     </div>`;
-  const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
+  const totalMermaC=Object.values(S.merma.prod||{}).reduce((a,b)=>a+b,0)+Object.values(S.merma.ajuste||{}).reduce((a,b)=>a+b,0);
+  const pct=(buenas+totalMermaC)>0?((buenas/(buenas+totalMermaC))*100).toFixed(1):0;
   const cs=document.getElementById('cierre-stats');
   if(cs)cs.innerHTML=`<div class="card-title">Resultados</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
@@ -2117,7 +2119,8 @@ function generarPDFInterno(){
   const tAjusteSeg=S.timers.ajuste.total||S.timers.ajuste.s||0;
   const tProdSeg=S.timers.prod.total||S.timers.prod.s||0;
   const tTotalSeg=tAjusteSeg+tProdSeg;
-  const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
+  const totalMermaI=totalMermaAj+totalMermaProd;
+  const pct=(buenas+totalMermaI)>0?((buenas/(buenas+totalMermaI))*100).toFixed(1):0;
   const seg_bot=tProdSeg&&buenas?(tProdSeg/buenas).toFixed(1):'—';
   const pzas_hora=tProdSeg&&buenas?Math.round(buenas/(tProdSeg/3600)):'—';
   const fecha=new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
