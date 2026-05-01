@@ -26,13 +26,25 @@ export default async function handler(req, res) {
 
   const files = await listRes.json();
   console.log('Files found:', JSON.stringify(files));
-  const fotoLabels = ['Frente', 'Reverso', 'Detalle tinta', 'Vista general'];
-  const fotoUrls = Array.isArray(files) && files.length
-    ? files.map((f, i) => ({
-        url: `${SB_URL}/storage/v1/object/public/${BUCKET}/${id}/${f.name}`,
-        label: fotoLabels[i] || `Foto ${i+1}`,
-      }))
-    : [];
+  // Ordenar por nombre (tienen timestamp) y tomar la última foto de cada posición (0-3)
+  const fotoLabels = ['Frente', 'Reverso', 'Lado izquierdo', 'Lado derecho'];
+  const fotosByPos = [null, null, null, null];
+  if (Array.isArray(files)) {
+    files.sort((a, b) => b.name.localeCompare(a.name)); // más reciente primero
+    files.forEach(f => {
+      const match = f.name.match(/foto-(\d)-/);
+      if (match) {
+        const pos = parseInt(match[1]);
+        if (pos >= 0 && pos <= 3 && !fotosByPos[pos]) {
+          fotosByPos[pos] = {
+            url: `${SB_URL}/storage/v1/object/public/${BUCKET}/${id}/${f.name}`,
+            label: fotoLabels[pos],
+          };
+        }
+      }
+    });
+  }
+  const fotoUrls = fotosByPos.filter(Boolean);
 
   const fecha = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
 
