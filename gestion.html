@@ -1718,33 +1718,49 @@ async function cargarDatosProduccion(p){
 function fmtSeg(s){s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return [h,m,ss].map(x=>String(x).padStart(2,'0')).join(':');}
 
 async function abrirPDFClienteCompletado(pipelineId){
+  const pipe=PIPELINE.find(p=>p.id===pipelineId);
+  if(!pipe){toast('Pedido no encontrado','err');return;}
   try{
-    const rows=await sbGet('ordenes_produccion','pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=*');
-    if(!rows||!rows.length){toast('Sin datos de producción para este pedido','err');return;}
-    const o=rows[0];
-    const pipe=PIPELINE.find(p=>p.id===pipelineId)||{};
-    // Generar PDF cliente via generate-pdf
     const resp=await fetch('/api/generate-pdf',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({tipo:'cliente',orden:o,pipeline:pipe})});
-    if(!resp.ok){toast('Error generando PDF','err');return;}
-    const blob=await resp.blob();
-    const url=URL.createObjectURL(blob);
-    window.open(url,'_blank');
+      body:JSON.stringify({tipo:'cliente',pedido:{
+        cliente:pipe.sub_cliente||pipe.cliente,po:pipe.po,
+        piezas:pipe.piezas,capacidad:pipe.capacidad,
+        venta_total:pipe.venta_total,colores:pipe.colores,
+        tintas_info:pipe.tintas_info||[],
+        venta_botellas:pipe.venta_botellas,venta_tapas:pipe.venta_tapas,
+        venta_tintas:pipe.venta_tintas,venta_pantallas:pipe.venta_pantallas,
+        venta_mdo:pipe.venta_mdo,venta_empaque:pipe.venta_empaque,
+        margen:pipe.margen,fecha_entrega:pipe.fecha_entrega,
+      }})});
+    const data=await resp.json();
+    if(!resp.ok||!data.pdf){toast('Error generando PDF','err');return;}
+    const link=document.createElement('a');
+    link.href=data.pdf;
+    link.download=(pipe.po||'pedido')+'-cliente.pdf';
+    link.click();
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
 async function abrirPDFInternoCompletado(pipelineId){
+  const pipe=PIPELINE.find(p=>p.id===pipelineId);
+  if(!pipe){toast('Pedido no encontrado','err');return;}
   try{
-    const rows=await sbGet('ordenes_produccion','pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=*');
-    if(!rows||!rows.length){toast('Sin datos de producción para este pedido','err');return;}
-    const o=rows[0];
-    const pipe=PIPELINE.find(p=>p.id===pipelineId)||{};
     const resp=await fetch('/api/generate-pdf',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({tipo:'interno',orden:o,pipeline:pipe})});
-    if(!resp.ok){toast('Error generando PDF','err');return;}
-    const blob=await resp.blob();
-    const url=URL.createObjectURL(blob);
-    window.open(url,'_blank');
+      body:JSON.stringify({tipo:'interno',pedido:{
+        cliente:pipe.sub_cliente||pipe.cliente,po:pipe.po,
+        piezas:pipe.piezas,capacidad:pipe.capacidad,
+        venta_total:pipe.venta_total,costo_total:pipe.costo_total,
+        colores:pipe.colores,tintas_info:pipe.tintas_info||[],
+        margen:pipe.margen,mo_horas:pipe.mo_horas,mo_tarifa:pipe.mo_tarifa,
+        costo_tintas_estimado:pipe.costo_tintas_estimado,
+        formula_tintas:pipe.formula_tintas||[],
+      }})});
+    const data=await resp.json();
+    if(!resp.ok||!data.pdf){toast('Error generando PDF','err');return;}
+    const link=document.createElement('a');
+    link.href=data.pdf;
+    link.download=(pipe.po||'pedido')+'-interno.pdf';
+    link.click();
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
