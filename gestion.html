@@ -307,6 +307,18 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
 </div></div>
 
 <!-- MODAL IMPORTAR PDFs -->
+<div class="modal-overlay" id="modal-empaque">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">📦 Fotos de empaque <button class="modal-close" onclick="closeModal('modal-empaque')">×</button></div>
+    <div id="empaque-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"></div>
+    <input type="file" id="file-empaque-gest" accept="image/*" style="display:none" onchange="handleEmpaqueGest(this)">
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-empaque')">Cerrar</button>
+      <button class="btn btn-primary" id="btn-guardar-empaque" onclick="guardarFotosEmpaque()" style="flex:1">💾 Guardar fotos</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-import">
   <div class="modal">
     <div class="modal-title">Importar pedido desde PDFs <button class="modal-close" onclick="closeModal('modal-import');resetImport()">×</button></div>
@@ -603,6 +615,7 @@ function renderPipeline(){
         <span class="badge ${BADGE_MAP[p.estado]||'badge-green'}" style="font-size:9px">${p.estado}</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-xs" title="Fotos empaque" onclick="abrirFotosEmpaque('${p.id}')">📦</button>
         <button class="btn btn-ghost btn-xs" title="PDF cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
         <button class="btn btn-ghost btn-xs" title="PDF interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
         <button class="btn btn-ghost btn-xs" title="Ver producción" onclick="verReportesProduccion('${p.id}')">🔍</button>
@@ -1734,6 +1747,94 @@ function verReportesProduccion(pipelineId){
   if(!p)return;
   abrirDetallePedido(pipelineId);
   setTimeout(()=>switchDetTab('prod'),600);
+}
+
+
+// ── Fotos de empaque en pipeline ────────────────────
+let _empaqueActual = {id:null, fotos:[null,null,null,null]};
+
+async function abrirFotosEmpaque(pipelineId){
+  _empaqueActual = {id: pipelineId, fotos:[null,null,null,null]};
+  // Cargar fotos existentes de Supabase Storage
+  const labels = ['Vista 1','Vista 2','Vista 3','Vista 4'];
+  const grid = document.getElementById('empaque-grid');
+  grid.innerHTML = labels.map((l,i) => `
+    <div style="cursor:pointer" onclick="abrirSlotEmpaque(${i})">
+      <div id="emp-slot-${i}" style="aspect-ratio:4/3;background:var(--bg3);border:2px dashed var(--border2);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:all .2s"
+        ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
+        ondragleave="this.style.borderColor='var(--border2)'"
+        ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleEmpaqueDrop(${i},event)">
+        <span style="font-size:24px">📦</span>
+        <span style="font-size:11px;color:var(--text3);margin-top:4px">${l}</span>
+      </div>
+    </div>`).join('');
+
+  // Intentar cargar fotos existentes
+  try{
+    const r = await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=fotos_empaque',{headers:SB_H});
+    const rows = await r.json();
+    if(rows&&rows[0]&&rows[0].fotos_empaque){
+      _empaqueActual.fotos = rows[0].fotos_empaque;
+      rows[0].fotos_empaque.forEach((url,i)=>{if(url) mostrarEmpaqueSlot(i,url,true);});
+    }
+  }catch(e){}
+  openModal('modal-empaque');
+}
+
+function abrirSlotEmpaque(i){
+  window._empaqueSlotIdx = i;
+  document.getElementById('file-empaque-gest').click();
+}
+
+function handleEmpaqueGest(input){
+  if(!input.files||!input.files[0])return;
+  const i = window._empaqueSlotIdx||0;
+  const reader = new FileReader();
+  reader.onload = e => {mostrarEmpaqueSlot(i, e.target.result, false); _empaqueActual.fotos[i] = e.target.result;};
+  reader.readAsDataURL(input.files[0]);
+  input.value='';
+}
+
+function handleEmpaqueDrop(i, event){
+  const file = event.dataTransfer&&event.dataTransfer.files&&event.dataTransfer.files[0];
+  if(!file||!file.type.startsWith('image/')){toast('Solo imágenes','err');return;}
+  const reader = new FileReader();
+  reader.onload = e => {mostrarEmpaqueSlot(i, e.target.result, false); _empaqueActual.fotos[i] = e.target.result;};
+  reader.readAsDataURL(file);
+}
+
+function mostrarEmpaqueSlot(i, src, esUrl){
+  const slot = document.getElementById('emp-slot-'+i);
+  if(slot) slot.innerHTML = '<img src="'+src+'" style="width:100%;height:100%;object-fit:cover">';
+}
+
+async function guardarFotosEmpaque(){
+  const btn = document.getElementById('btn-guardar-empaque');
+  if(btn){btn.disabled=true;btn.textContent='Subiendo...';}
+  try{
+    const urls = [];
+    for(let i=0;i<4;i++){
+      const f = _empaqueActual.fotos[i];
+      if(!f){urls.push(null);continue;}
+      if(f.startsWith('http')){urls.push(f);continue;} // ya es URL
+      // Subir a Storage
+      const base64 = f.replace(/^data:image\/\w+;base64,/,'');
+      const arr = Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
+      const blob = new Blob([arr],{type:'image/jpeg'});
+      const filename = _empaqueActual.id+'/empaque-'+i+'-'+Date.now()+'.jpg';
+      const r = await fetch(SB_URL+'/storage/v1/object/fotos-aprobacion/'+filename,{
+        method:'POST', headers:{...SB_H,'Content-Type':'image/jpeg','x-upsert':'true'}, body:blob
+      });
+      if(r.ok) urls.push(SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+filename);
+      else urls.push(null);
+      if(btn) btn.textContent='Subiendo '+(i+1)+'/4...';
+    }
+    // Guardar URLs en pipeline
+    await sbPatch('pipeline_mf',{fotos_empaque:urls},'id=eq.'+_empaqueActual.id);
+    toast('Fotos de empaque guardadas ✓','ok');
+    closeModal('modal-empaque');
+  }catch(e){toast('Error: '+e.message,'err');}
+  finally{if(btn){btn.disabled=false;btn.textContent='💾 Guardar fotos';}}
 }
 
 function poblarSelectPipeline(){

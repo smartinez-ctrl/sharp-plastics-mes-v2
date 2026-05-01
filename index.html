@@ -538,35 +538,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       </div>
     </div>
     <div class="card" id="cierre-costos"></div>
-    <div class="card" id="card-fotos-empaque">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div class="card-title" style="margin:0">📦 Fotos de empaque final</div>
-        <span style="font-size:10px;color:var(--text3)">Opcional</span>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="foto-slot" id="empaque-0" onclick="openEmpaqueMenu(0)"
-          ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
-          ondragleave="this.style.borderColor=''"
-          ondrop="event.preventDefault();this.style.borderColor='';handleEmpaquesDrop(0,event)">
-          <div class="foto-icon">📦</div><div class="foto-label">Empaque 1</div></div>
-        <div class="foto-slot" id="empaque-1" onclick="openEmpaqueMenu(1)"
-          ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
-          ondragleave="this.style.borderColor=''"
-          ondrop="event.preventDefault();this.style.borderColor='';handleEmpaquesDrop(1,event)">
-          <div class="foto-icon">📦</div><div class="foto-label">Empaque 2</div></div>
-        <div class="foto-slot" id="empaque-2" onclick="openEmpaqueMenu(2)"
-          ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
-          ondragleave="this.style.borderColor=''"
-          ondrop="event.preventDefault();this.style.borderColor='';handleEmpaquesDrop(2,event)">
-          <div class="foto-icon">📦</div><div class="foto-label">Empaque 3</div></div>
-        <div class="foto-slot" id="empaque-3" onclick="openEmpaqueMenu(3)"
-          ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
-          ondragleave="this.style.borderColor=''"
-          ondrop="event.preventDefault();this.style.borderColor='';handleEmpaquesDrop(3,event)">
-          <div class="foto-icon">📦</div><div class="foto-label">Empaque 4</div></div>
-      </div>
-      <input type="file" id="file-empaque" accept="image/*" style="display:none" onchange="handleEmpaqueFoto(window._empaqueIdx,this)">
-    </div>
+<!-- fotos empaque movidas al pipeline -->
     <div class="card">
       <div class="card-title">Firma de cierre</div>
       <div class="field"><label>Aprobado por</label><select id="cierre-firma"><option value="">Seleccionar...</option></select></div>
@@ -2118,11 +2090,12 @@ function generarPDFInterno(){
   const opers=(S.orden.operadores||[]).map(id=>{const u=USERS_ALL.find(x=>x.id===id||x.name===id);return u?u.name||u.nombre:id;}).join(', ')||'—';
 
   // Tiempos muertos por fase
-  const tmAjRows=Object.entries(S.tm.ajuste||{}).filter(([,v])=>v>0)
-    .map(([k,v])=>`<tr><td style="padding:4px 10px;font-size:11px">${tipos[k]||k}</td><td style="padding:4px 10px;font-size:11px;color:#6b7280;text-align:center">Ajuste</td><td style="padding:4px 10px;font-size:11px;font-family:monospace;text-align:right">${fmt(v)}</td></tr>`).join('');
-  const tmPrRows=Object.entries(S.tm.prod||{}).filter(([,v])=>v>0)
-    .map(([k,v])=>`<tr><td style="padding:4px 10px;font-size:11px">${tipos[k]||k}</td><td style="padding:4px 10px;font-size:11px;color:#6b7280;text-align:center">Producción</td><td style="padding:4px 10px;font-size:11px;font-family:monospace;text-align:right">${fmt(v)}</td></tr>`).join('');
-  const tmTotal=Object.values({...S.tm.ajuste||{},...S.tm.prod||{}}).reduce((s,v)=>s+v,0);
+  const tmVal=v=>typeof v==='object'?(v.total||0)+(v.ss||0):v||0;
+  const tmAjRows=Object.entries(S.tm.ajuste||{}).filter(([,v])=>tmVal(v)>0)
+    .map(([k,v])=>`<tr><td style="padding:4px 10px;font-size:11px">${tipos[k]||k}</td><td style="padding:4px 10px;font-size:11px;color:#6b7280;text-align:center">Ajuste</td><td style="padding:4px 10px;font-size:11px;font-family:monospace;text-align:right">${fmt(tmVal(v))}</td></tr>`).join('');
+  const tmPrRows=Object.entries(S.tm.prod||{}).filter(([,v])=>tmVal(v)>0)
+    .map(([k,v])=>`<tr><td style="padding:4px 10px;font-size:11px">${tipos[k]||k}</td><td style="padding:4px 10px;font-size:11px;color:#6b7280;text-align:center">Producción</td><td style="padding:4px 10px;font-size:11px;font-family:monospace;text-align:right">${fmt(tmVal(v))}</td></tr>`).join('');
+  const tmTotal=Object.values({...S.tm.ajuste||{},...S.tm.prod||{}}).reduce((s,v)=>s+tmVal(v),0);
 
   // Merma
   const mermaRows=[
@@ -2446,7 +2419,7 @@ function generarPDF(){
     <tbody>${qaRows}</tbody>
   </table>
 
-  ${obs?`<div class="section-title">Observaciones</div><p style="font-size:11px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;margin:0 0 14px">${obs}</p>`:''}
+  <!-- observaciones no van en PDF cliente -->
 
   <div class="footer">
     <div class="sign-box">Liberado por: <strong>${firma}</strong></div>
