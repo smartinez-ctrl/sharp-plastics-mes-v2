@@ -183,10 +183,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
   </div>
   <div class="card"><div class="card-title">Activos</div><div id="pipeline-activos"><div class="loading"><div class="loading-spinner"></div></div></div></div>
   <div class="card"><div class="card-title">Completados recientes</div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Sub-cliente</th><th>PO</th><th>Cap.</th><th>Piezas</th><th>Venta</th><th>Margen</th><th>Cierre</th><th>Estado</th><th></th></tr></thead>
-      <tbody id="pipeline-completados"><tr><td colspan="9" class="loading">Cargando...</td></tr></tbody>
-    </table></div>
+    <div id="pipeline-completados"><div class="loading">Cargando...</div></div>
   </div>
 </div>
 
@@ -523,13 +520,15 @@ function renderPipeline(){
   document.getElementById('st-margen').textContent=mProm>0?mProm.toFixed(1)+'%':'—';
 
   // Header de columnas
-  const pipelineHeader = `<div style="display:grid;grid-template-columns:3fr 1fr 0.6fr 0.6fr 1.2fr 1.2fr 0.8fr 1fr 1.2fr;gap:0;padding:6px 14px;margin-bottom:2px">
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente / PO</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Piezas</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Col</span>
+  const PIPE_COLS = '2.5fr 1.2fr 0.8fr 0.8fr 1fr 1fr 1.1fr 1fr 1fr 1.2fr';
+  const pipelineHeader = `<div style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;padding:6px 14px;margin-bottom:2px">
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">PO</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">ml</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Piezas</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Pedido</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Entrega</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Venta</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Costo</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Margen</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Estado</span>
     <span></span>
@@ -539,45 +538,68 @@ function renderPipeline(){
     const isUrgent=p.fecha_entrega&&(new Date(p.fecha_entrega+'T12:00:00')-new Date())<4*24*60*60*1000;
     const margenColor=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
     const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;color:var(--text3)">${t.pantone||t.nombre||''}</span>`).join(' '):'';
-    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:3fr 1fr 0.6fr 0.6fr 1.2fr 1.2fr 0.8fr 1fr 1.2fr;gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
-      <div style="min-width:0">
+    const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
+      <div style="min-width:0;overflow:hidden">
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
-        <div style="display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap">
-          <span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--text3)">${p.po||'—'}</span>
-          ${tintas}
-        </div>
+        <div style="margin-top:2px">${tintas}</div>
       </div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3)">${p.po||'—'}</div>
+      <div style="font-size:12px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
-      <div style="font-size:13px;text-align:center;color:var(--text2)">${p.colores||0}</div>
-      <div style="font-size:13px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
+      <div style="font-size:11px;text-align:center;color:var(--text3)">${fPed}</div>
+      <div style="font-size:11px;text-align:center;color:${isUrgent?'var(--red)':'var(--text3)'}">${fEnt}</div>
       <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>
-      <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--red);text-align:right">${p.costo_total?mxn(p.costo_total):'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
-      <div style="display:flex;align-items:center;justify-content:flex-end">
-        ${p.costo_revisado?'<span style="font-size:9px;color:var(--green);margin-right:4px">✓</span>':''}
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px">
+        ${p.costo_revisado?'<span style="font-size:9px;color:var(--green)">✓</span>':''}
         <span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴':p.estado}</span>
       </div>
-      <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px" onclick="event.stopPropagation()">
-        <button class="btn btn-primary btn-xs" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button>
-        <button class="btn btn-ghost btn-xs" onclick="abrirPDFs_menu(event,'${p.id}')">📄</button>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
+        <button class="btn btn-primary btn-xs" title="Cotizador" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button>
+        <button class="btn btn-ghost btn-xs" title="PDFs" onclick="abrirPDFs_menu(event,'${p.id}')">📄</button>
         ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
       </div>
     </div>`;
   }).join('')):'<div style="text-align:center;padding:30px;color:var(--text3)">Sin pedidos activos.</div>';
 
-  document.getElementById('pipeline-completados').innerHTML=completados.length?completados.slice(0,10).map(p=>`
-    <tr style="cursor:pointer" onclick="abrirDetallePedido('${p.id}')">
-      <td>${p.sub_cliente||p.cliente||'—'}</td><td class="td-mono">${p.po||'—'}</td>
-      <td>${p.capacidad?p.capacidad+'ml':'—'}</td><td>${(p.piezas||0).toLocaleString()}</td>
-      <td class="td-mono" style="color:var(--green)">${p.venta_total?mxn(p.venta_total):'—'}</td>
-      <td class="td-mono" style="color:var(--green)">${p.margen?p.margen.toFixed(1)+'%':'—'}</td>
-      <td>${p.updated_at?new Date(p.updated_at).toLocaleDateString('es-MX',{day:'numeric',month:'short'}):'—'}</td>
-      <td><span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}">${p.estado}</span></td>
-      <td onclick="event.stopPropagation()" style="white-space:nowrap">
-        <button class="btn btn-ghost btn-xs" onclick="verReportesProduccion('${p.id}')" title="Ver reportes de producción">📄</button>
+  const compHeader = `<div style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;padding:6px 14px;margin-bottom:2px">
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">PO</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">ml</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Piezas</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Pedido</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Entrega</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Venta</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Margen</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Estado</span>
+    <span></span>
+  </div>`;
+  document.getElementById('pipeline-completados').innerHTML=completados.length?(compHeader+completados.slice(0,10).map(p=>{
+    const fPed2=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    const fEnt2=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    const margenColor2=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
+    return `<div class="pipeline-card" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;opacity:0.85">
+      <div style="min-width:0;overflow:hidden">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3)">${p.po||'—'}</div>
+      <div style="font-size:12px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
+      <div style="font-size:11px;text-align:center;color:var(--text3)">${fPed2}</div>
+      <div style="font-size:11px;text-align:center;color:var(--text3)">${fEnt2}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor2};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
+      <div style="display:flex;align-items:center;justify-content:flex-end">
+        <span class="badge ${BADGE_MAP[p.estado]||'badge-green'}" style="font-size:9px">${p.estado}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-xs" title="Ver producción y PDFs" onclick="verReportesProduccion('${p.id}')">📄</button>
         ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
-      </td>
-    </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">Sin completados</td></tr>';
+      </div>
+    </div>`;
+  }).join('')):'<div style="text-align:center;padding:30px;color:var(--text3)">Sin completados</div>';
 }
 
 function abrirNuevoPedido(){
