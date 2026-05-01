@@ -280,7 +280,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     </div>
 <!-- Colores movidos a pantalla de ajuste -->
   </div></div>
-  <div class="bottom-bar"><button class="btn btn-primary" onclick="goAjuste()">Continuar a ajuste →</button></div>
+  <div class="bottom-bar" style="display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="verOrdenTrabajo()" style="flex:0 0 auto">📋 Orden</button>
+    <button class="btn btn-primary" onclick="goAjuste()" style="flex:1">Continuar a ajuste →</button>
+  </div>
 </div>
 
 <!-- AJUSTE -->
@@ -1012,6 +1015,145 @@ function removeColor(i){S.orden.colores.splice(i,1);renderColores();renderTintas
 // ══════════════════════════════════════════════════════
 // AJUSTE
 // ══════════════════════════════════════════════════════
+function verOrdenTrabajo(){
+  // Recoger datos actuales de los inputs
+  const cliente = document.getElementById('ord-cliente')?.value || S.orden.cliente || '—';
+  const op = document.getElementById('ord-op')?.value || S.orden.op || '—';
+  const pzas = document.getElementById('ord-pzas')?.value || S.orden.pzas || 0;
+  const producto = document.getElementById('ord-producto')?.value || S.orden.producto || '—';
+  const loteBot = document.getElementById('ord-lote-bot')?.value || S.orden.loteBot || '—';
+  const loteTap = document.getElementById('ord-lote-tap')?.value || S.orden.loteTap || '—';
+  const maquina = document.getElementById('ord-maquina')?.value || S.orden.maquina || 'Shuttle';
+  const colores = S.orden.colores||[];
+  const fecha = new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'});
+
+  // Datos del pipeline si existen
+  const pipe = S.pipelineId && window._dashRows ? window._dashRows.find(p=>p.id===S.pipelineId) : null;
+  const colorBot = pipe?.color_botella || '—';
+  const colorTap = pipe?.color_tapa || '—';
+  const colorBoq = pipe?.color_boquilla || '—';
+  const fechaEntrega = pipe?.fecha_entrega ? new Date(pipe.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'}) : '—';
+  const pdfDiseno = pipe?.pdf_diseno_url || null;
+
+  // Personal
+  const USERS_ALL = window._allUsers || USERS || [];
+  const ajust = (S.orden.ajustadores||[]).map(id=>{const u=USERS_ALL.find(x=>x.id===id||x.name===id);return u?u.name||u.nombre:id;}).join(', ')||'—';
+  const opers = (S.orden.operadores||[]).map(id=>{const u=USERS_ALL.find(x=>x.id===id||x.name===id);return u?u.name||u.nombre:id;}).join(', ')||'—';
+
+  const coloresHTML = colores.length ? colores.map((c,i)=>
+    '<tr><td style="padding:6px 12px;font-size:12px;border-bottom:1px solid #e5e7eb;font-weight:600">Color '+(i+1)+'</td>'+
+    '<td style="padding:6px 12px;font-size:12px;border-bottom:1px solid #e5e7eb">'+(c.nombre||'—')+(c.pantone?' <span style="color:#6b7280;font-size:11px">· '+c.pantone+'</span>':'')+'</td></tr>'
+  ).join('') : '<tr><td colspan="2" style="padding:6px 12px;font-size:12px;color:#6b7280">Sin colores registrados</td></tr>';
+
+  const html = `<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orden de trabajo — ${op}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;background:#fff;color:#111;font-size:12px}
+  .header{background:#0d0f12;color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+  .logo{font-size:18px;font-weight:800;letter-spacing:-.5px}
+  .logo b{color:#f59e0b}
+  .section{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#374151;border-bottom:2px solid #0d0f12;padding-bottom:4px;margin:16px 0 10px}
+  table{width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:16px}
+  th{padding:7px 12px;background:#f0f4f8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;text-align:left;color:#374151}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  .box{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px}
+  .box-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px}
+  .box-val{font-size:14px;font-weight:700}
+  .badge{display:inline-block;background:#0d0f12;color:#f59e0b;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:.03em}
+  .footer{margin-top:24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .sign{border-top:1.5px solid #111;padding-top:6px;font-size:10px;color:#6b7280}
+  @media print{body{padding:0}@page{margin:10mm}button{display:none}}
+</style></head>
+<body>
+<div class="header">
+  <div class="logo">SHARP <b>PLASTICS</b></div>
+  <div style="text-align:right">
+    <div style="font-size:10px;color:#9ca3af">Orden de trabajo</div>
+    <div style="font-size:16px;font-weight:700">${op}</div>
+  </div>
+</div>
+<div style="padding:16px 24px">
+
+  <!-- Info principal -->
+  <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:16px">
+    <div class="box">
+      <div class="box-lbl">Cliente</div>
+      <div class="box-val" style="font-size:18px">${cliente}</div>
+    </div>
+    <div class="box" style="text-align:center">
+      <div class="box-lbl">Piezas</div>
+      <div class="box-val" style="font-size:22px;color:#16a34a">${parseInt(pzas).toLocaleString()}</div>
+    </div>
+    <div class="box" style="text-align:center">
+      <div class="box-lbl">Fecha entrega</div>
+      <div class="box-val" style="font-size:12px;color:#dc2626">${fechaEntrega}</div>
+    </div>
+  </div>
+
+  <!-- Producto y parámetros -->
+  <div class="section">Producto</div>
+  <div class="grid2">
+    <div class="box"><div class="box-lbl">Modelo</div><div class="box-val">${producto}</div></div>
+    <div class="box"><div class="box-lbl">Máquina</div><div class="box-val">${maquina}</div></div>
+    <div class="box"><div class="box-lbl">Lote botella</div><div class="box-val">${loteBot}</div></div>
+    <div class="box"><div class="box-lbl">Lote tapa</div><div class="box-val">${loteTap}</div></div>
+  </div>
+
+  <!-- Colores de componentes -->
+  ${colorBot!=='—'||colorTap!=='—'?`
+  <div class="section">Colores de componentes</div>
+  <div class="grid2">
+    <div class="box"><div class="box-lbl">Color botella</div><div class="box-val">${colorBot}</div></div>
+    <div class="box"><div class="box-lbl">Color tapa</div><div class="box-val">${colorTap}</div></div>
+    ${colorBoq!=='—'?`<div class="box"><div class="box-lbl">Color boquilla</div><div class="box-val">${colorBoq}</div></div>`:''}
+  </div>`:''}
+
+  <!-- Colores a imprimir -->
+  <div class="section">Colores a imprimir</div>
+  <table>
+    <thead><tr><th>Color</th><th>Nombre / Pantone</th></tr></thead>
+    <tbody>${coloresHTML}</tbody>
+  </table>
+
+  <!-- Personal -->
+  <div class="section">Personal asignado</div>
+  <div class="grid2">
+    <div class="box"><div class="box-lbl">Ajustador(es)</div><div class="box-val" style="font-size:13px">${ajust}</div></div>
+    <div class="box"><div class="box-lbl">Operador(es)</div><div class="box-val" style="font-size:13px">${opers}</div></div>
+  </div>
+
+  <!-- Diseño -->
+  ${pdfDiseno?`
+  <div class="section">Diseño del cliente</div>
+  <div style="text-align:center;margin-bottom:16px">
+    <a href="${pdfDiseno}" target="_blank" style="display:inline-block;background:#0d0f12;color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none">
+      🎨 Ver diseño del cliente (PDF)
+    </a>
+    <p style="font-size:10px;color:#6b7280;margin-top:6px">Toca para abrir el PDF de diseño en una nueva pestaña</p>
+  </div>`:''}
+
+  <!-- Firmas -->
+  <div class="footer">
+    <div class="sign">Ajustador: <strong>${ajust}</strong></div>
+    <div class="sign">Supervisor: ________________</div>
+    <div class="sign">Fecha: ${fecha}</div>
+  </div>
+
+  <div style="text-align:center;margin-top:20px">
+    <button onclick="window.print()" style="background:#0d0f12;color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:13px;font-weight:600;cursor:pointer">🖨️ Imprimir / Guardar PDF</button>
+  </div>
+</div>
+</body></html>`;
+
+  const w = window.open('','_blank','width=800,height=900');
+  w.document.write(html);
+  w.document.close();
+}
+
 function goAjuste(){
   S.orden.cliente=document.getElementById('ord-cliente').value||'';
   S.orden.op=document.getElementById('ord-op').value||'';
