@@ -840,11 +840,15 @@ async function renderDashboard(){
     }
     if(completados.length){
       html+='<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin:16px 0 8px">Completados</div>';
-      html+=completados.map(p=>`<div class="card" style="opacity:0.65;margin-bottom:8px">
-        <div style="display:flex;align-items:center;justify-content:space-between">
+      html+=completados.map(p=>`<div class="card" style="opacity:0.75;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div><div style="font-size:13px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
           <div style="font-size:11px;color:var(--text2);margin-top:2px">${p.po} · ${(p.piezas||0).toLocaleString()} pzas</div></div>
           <div class="badge badge-green">${p.estado}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="verPDFCompletado('${p.id}','cliente')">📋 PDF cliente</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="verPDFCompletado('${p.id}','interno')">📊 PDF interno</button>
         </div>
       </div>`).join('');
     }
@@ -857,6 +861,54 @@ async function renderDashboard(){
 // ══════════════════════════════════════════════════════
 // NUEVA ORDEN
 // ══════════════════════════════════════════════════════
+async function verPDFCompletado(pipelineId, tipo){
+  try{
+    // Obtener datos del pipeline y orden de producción
+    const [rPipe, rOrden] = await Promise.all([
+      fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=*',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}}),
+      fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=*',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}})
+    ]);
+    const pipe = (await rPipe.json())[0];
+    const orden = (await rOrden.json())[0];
+    if(!pipe){toast('Pedido no encontrado','err');return;}
+
+    // Reconstruir S temporal para generar el PDF
+    const tmpS = {
+      orden:{
+        cliente:pipe.sub_cliente||pipe.cliente||'—',
+        op:pipe.po||'—',
+        producto:pipe.capacidad?'Botella MF '+pipe.capacidad+'ml':'—',
+        pzas:pipe.piezas||0,
+        maquina:orden?.maquina||'—',
+        loteBot:orden?.lote_botella||'—',
+        loteTap:orden?.lote_tapa||'—',
+        colores:pipe.tintas_info||[],
+        ajustadores:orden?.ajustadores||[],
+        operadores:orden?.operadores||[],
+      },
+      timers:{
+        ajuste:{s:orden?.tiempo_ajuste_seg||0,total:orden?.tiempo_ajuste_seg||0},
+        prod:{s:orden?.tiempo_produccion_seg||0,total:orden?.tiempo_produccion_seg||0}
+      },
+      merma:{ajuste:orden?.merma_ajuste||{},prod:orden?.merma_produccion||{}},
+      tm:{ajuste:orden?.tm_ajuste||{},prod:orden?.tm_produccion||{}},
+      qa:orden?.qa_resultados||{},
+      tintas:pipe.formula_tintas||[],
+      fotos:[],
+      consumoReal:orden?.consumo_real_tintas||[],
+      reajustes:orden?.reajustes||0,
+    };
+
+    // Swap S temporalmente
+    const origS = {...S};
+    Object.assign(S, tmpS);
+    if(tipo==='cliente') generarPDF();
+    else generarPDFInterno();
+    // Restaurar S
+    setTimeout(()=>Object.assign(S, origS), 500);
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
 function goNuevaOrden(idx){
   resetOrden();
   if(idx!==null&&window._dashRows&&window._dashRows[idx]){
