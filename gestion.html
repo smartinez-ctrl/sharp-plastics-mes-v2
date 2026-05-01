@@ -611,14 +611,10 @@ function initPipelineDrag(){
         c.style.borderTop='';c.style.borderBottom='';c.style.opacity='';
       });
       const tgtId=card.dataset.id;
-      console.log('DROP: src=',_dragSrcId,'tgt=',tgtId);
       if(!_dragSrcId||tgtId===_dragSrcId){_dragSrcId=null;return;}
       const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
       const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
       const tgtIdx=activos.findIndex(p=>p.id===tgtId);
-      console.log('srcIdx=',srcIdx,'tgtIdx=',tgtIdx,'total activos=',activos.length);
-      console.log('src id en pipeline:',activos[srcIdx]?.id,'vs _dragSrcId:',_dragSrcId);
-      console.log('tgt id en pipeline:',activos[tgtIdx]?.id,'vs tgtId:',tgtId);
       if(srcIdx<0||tgtIdx<0){_dragSrcId=null;return;}
       const [moved]=activos.splice(srcIdx,1);
       activos.splice(tgtIdx,0,moved);
@@ -627,7 +623,6 @@ function initPipelineDrag(){
         const gp=PIPELINE.find(x=>x.id===p.id);
         if(gp)gp.orden_posicion=i;
       });
-      console.log('Nuevo orden:',activos.map(p=>p.sub_cliente||p.cliente));
       _dragSrcId=null;
       // Reconstruir PIPELINE con el nuevo orden de activos
       const noActivos=PIPELINE.filter(p=>p.estado!=='Pendiente'&&p.estado!=='En producción');
