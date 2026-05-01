@@ -663,6 +663,11 @@ const QA_ITEMS={
   'Impresión':['Sin mal flameo','Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
   'Ensamble':['Tapa color correcto','Roscado correcto','Prueba de fuga','Tipo de caja correcto','Pzas por caja correctas']
 };
+const QA_ITEMS_EN={
+  'Blow Molding':['Uniform wall thickness','No parallel lines','Correct flash removal','Correct bottle tone','No flash','No deformity','No orange peel','No perforations on base'],
+  'Printing':['No bad flaming','No incomplete artwork','No delamination','Correct registration','No shadow','No soleo','No contamination','No serrated edges','No misalignment','No missing ink','No bubbles','No poor dispersion'],
+  'Assembly':['Correct cap color','Correct threading','Leak test','Correct box type','Correct pieces per box']
+};
 const STEPS=['orden','ajuste','fotos','produccion','cierre'];
 
 // ══════════════════════════════════════════════════════
@@ -2392,9 +2397,21 @@ function generarPDF(){
   const agua=document.getElementById('cierreAgua')?.value||'—';
   const fecha=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
   let qaRows='';let tot=0,pass=0;
-  Object.entries(QA_ITEMS).forEach(([sec,items])=>{
-    qaRows+=`<tr><td colspan="2" style="background:#f0f4f8;font-weight:700;font-size:11px;color:#374151;padding:6px 10px;text-transform:uppercase">${sec}</td></tr>`;
-    items.forEach(item=>{tot++;const v=S.qa[item]||'';if(v==='P')pass++;const color=v==='P'?'#16a34a':v==='NC'?'#dc2626':'#6b7280';const label=v==='P'?'✓ Pass':v==='NC'?'✗ Non-conforming':v==='NA'?'N/A':'Pending';qaRows+=`<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:12px">${item}</td><td style="padding:6px 10px;font-size:12px;font-weight:600;color:${color};text-align:right">${label}</td></tr>`;});
+  // Usar QA_ITEMS_EN para el PDF cliente, mapeando las respuestas del español
+  const seccionesES=Object.keys(QA_ITEMS);
+  const seccionesEN=Object.keys(QA_ITEMS_EN);
+  seccionesES.forEach((sec,si)=>{
+    const itemsES=QA_ITEMS[sec];
+    const itemsEN=QA_ITEMS_EN[seccionesEN[si]]||itemsES;
+    const secEN=seccionesEN[si]||sec;
+    qaRows+=`<tr><td colspan="2" style="background:#f0f4f8;font-weight:700;font-size:11px;color:#374151;padding:6px 10px;text-transform:uppercase">${secEN}</td></tr>`;
+    itemsES.forEach((itemES,ii)=>{
+      const itemEN=itemsEN[ii]||itemES;
+      tot++;const v=S.qa[itemES]||'';if(v==='P')pass++;
+      const color=v==='P'?'#16a34a':v==='NC'?'#dc2626':'#6b7280';
+      const label=v==='P'?'✓ Pass':v==='NC'?'✗ Non-conforming':v==='NA'?'N/A':'Pending';
+      qaRows+=`<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:12px">${itemEN}</td><td style="padding:6px 10px;font-size:12px;font-weight:600;color:${color};text-align:right">${label}</td></tr>`;
+    });
   });
   let tintasRows='';let costoTotal=0;
   S.tintas.forEach((t,i)=>{
