@@ -545,10 +545,51 @@ async function loadCatalogos(){
 
 async function loadPipeline(){
   try{
-    PIPELINE=await sbGet('pipeline_mf','order=created_at.desc');
+    PIPELINE=await sbGet('pipeline_mf','order=orden_posicion.asc,created_at.desc');
     renderPipeline();
     poblarSelectPipeline();
   }catch(e){document.getElementById('pipeline-activos').innerHTML=`<div style="color:var(--red);padding:20px">Error: ${e.message}</div>`;}
+}
+
+// ── Pipeline drag & drop ─────────────────────────────
+let _dragSrcId=null;
+
+function pipeDragStart(e){
+  _dragSrcId=e.currentTarget.dataset.id;
+  e.currentTarget.style.opacity='0.4';
+  e.dataTransfer.effectAllowed='move';
+}
+function pipeDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  e.currentTarget.style.borderTop='2px solid var(--amber)';
+}
+function pipeDragEnd(e){
+  e.currentTarget.style.opacity='1';
+  e.currentTarget.style.borderTop='';
+  document.querySelectorAll('.pipeline-card').forEach(c=>{c.style.borderTop='';});
+}
+async function pipeDrop(e){
+  e.preventDefault();
+  e.currentTarget.style.borderTop='';
+  const targetId=e.currentTarget.dataset.id;
+  if(!_dragSrcId||_dragSrcId===targetId)return;
+  // Reordenar en PIPELINE array
+  const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
+  const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
+  const tgtIdx=activos.findIndex(p=>p.id===targetId);
+  if(srcIdx<0||tgtIdx<0)return;
+  activos.splice(tgtIdx,0,activos.splice(srcIdx,1)[0]);
+  // Reasignar posiciones
+  const updates=activos.map((p,i)=>({id:p.id,pos:i}));
+  // Update en PIPELINE global
+  updates.forEach(u=>{const p=PIPELINE.find(x=>x.id===u.id);if(p)p.orden_posicion=u.pos;});
+  renderPipeline();
+  // Guardar en Supabase en background
+  Promise.all(updates.map(u=>sbPatch('pipeline_mf',{orden_posicion:u.pos},'id=eq.'+u.id)))
+    .then(()=>toast('Orden guardado ✓'))
+    .catch(e=>toast('Error guardando orden: '+e.message,'err'));
+  _dragSrcId=null;
 }
 
 function renderPipeline(){
@@ -585,7 +626,7 @@ function renderPipeline(){
     const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;color:var(--text3)">${t.pantone||t.nombre||''}</span>`).join(' '):'';
     const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="true" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" ondragstart="pipeDragStart(event)" ondragover="pipeDragOver(event)" ondrop="pipeDrop(event)" ondragend="pipeDragEnd(event)" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;cursor:grab">
       <div style="min-width:0;overflow:hidden">
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="margin-top:2px">${tintas}</div>
