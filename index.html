@@ -1869,6 +1869,7 @@ async function finalizarYCerrar(){
     });
     await sbPatch('pipeline_mf',{
       estado:'Completado',
+      consumo_real_tintas:S.consumoReal||[],
       formula_tintas:S.tintas||[],
       tintas_info:tintasInfo,
     },'id=eq.'+S.pipelineId);
