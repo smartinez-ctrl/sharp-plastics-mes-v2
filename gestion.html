@@ -611,25 +611,26 @@ function initPipelineDrag(){
         c.style.borderTop='';c.style.borderBottom='';c.style.opacity='';
       });
       const tgtId=card.dataset.id;
+      console.log('DROP: src=',_dragSrcId,'tgt=',tgtId);
       if(!_dragSrcId||tgtId===_dragSrcId){_dragSrcId=null;return;}
       const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
       const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
       const tgtIdx=activos.findIndex(p=>p.id===tgtId);
+      console.log('srcIdx=',srcIdx,'tgtIdx=',tgtIdx,'total activos=',activos.length);
       if(srcIdx<0||tgtIdx<0){_dragSrcId=null;return;}
-      // Mover en el array
       const [moved]=activos.splice(srcIdx,1);
       activos.splice(tgtIdx,0,moved);
-      // Actualizar PIPELINE
       activos.forEach((p,i)=>{
         p.orden_posicion=i;
         const gp=PIPELINE.find(x=>x.id===p.id);
         if(gp)gp.orden_posicion=i;
       });
+      console.log('Nuevo orden:',activos.map(p=>p.sub_cliente||p.cliente));
       _dragSrcId=null;
       renderPipeline();
       Promise.all(activos.map((p,i)=>sbPatch('pipeline_mf',{orden_posicion:i},'id=eq.'+p.id)))
         .then(()=>toast('Orden guardado ✓'))
-        .catch(()=>toast('Error al guardar','err'));
+        .catch(e=>toast('Error: '+e.message,'err'));
     });
   });
 }
