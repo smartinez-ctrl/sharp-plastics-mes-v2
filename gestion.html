@@ -835,10 +835,10 @@ async function abrirDetallePedido(id){
           <tbody id="venta-calc-rows">
             ${ventaRow('botellas','Botellas',piezas,pBot.toFixed(4))}
             ${ventaRow('tapas','Tapas',piezas,pTap.toFixed(4))}
-            ${ventaRow('tintas','Tintas (fijo)',piezas,tfTintas)}
-            ${ventaRow('pantallas','Pantallas + positivos',colores,tfPant)}
-            ${ventaRow('mdo','Mano de obra',piezas,(mdoVentaTotal/piezas||0).toFixed(4))}
-            ${ventaRow('empaque','Empaque',piezas,(tfP+tfT).toFixed(2))}
+            ${ventaRow('tintas','Tintas (fijo)',piezas,(p.venta_tintas>0&&piezas?p.venta_tintas/piezas:tfTintas).toFixed(4))}
+            ${ventaRow('pantallas','Pantallas + positivos',(p.venta_pantallas>0&&tfPant?Math.round(p.venta_pantallas/tfPant):colores),(p.venta_pantallas>0&&colores?p.venta_pantallas/Math.round(p.venta_pantallas/tfPant):tfPant).toFixed(2))}
+            ${ventaRow('mdo','Mano de obra',piezas,(p.venta_mdo>0&&piezas?p.venta_mdo/piezas:mdoVentaTotal/piezas||0).toFixed(4))}
+            ${ventaRow('empaque','Empaque',piezas,(p.venta_empaque>0&&piezas?p.venta_empaque/piezas:(tfP+tfT)).toFixed(2))}
           </tbody>
         </table>
       </div>
@@ -1899,8 +1899,9 @@ function recalcVenta(){
 }
 
 async function guardarVentaEdit(id){
-  const total=window._ventaEditTotal;const margen=window._margenEdit;
-  if(!total)return;
+  // Recalcular por si acaso antes de guardar
+  recalcVenta();
+  const total=window._ventaEditTotal||0;const margen=window._margenEdit||0;
   try{
     const getVal=(dataId,field)=>{
       const inp=document.querySelector(`[data-id="${dataId}"][data-field="${field}"]`);
