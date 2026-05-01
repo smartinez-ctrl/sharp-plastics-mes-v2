@@ -313,12 +313,20 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">PDF 1 — Purchase Order</div>
-        <div class="pdf-drop" id="drop1" onclick="document.getElementById('file-po').click()"><div class="pdf-drop-icon">📄</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">MF-...-Order_Form.pdf</div></div>
+        <div class="pdf-drop" id="drop1" onclick="document.getElementById('file-po').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'"
+          ondragleave="this.style.borderColor='';this.style.background=''"
+          ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handlePDFDrop('po',event)">
+          <div class="pdf-drop-icon">📄</div><div class="pdf-drop-text">Arrastra o clic para seleccionar</div><div class="pdf-drop-sub">MF-...-Order_Form.pdf</div></div>
         <input type="file" id="file-po" accept="application/pdf" style="display:none" onchange="handlePDF('po',this)">
       </div>
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">PDF 2 — Mock Up / Colores</div>
-        <div class="pdf-drop" id="drop2" onclick="document.getElementById('file-mockup').click()"><div class="pdf-drop-icon">🎨</div><div class="pdf-drop-text">Clic para seleccionar</div><div class="pdf-drop-sub">..._V2.pdf</div></div>
+        <div class="pdf-drop" id="drop2" onclick="document.getElementById('file-mockup').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'"
+          ondragleave="this.style.borderColor='';this.style.background=''"
+          ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handlePDFDrop('mockup',event)">
+          <div class="pdf-drop-icon">🎨</div><div class="pdf-drop-text">Arrastra o clic para seleccionar</div><div class="pdf-drop-sub">..._V2.pdf</div></div>
         <input type="file" id="file-mockup" accept="application/pdf" style="display:none" onchange="handlePDF('mockup',this)">
       </div>
     </div>
@@ -595,7 +603,9 @@ function renderPipeline(){
         <span class="badge ${BADGE_MAP[p.estado]||'badge-green'}" style="font-size:9px">${p.estado}</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
-        <button class="btn btn-ghost btn-xs" title="Ver producción y PDFs" onclick="verReportesProduccion('${p.id}')">📄</button>
+        <button class="btn btn-ghost btn-xs" title="PDF cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
+        <button class="btn btn-ghost btn-xs" title="PDF interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
+        <button class="btn btn-ghost btn-xs" title="Ver producción" onclick="verReportesProduccion('${p.id}')">🔍</button>
         ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
       </div>
     </div>`;
@@ -795,6 +805,16 @@ function resetImport(){
   const bic=document.getElementById('btn-import-cotizar');if(bic)bic.style.display='none';
   const big=document.getElementById('btn-import-guardar');if(big)big.style.display='none';
   document.getElementById('file-po').value='';document.getElementById('file-mockup').value='';
+}
+
+function handlePDFDrop(tipo,event){
+  const file=event.dataTransfer?.files?.[0];
+  if(!file||file.type!=='application/pdf'){toast('Solo archivos PDF','err');return;}
+  // Simular como si viniera del input
+  const dt=new DataTransfer();
+  dt.items.add(file);
+  const inputEl=document.getElementById(tipo==='po'?'file-po':'file-mockup');
+  if(inputEl){inputEl.files=dt.files;handlePDF(tipo,inputEl);}
 }
 
 function handlePDF(tipo,input){
@@ -1696,6 +1716,37 @@ async function cargarDatosProduccion(p){
 }
 
 function fmtSeg(s){s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return [h,m,ss].map(x=>String(x).padStart(2,'0')).join(':');}
+
+async function abrirPDFClienteCompletado(pipelineId){
+  try{
+    const rows=await sbGet('ordenes_produccion','pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=*');
+    if(!rows||!rows.length){toast('Sin datos de producción para este pedido','err');return;}
+    const o=rows[0];
+    const pipe=PIPELINE.find(p=>p.id===pipelineId)||{};
+    // Generar PDF cliente via generate-pdf
+    const resp=await fetch('/api/generate-pdf',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tipo:'cliente',orden:o,pipeline:pipe})});
+    if(!resp.ok){toast('Error generando PDF','err');return;}
+    const blob=await resp.blob();
+    const url=URL.createObjectURL(blob);
+    window.open(url,'_blank');
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function abrirPDFInternoCompletado(pipelineId){
+  try{
+    const rows=await sbGet('ordenes_produccion','pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=*');
+    if(!rows||!rows.length){toast('Sin datos de producción para este pedido','err');return;}
+    const o=rows[0];
+    const pipe=PIPELINE.find(p=>p.id===pipelineId)||{};
+    const resp=await fetch('/api/generate-pdf',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tipo:'interno',orden:o,pipeline:pipe})});
+    if(!resp.ok){toast('Error generando PDF','err');return;}
+    const blob=await resp.blob();
+    const url=URL.createObjectURL(blob);
+    window.open(url,'_blank');
+  }catch(e){toast('Error: '+e.message,'err');}
+}
 
 function verReportesProduccion(pipelineId){
   const p=PIPELINE.find(x=>x.id===pipelineId);
