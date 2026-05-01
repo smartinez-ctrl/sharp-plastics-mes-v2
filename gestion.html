@@ -73,6 +73,8 @@ tr:last-child td{border-bottom:none}
 .pipeline-card{background:var(--bg2);border:1px solid var(--border);border-left:3px solid transparent;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s}
 .pipeline-card:hover{border-color:var(--border2);transform:translateY(-1px)}
 .pipeline-card.urgent{border-left-color:var(--red)}
+.pipeline-card.dragging{opacity:0.4}
+.pipeline-card.drag-over{border-top:3px solid var(--amber) !important}
 .pipeline-card.en-prod{border-left-color:var(--blue)}
 .pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
 .pc-title{font-size:15px;font-weight:600;margin-bottom:3px}
@@ -552,47 +554,46 @@ async function loadPipeline(){
 }
 
 // ── Pipeline drag & drop ─────────────────────────────
-let _dragSrcId=null;
+let _dragSrcIdx=null;
 
 function pipeDragStart(e){
-  _dragSrcId=e.currentTarget.dataset.id;
-  e.currentTarget.style.opacity='0.4';
+  _dragSrcIdx=parseInt(e.currentTarget.dataset.idx);
   e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain',_dragSrcIdx);
+  setTimeout(()=>e.currentTarget.classList.add('dragging'),0);
 }
 function pipeDragOver(e){
   e.preventDefault();
   e.dataTransfer.dropEffect='move';
-  e.currentTarget.style.borderTop='2px solid var(--amber)';
+  document.querySelectorAll('.pipeline-card[data-idx]').forEach(c=>c.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
 }
 function pipeDragEnd(e){
-  e.currentTarget.style.opacity='1';
-  e.currentTarget.style.borderTop='';
-  document.querySelectorAll('.pipeline-card').forEach(c=>{c.style.borderTop='';});
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.pipeline-card[data-idx]').forEach(c=>c.classList.remove('drag-over','dragging'));
 }
 async function pipeDrop(e){
   e.preventDefault();
-  e.currentTarget.style.borderTop='';
-  const targetId=e.currentTarget.dataset.id;
-  if(!_dragSrcId||_dragSrcId===targetId)return;
+  e.stopPropagation();
+  document.querySelectorAll('.pipeline-card[data-idx]').forEach(c=>c.classList.remove('drag-over','dragging'));
+  const tgtIdx=parseInt(e.currentTarget.dataset.idx);
+  if(_dragSrcIdx===null||isNaN(tgtIdx)||_dragSrcIdx===tgtIdx){_dragSrcIdx=null;return;}
+  // Reordenar activos en PIPELINE
   const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
-  const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
-  const tgtIdx=activos.findIndex(p=>p.id===targetId);
-  if(srcIdx<0||tgtIdx<0)return;
-  // Reordenar activos
-  activos.splice(tgtIdx,0,activos.splice(srcIdx,1)[0]);
-  // Actualizar orden_posicion en PIPELINE global y en array local
+  const moved=activos.splice(_dragSrcIdx,1)[0];
+  activos.splice(tgtIdx,0,moved);
+  // Actualizar orden_posicion
   activos.forEach((p,i)=>{
     p.orden_posicion=i;
     const gp=PIPELINE.find(x=>x.id===p.id);
     if(gp)gp.orden_posicion=i;
   });
-  // Re-renderizar inmediatamente
+  _dragSrcIdx=null;
   renderPipeline();
-  // Guardar en Supabase en background
+  // Guardar en Supabase
   Promise.all(activos.map((p,i)=>sbPatch('pipeline_mf',{orden_posicion:i},'id=eq.'+p.id)))
     .then(()=>toast('Orden guardado ✓'))
-    .catch(e=>toast('Error: '+e.message,'err'));
-  _dragSrcId=null;
+    .catch(()=>toast('Error guardando orden','err'));
 }
 
 function renderPipeline(){
@@ -629,7 +630,7 @@ function renderPipeline(){
     const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;color:var(--text3)">${t.pantone||t.nombre||''}</span>`).join(' '):'';
     const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="true" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" ondragstart="pipeDragStart(event)" ondragover="pipeDragOver(event)" ondrop="pipeDrop(event)" ondragend="pipeDragEnd(event)" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;cursor:grab">
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="true" data-id="${p.id}" data-idx="${activos.indexOf(p)}" onclick="abrirDetallePedido('${p.id}')" ondragstart="pipeDragStart(event)" ondragover="pipeDragOver(event)" ondrop="pipeDrop(event)" ondragend="pipeDragEnd(event)" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;cursor:grab">
       <div style="min-width:0;overflow:hidden">
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="margin-top:2px">${tintas}</div>
