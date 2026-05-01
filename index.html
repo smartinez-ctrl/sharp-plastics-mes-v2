@@ -2022,9 +2022,9 @@ function generarPDFInterno(){
   const tipos={comida:'Salida a comer',tintas:'Prep. tintas',reajuste:'Reajuste',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
 
   // Personal
-  const USERS_ALL=window._allUsers||[];
-  const ajust=(S.orden.ajustadores||[]).map(id=>{const u=USERS_ALL.find(x=>x.id===id);return u?u.name:id;}).join(', ')||'—';
-  const opers=(S.orden.operadores||[]).map(id=>{const u=USERS_ALL.find(x=>x.id===id);return u?u.name:id;}).join(', ')||'—';
+  const USERS_ALL=USERS||[];
+  const ajust=(S.orden.ajustadores||[]).map(id=>{const u=USERS_ALL.find(x=>x.id===id||x.name===id);return u?u.name||u.nombre:id;}).join(', ')||'—';
+  const opers=(S.orden.operadores||[]).map(id=>{const u=USERS_ALL.find(x=>x.id===id||x.name===id);return u?u.name||u.nombre:id;}).join(', ')||'—';
 
   // Tiempos muertos por fase
   const tmAjRows=Object.entries(S.tm.ajuste||{}).filter(([,v])=>v>0)
