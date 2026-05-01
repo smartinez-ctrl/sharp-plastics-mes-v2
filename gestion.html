@@ -915,8 +915,8 @@ async function procesarPDFs(){
     if(extracted.capacidad===750)extracted.capacidad=700; // 750ml usa misma botella que 700ml
     const cap=extracted.capacidad||0;
     const capN=cap===750?700:cap; // normalizar 750→700
-    const colorBotSel=document.getElementById('cot-color-bot')?.value!=='false';
-    const colorTapSel=document.getElementById('cot-color-tap')?.value!=='false';
+    const colorBotSel=!esNatural; // usar detección automática de natural/clear
+    const colorTapSel=true;
     const pvBot=CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capN&&p.corrida==='stock2500'&&p.con_color===colorBotSel)||CAT.precios_venta.find(p=>p.tipo==='botella'&&p.capacidad_ml===capN&&p.con_color===colorBotSel);
     const pvTap=CAT.precios_venta.find(p=>p.tipo==='tapa'&&p.corrida==='2500'&&p.con_color===colorTapSel);
     const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
