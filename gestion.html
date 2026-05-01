@@ -523,7 +523,7 @@ function renderPipeline(){
   document.getElementById('st-margen').textContent=mProm>0?mProm.toFixed(1)+'%':'—';
 
   // Header de columnas
-  const pipelineHeader = `<div style="display:grid;grid-template-columns:2fr 80px 55px 55px 100px 100px 70px 90px 110px;gap:0;padding:6px 14px;margin-bottom:2px">
+  const pipelineHeader = `<div style="display:grid;grid-template-columns:3fr 1fr 0.6fr 0.6fr 1.2fr 1.2fr 0.8fr 1fr 1.2fr;gap:0;padding:6px 14px;margin-bottom:2px">
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente / PO</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Piezas</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Col</span>
@@ -539,7 +539,7 @@ function renderPipeline(){
     const isUrgent=p.fecha_entrega&&(new Date(p.fecha_entrega+'T12:00:00')-new Date())<4*24*60*60*1000;
     const margenColor=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
     const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;color:var(--text3)">${t.pantone||t.nombre||''}</span>`).join(' '):'';
-    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:2fr 80px 55px 55px 100px 100px 70px 90px 110px;gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:3fr 1fr 0.6fr 0.6fr 1.2fr 1.2fr 0.8fr 1fr 1.2fr;gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
       <div style="min-width:0">
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap">
