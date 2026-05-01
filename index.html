@@ -1446,24 +1446,24 @@ async function enviarAprobacion(){
 
 async function enviarEmailInicioOrden(p){
   try{
-    const coloresStr=(p.tintas_info||[]).map(t=>t.nombre+(t.pantone?' · '+t.pantone:'')).join(', ')||
-      (p.color_botella||'—');
+    const coloresStr=(p.tintas_info||[]).map(t=>t.nombre+(t.pantone?' · '+t.pantone:'')).join(', ')||(p.color_botella||'—');
     const r=await fetch('/api/send-monitor',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        orden_id: p.id,
-        orden_op: p.po||'—',
-        cliente: p.sub_cliente||p.cliente||'—',
-        piezas: p.piezas||0,
-        colores: coloresStr,
-        capacidad: p.capacidad||'—',
+        orden_id:p.id,
+        orden_op:p.po||'—',
+        cliente:p.sub_cliente||p.cliente||'—',
+        piezas:p.piezas||0,
+        colores:coloresStr,
+        capacidad:p.capacidad||'—',
       })
     });
-    const d=await r.json();
-    if(r.ok) console.log('Email inicio orden enviado, monitor:', d.url);
-    else console.warn('Error email inicio:', d);
-  }catch(e){console.warn('enviarEmailInicioOrden error:',e);}
+    const text=await r.text();
+    console.log('send-monitor status:',r.status,'response:',text.slice(0,200));
+    if(r.ok){const d=JSON.parse(text);console.log('Monitor email enviado:',d.url);}
+    else console.warn('Error email inicio:',text.slice(0,300));
+  }catch(e){console.warn('enviarEmailInicioOrden error:',e.message);}
 }
 
 async function enviarEmailMonitor(){
