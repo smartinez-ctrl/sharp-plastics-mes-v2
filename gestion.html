@@ -629,6 +629,11 @@ function initPipelineDrag(){
       });
       console.log('Nuevo orden:',activos.map(p=>p.sub_cliente||p.cliente));
       _dragSrcId=null;
+      // Reconstruir PIPELINE con el nuevo orden de activos
+      const noActivos=PIPELINE.filter(p=>p.estado!=='Pendiente'&&p.estado!=='En producción');
+      PIPELINE.length=0;
+      activos.forEach(p=>PIPELINE.push(p));
+      noActivos.forEach(p=>PIPELINE.push(p));
       renderPipeline();
       Promise.all(activos.map((p,i)=>sbPatch('pipeline_mf',{orden_posicion:i},'id=eq.'+p.id)))
         .then(()=>toast('Orden guardado ✓'))
