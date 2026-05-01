@@ -1829,6 +1829,36 @@ async function finalizarYCerrar(){
   setTimeout(()=>{showScreen('dashboard');renderDashboard();},1500);
 }
 
+function renderQA(){
+  const el=document.getElementById('qa-checklist');if(!el)return;
+  let total=0,passed=0,html='';
+  Object.entries(QA_ITEMS).forEach(([section,items])=>{
+    html+=`<div class="qa-section-title">${section}</div>`;
+    items.forEach(item=>{
+      total++;const val=S.qa[item]||'';if(val==='P')passed++;
+      html+=`<div class="qa-item">
+        <div style="font-size:12px;flex:1">${item}</div>
+        <div class="qa-btns">
+          <button class="qa-btn qa-ok ${val==='P'?'sel':''}" data-item="${item}" data-val="P" onclick="setQA(this)">✓ OK</button>
+          <button class="qa-btn qa-nc ${val==='NC'?'sel':''}" data-item="${item}" data-val="NC" onclick="setQA(this)">✗ NC</button>
+          <button class="qa-btn qa-na ${val==='NA'?'sel':''}" data-item="${item}" data-val="NA" onclick="setQA(this)">N/A</button>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML=html;
+  const badge=document.getElementById('qa-badge');if(badge)badge.textContent=passed+'/'+total;
+}
+function setQA(btn){
+  const item=btn.dataset.item,val=btn.dataset.val;
+  S.qa[item]=val;
+  btn.closest('.qa-item').querySelectorAll('.qa-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const passed=Object.values(S.qa).filter(v=>v==='P').length;
+  const total=Object.values(QA_ITEMS).reduce((s,items)=>s+items.length,0);
+  const badge=document.getElementById('qa-badge');if(badge)badge.textContent=passed+'/'+total;
+}
+
 function goCierre(){
   timerStop('prod');
   // Detener autosave
