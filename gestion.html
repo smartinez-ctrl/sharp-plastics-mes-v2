@@ -75,6 +75,7 @@ tr:last-child td{border-bottom:none}
 .pipeline-card.urgent{border-left-color:var(--red)}
 .pipeline-card.dragging{opacity:0.4}
 .pipeline-card.drag-over{border-top:3px solid var(--amber) !important}
+.drag-handle:hover{color:var(--amber) !important}
 .pipeline-card.en-prod{border-left-color:var(--blue)}
 .pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
 .pc-title{font-size:15px;font-weight:600;margin-bottom:3px}
@@ -568,64 +569,73 @@ async function loadPipeline(){
 
 // ── Pipeline drag & drop ─────────────────────────────
 let _dragSrcId=null;
+let _dragActive=false;
 
 function initPipelineDrag(){
-  // Asignar handlers directamente a cada card después de renderizar
   document.querySelectorAll('#pipeline-activos .pipeline-card[data-id]').forEach(card=>{
-    card.setAttribute('draggable','true');
-    card.ondragstart=function(e){
+    const handle=card.querySelector('.drag-handle');
+    if(!handle)return;
+
+    handle.addEventListener('mousedown',function(e){
+      e.stopPropagation();
+    });
+
+    card.addEventListener('dragstart',function(e){
+      if(!_dragActive){e.preventDefault();return;}
       _dragSrcId=card.dataset.id;
       e.dataTransfer.effectAllowed='move';
       e.dataTransfer.setData('text/plain',_dragSrcId);
-      card.style.opacity='0.4';
-    };
-    card.ondragend=function(){
+      setTimeout(()=>{card.style.opacity='0.4';},0);
+    });
+    card.addEventListener('dragend',function(){
       card.style.opacity='';
+      _dragActive=false;
       document.querySelectorAll('#pipeline-activos .pipeline-card').forEach(c=>{
         c.style.borderTop='';c.style.borderBottom='';
       });
-    };
-    card.ondragover=function(e){
+    });
+    card.addEventListener('dragover',function(e){
+      if(!_dragSrcId||card.dataset.id===_dragSrcId)return;
       e.preventDefault();
       document.querySelectorAll('#pipeline-activos .pipeline-card').forEach(c=>{
         c.style.borderTop='';c.style.borderBottom='';
       });
-      // Determinar si soltar arriba o abajo
       const rect=card.getBoundingClientRect();
-      const mid=rect.top+rect.height/2;
-      if(e.clientY<mid) card.style.borderTop='3px solid var(--amber)';
+      if(e.clientY<rect.top+rect.height/2) card.style.borderTop='3px solid var(--amber)';
       else card.style.borderBottom='3px solid var(--amber)';
-    };
-    card.ondrop=function(e){
-      e.preventDefault();
-      e.stopPropagation();
+    });
+    card.addEventListener('drop',function(e){
+      e.preventDefault();e.stopPropagation();
       document.querySelectorAll('#pipeline-activos .pipeline-card').forEach(c=>{
         c.style.borderTop='';c.style.borderBottom='';c.style.opacity='';
       });
-      if(!_dragSrcId||card.dataset.id===_dragSrcId){_dragSrcId=null;return;}
+      if(!_dragSrcId||card.dataset.id===_dragSrcId){_dragSrcId=null;_dragActive=false;return;}
       const tgtId=card.dataset.id;
       const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
       const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
       let tgtIdx=activos.findIndex(p=>p.id===tgtId);
-      if(srcIdx<0||tgtIdx<0){_dragSrcId=null;return;}
-      // Insertar arriba o abajo según posición del mouse
+      if(srcIdx<0||tgtIdx<0){_dragSrcId=null;_dragActive=false;return;}
       const rect=card.getBoundingClientRect();
-      if(e.clientY>rect.top+rect.height/2) tgtIdx+=1;
-      // Ajustar índice destino si src está antes
-      const finalIdx=srcIdx<tgtIdx?tgtIdx-1:tgtIdx;
+      const insertAfter=e.clientY>rect.top+rect.height/2;
+      if(insertAfter&&srcIdx>tgtIdx) tgtIdx+=1;
+      if(!insertAfter&&srcIdx<tgtIdx) tgtIdx-=1;
       const [moved]=activos.splice(srcIdx,1);
-      activos.splice(finalIdx,0,moved);
+      activos.splice(tgtIdx,0,moved);
       activos.forEach((p,i)=>{
         p.orden_posicion=i;
         const gp=PIPELINE.find(x=>x.id===p.id);
         if(gp)gp.orden_posicion=i;
       });
-      _dragSrcId=null;
+      _dragSrcId=null;_dragActive=false;
       renderPipeline();
       Promise.all(activos.map((p,i)=>sbPatch('pipeline_mf',{orden_posicion:i},'id=eq.'+p.id)))
         .then(()=>toast('Orden guardado ✓'))
-        .catch(()=>toast('Error guardando orden','err'));
-    };
+        .catch(()=>toast('Error guardando','err'));
+    });
+
+    handle.addEventListener('mousedown',function(e){
+      _dragActive=true;
+    });
   });
 }
 
@@ -676,7 +686,7 @@ function renderPipeline(){
 
   // Header de columnas
   const PIPE_COLS = '3fr 1.1fr 0.5fr 0.7fr 1fr 1.1fr 0.8fr 0.9fr 0.7fr 1.1fr';
-  const pipelineHeader = `<div style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;padding:6px 14px;margin-bottom:2px">
+  const pipelineHeader = `<div style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;padding:6px 14px;margin-bottom:2px"><span></span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">PO</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">ml</span>
@@ -695,7 +705,8 @@ function renderPipeline(){
     const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;color:var(--text3)">${t.pantone||t.nombre||''}</span>`).join(' '):'';
     const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="true" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;cursor:grab">
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="true" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
+      <div class="drag-handle" title="Arrastrar para reordenar" style="cursor:grab;color:var(--text3);font-size:14px;padding-right:6px;user-select:none" onclick="event.stopPropagation()">⠿</div>
       <div style="min-width:0;overflow:hidden">
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="margin-top:2px">${tintas}</div>
