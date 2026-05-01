@@ -569,67 +569,63 @@ async function loadPipeline(){
 // ── Pipeline drag & drop ─────────────────────────────
 let _dragSrcId=null;
 
-function getCard(el){
-  while(el&&!el.dataset.id)el=el.parentElement;
-  return el;
-}
-
 function initPipelineDrag(){
-  const container=document.getElementById('pipeline-activos');
-  if(!container)return;
-  // Re-inicializar siempre (quitar listener viejo)
-  const newContainer=container.cloneNode(true);
-  container.parentNode.replaceChild(newContainer,container);
-
-  newContainer.addEventListener('dragstart',function(e){
-    const card=getCard(e.target);
-    if(!card||!card.dataset.id)return;
-    _dragSrcId=card.dataset.id;
-    setTimeout(()=>card.classList.add('dragging'),0);
-    e.dataTransfer.effectAllowed='move';
-    e.dataTransfer.setData('text/plain',_dragSrcId);
-  });
-  newContainer.addEventListener('dragover',function(e){
-    e.preventDefault();
-    e.dataTransfer.dropEffect='move';
-    const card=getCard(e.target);
-    newContainer.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over'));
-    if(card&&card.dataset.id&&card.dataset.id!==_dragSrcId)card.classList.add('drag-over');
-  });
-  newContainer.addEventListener('dragleave',function(e){
-    if(!newContainer.contains(e.relatedTarget))
-      newContainer.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over'));
-  });
-  newContainer.addEventListener('dragend',function(){
-    newContainer.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over','dragging'));
-    _dragSrcId=null;
-  });
-  newContainer.addEventListener('drop',function(e){
-    e.preventDefault();
-    newContainer.querySelectorAll('.pipeline-card').forEach(c=>c.classList.remove('drag-over','dragging'));
-    const card=getCard(e.target);
-    if(!card||!card.dataset.id||!_dragSrcId||card.dataset.id===_dragSrcId){_dragSrcId=null;return;}
-    const tgtId=card.dataset.id;
-    // Trabajar con el array activos actual
-    const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
-    const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
-    const tgtIdx=activos.findIndex(p=>p.id===tgtId);
-    if(srcIdx<0||tgtIdx<0){_dragSrcId=null;return;}
-    // Mover
-    const [moved]=activos.splice(srcIdx,1);
-    activos.splice(tgtIdx,0,moved);
-    // Actualizar orden en PIPELINE
-    activos.forEach((p,i)=>{
-      p.orden_posicion=i;
-      const gp=PIPELINE.find(x=>x.id===p.id);
-      if(gp)gp.orden_posicion=i;
-    });
-    _dragSrcId=null;
-    renderPipeline();
-    // Guardar en Supabase
-    Promise.all(activos.map((p,i)=>sbPatch('pipeline_mf',{orden_posicion:i},'id=eq.'+p.id)))
-      .then(()=>toast('Orden guardado ✓'))
-      .catch(()=>toast('Error guardando orden','err'));
+  // Asignar handlers directamente a cada card después de renderizar
+  document.querySelectorAll('#pipeline-activos .pipeline-card[data-id]').forEach(card=>{
+    card.setAttribute('draggable','true');
+    card.ondragstart=function(e){
+      _dragSrcId=card.dataset.id;
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain',_dragSrcId);
+      card.style.opacity='0.4';
+    };
+    card.ondragend=function(){
+      card.style.opacity='';
+      document.querySelectorAll('#pipeline-activos .pipeline-card').forEach(c=>{
+        c.style.borderTop='';c.style.borderBottom='';
+      });
+    };
+    card.ondragover=function(e){
+      e.preventDefault();
+      document.querySelectorAll('#pipeline-activos .pipeline-card').forEach(c=>{
+        c.style.borderTop='';c.style.borderBottom='';
+      });
+      // Determinar si soltar arriba o abajo
+      const rect=card.getBoundingClientRect();
+      const mid=rect.top+rect.height/2;
+      if(e.clientY<mid) card.style.borderTop='3px solid var(--amber)';
+      else card.style.borderBottom='3px solid var(--amber)';
+    };
+    card.ondrop=function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      document.querySelectorAll('#pipeline-activos .pipeline-card').forEach(c=>{
+        c.style.borderTop='';c.style.borderBottom='';c.style.opacity='';
+      });
+      if(!_dragSrcId||card.dataset.id===_dragSrcId){_dragSrcId=null;return;}
+      const tgtId=card.dataset.id;
+      const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
+      const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
+      let tgtIdx=activos.findIndex(p=>p.id===tgtId);
+      if(srcIdx<0||tgtIdx<0){_dragSrcId=null;return;}
+      // Insertar arriba o abajo según posición del mouse
+      const rect=card.getBoundingClientRect();
+      if(e.clientY>rect.top+rect.height/2) tgtIdx+=1;
+      // Ajustar índice destino si src está antes
+      const finalIdx=srcIdx<tgtIdx?tgtIdx-1:tgtIdx;
+      const [moved]=activos.splice(srcIdx,1);
+      activos.splice(finalIdx,0,moved);
+      activos.forEach((p,i)=>{
+        p.orden_posicion=i;
+        const gp=PIPELINE.find(x=>x.id===p.id);
+        if(gp)gp.orden_posicion=i;
+      });
+      _dragSrcId=null;
+      renderPipeline();
+      Promise.all(activos.map((p,i)=>sbPatch('pipeline_mf',{orden_posicion:i},'id=eq.'+p.id)))
+        .then(()=>toast('Orden guardado ✓'))
+        .catch(()=>toast('Error guardando orden','err'));
+    };
   });
 }
 
@@ -679,13 +675,12 @@ function renderPipeline(){
   document.getElementById('st-margen').textContent=mProm>0?mProm.toFixed(1)+'%':'—';
 
   // Header de columnas
-  const PIPE_COLS = '2fr 1fr 0.5fr 0.7fr 0.9fr 0.9fr 1fr 0.9fr 0.9fr 70px 1.1fr';
+  const PIPE_COLS = '3fr 1.1fr 0.5fr 0.7fr 1fr 1.1fr 0.8fr 0.9fr 0.7fr 1.1fr';
   const pipelineHeader = `<div style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;padding:6px 14px;margin-bottom:2px">
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">PO</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">ml</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Piezas</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Pedido</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Entrega</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Venta</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Margen</span>
@@ -708,7 +703,6 @@ function renderPipeline(){
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3)">${p.po||'—'}</div>
       <div style="font-size:12px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
-      <div style="font-size:11px;text-align:center;color:var(--text3)">${fPed}</div>
       <div style="font-size:11px;text-align:center;color:${isUrgent?'var(--red)':'var(--text3)'}">${fEnt}</div>
       <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
@@ -736,7 +730,6 @@ function renderPipeline(){
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">PO</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">ml</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Piezas</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Pedido</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Entrega</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Venta</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Margen</span>
@@ -754,7 +747,6 @@ function renderPipeline(){
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3)">${p.po||'—'}</div>
       <div style="font-size:12px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
-      <div style="font-size:11px;text-align:center;color:var(--text3)">${fPed2}</div>
       <div style="font-size:11px;text-align:center;color:var(--text3)">${fEnt2}</div>
       <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor2};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
