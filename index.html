@@ -1951,7 +1951,8 @@ function renderCierre(){
     S.orden.colores.forEach((col,i)=>{
       const t=S.tintas[i]||{componentes:[]};
       const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-      const cr=S.consumoReal[i]||{gramos_usados:0,gramos_sobrante:0};
+      if(!S.consumoReal[i])S.consumoReal[i]={gramos_usados:0,gramos_sobrante:0};
+      const cr=S.consumoReal[i];
       html+=`<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:8px">
         <div style="font-size:12px;font-weight:700;margin-bottom:8px">${col.nombre}${col.pantone?' · <span style="font-family:monospace;color:var(--text3)">${col.pantone}</span>':''} <span style="font-size:10px;color:var(--text3);font-weight:400">· estimado: ${tgEst}g</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -2253,60 +2254,7 @@ function goCierre(){
 }
 
 
-function renderCierre(){
-  const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
-  const merma=Object.values(S.merma.prod).reduce((a,b)=>a+b,0);
-  const r=document.getElementById('cierre-resumen');
-  if(r)r.innerHTML=`<div class="card-title">Resumen del pedido</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Cliente</div><div style="font-size:14px;font-weight:600;margin-top:2px">${S.orden.cliente||'—'}</div></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Orden</div><div style="font-size:14px;font-weight:600;margin-top:2px">${S.orden.op||'—'}</div></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Producto</div><div style="font-size:13px;margin-top:2px">${S.orden.producto||'—'}</div></div>
-      <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em">Colores</div><div style="margin-top:4px">${S.orden.colores.map(c=>`<span class="color-tag" style="font-size:10px"><span class="color-swatch" style="background:${chex(c.nombre)}"></span>${c.nombre}</span>`).join('')||'—'}</div></div>
-    </div>`;
-  const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
-  const cs=document.getElementById('cierre-stats');
-  if(cs)cs.innerHTML=`<div class="card-title">Resultados</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
-      <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:10px;padding:12px;text-align:center"><div style="font-family:monospace;font-size:22px;font-weight:700;color:var(--green)">${buenas.toLocaleString()}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Buenas</div></div>
-      <div style="background:var(--red-bg);border:1px solid var(--red-border);border-radius:10px;padding:12px;text-align:center"><div style="font-family:monospace;font-size:22px;font-weight:700;color:var(--red)">${merma}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Merma</div></div>
-      <div style="background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:10px;padding:12px;text-align:center"><div style="font-family:monospace;font-size:22px;font-weight:700;color:var(--amber)">${pct}%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rendimiento</div></div>
-    </div>
-    <div style="display:flex;gap:16px;font-size:12px;color:var(--text2)">
-      <span>⏱ Ajuste: ${fmt(S.timers.ajuste.total||S.timers.ajuste.s)}</span>
-      <span>⏱ Prod: ${fmt(S.timers.prod.total||S.timers.prod.s)}</span>
-      <span>↺ Reajustes: ${S.reajustes}</span>
-    </div>`;
-  // Consumo real de tintas
-  if(!S.consumoReal)S.consumoReal=S.orden.colores.map(()=>({gramos_usados:0,gramos_sobrante:0}));
-  const cc=document.getElementById('cierre-costos');
-  if(cc){
-    let html='<div class="card-title" style="margin-bottom:10px">Consumo real de tintas</div>';
-    html+='<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Registra cuánto se usó realmente en producción para tener el costo final exacto.</div>';
-    S.orden.colores.forEach((col,i)=>{
-      const t=S.tintas[i]||{componentes:[]};
-      const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-      const cr=S.consumoReal[i]||{gramos_usados:0,gramos_sobrante:0};
-      html+=`<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:8px">${col.nombre}${col.pantone?' · <span style="font-family:monospace;color:var(--text3)">${col.pantone}</span>':''} <span style="font-size:10px;color:var(--text3);font-weight:400">· estimado: ${tgEst}g</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="field" style="margin:0"><label style="font-size:10px">Gramos usados</label>
-            <input type="number" value="${cr.gramos_usados||''}" placeholder="0" inputmode="numeric" style="text-align:center" oninput="S.consumoReal[${i}].gramos_usados=parseFloat(this.value)||0;actualizarConsumo()"></div>
-          <div class="field" style="margin:0"><label style="font-size:10px">Gramos sobrante</label>
-            <input type="number" value="${cr.gramos_sobrante||''}" placeholder="0" inputmode="numeric" style="text-align:center" oninput="S.consumoReal[${i}].gramos_sobrante=parseFloat(this.value)||0;actualizarConsumo()"></div>
-        </div>
-        <div id="consumo-diff-${i}" style="font-size:10px;color:var(--text3);margin-top:6px;text-align:right"></div>
-      </div>`;
-    });
-    cc.innerHTML=html;
-    actualizarConsumo();
-  }
-  renderQA();
-}
 
-// ══════════════════════════════════════════════════════
-// QA
-// ══════════════════════════════════════════════════════
 function actualizarConsumo(){
   if(!S.consumoReal)return;
   S.orden.colores.forEach((_,i)=>{
