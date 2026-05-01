@@ -1112,7 +1112,9 @@ async function importarAPipeline(){
         return;
       }
     }
+    const maxPos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción').length;
     const data={
+      orden_posicion:maxPos,
       cliente:'MountainFlow',
       sub_cliente:d.sub_cliente||null,
       po:d.po||null,

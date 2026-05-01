@@ -848,7 +848,10 @@ async function renderDashboard(){
             <div style="font-size:12px;color:var(--text2)">${p.po} · ${(p.piezas||0).toLocaleString()} pzas · ${p.colores||0} col</div>
             <div style="font-size:11px;font-weight:600;color:${urgente?'var(--red)':'var(--text3)'}">📅 ${fEnt}${diasRestantes!==null?' ('+diasRestantes+'d)':''}</div>
           </div>
-          ${btn}
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <div style="flex:1">${btn}</div>
+            ${p.pdf_diseno_url?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="event.stopPropagation();window.open('${p.pdf_diseno_url}','_blank')" title="Ver diseño">🎨</button>`:''}
+          </div>
         </div>`;
       }).join('');
       if(resto>0) html+=`<div style="text-align:center;font-size:11px;color:var(--text3);padding:8px">+${resto} pedido${resto>1?'s':''} más en el pipeline</div>`;
