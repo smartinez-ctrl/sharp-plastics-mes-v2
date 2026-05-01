@@ -407,12 +407,20 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
       </div>
       <div class="field"><label>Dirección de envío</label><input type="text" id="mp-envio"></div>
       <div class="field"><label>Notas / Packaging</label><textarea id="mp-notas" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none"></textarea></div>
-      <div class="field"><label>PDF de diseño</label>
+      <div class="field"><label>PDF de diseño (Mock up)</label>
         <div style="display:flex;gap:8px;align-items:center">
           <input type="text" id="mp-pdf-diseno" placeholder="URL del diseño o nombre de archivo">
           <input type="file" id="mp-pdf-diseno-file" accept="application/pdf,image/*" style="display:none" onchange="handlePDFDiseno(this)">
           <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('mp-pdf-diseno-file').click()">📎</button>
           <button class="btn btn-ghost btn-sm" id="btn-ver-diseno" type="button" onclick="verPDFDiseno()" style="display:none">👁 Ver</button>
+        </div>
+      </div>
+      <div class="field"><label>PDF orden de compra (PO)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="mp-pdf-po" placeholder="URL de la orden de compra" readonly style="opacity:0.7">
+          <input type="file" id="mp-pdf-po-file" accept="application/pdf" style="display:none" onchange="handlePDFPO(this)">
+          <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('mp-pdf-po-file').click()">📎 Subir</button>
+          <button class="btn btn-ghost btn-sm" id="btn-ver-po" type="button" style="display:none" onclick="window.open(document.getElementById('mp-pdf-po').value,'_blank')">👁 Ver</button>
         </div>
       </div>
       <div class="field"><label>Estado</label><select id="mp-estado"><option value="Pendiente">Pendiente</option><option value="En producción">En producción</option><option value="Completado">Completado</option><option value="Entregado">Entregado</option><option value="Cancelado">Cancelado</option></select></div>
@@ -728,7 +736,7 @@ function abrirNuevoPedido(){
 async function abrirDetallePedido(id){
   const p=PIPELINE.find(x=>x.id===id);if(!p)return;
   document.getElementById('modal-pedido-titulo').textContent=`${p.sub_cliente||p.cliente||'Pedido'} — ${p.capacidad?p.capacidad+'ml':''}`;
-  const flds={'mp-subcli':p.sub_cliente,'mp-po':p.po,'mp-cap':p.capacidad,'mp-piezas':p.piezas,'mp-colores':p.colores,'mp-fecha-entrega':p.fecha_entrega,'mp-fecha-pedido':p.fecha_pedido,'mp-fecha-inicio':p.fecha_inicio,'mp-horas':p.horas_estimadas,'mp-col-bot':p.color_botella,'mp-col-tap':p.color_tapa,'mp-col-boq':p.color_boquilla,'mp-envio':p.direccion_envio,'mp-notas':p.notas,'mp-estado':p.estado||'Pendiente','mp-pdf-diseno':p.pdf_diseno_url||''};
+  const flds={'mp-subcli':p.sub_cliente,'mp-po':p.po,'mp-cap':p.capacidad,'mp-piezas':p.piezas,'mp-colores':p.colores,'mp-fecha-entrega':p.fecha_entrega,'mp-fecha-pedido':p.fecha_pedido,'mp-fecha-inicio':p.fecha_inicio,'mp-horas':p.horas_estimadas,'mp-col-bot':p.color_botella,'mp-col-tap':p.color_tapa,'mp-col-boq':p.color_boquilla,'mp-envio':p.direccion_envio,'mp-notas':p.notas,'mp-estado':p.estado||'Pendiente','mp-pdf-diseno':p.pdf_diseno_url||'','mp-pdf-po':p.pdf_po_url||''};
   Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
   document.getElementById('modal-pedido').dataset.id=id;
   // Mostrar botón ver PDF si hay diseño guardado
@@ -2683,15 +2691,48 @@ function exportarPDFInternoCotizador(){
 }
 
 
-function handlePDFDiseno(input){
+async function handlePDFDiseno(input){
   const file=input.files[0];if(!file)return;
-  // Guardar nombre del archivo como referencia
-  const inp=document.getElementById('mp-pdf-diseno');
-  if(inp)inp.value=file.name;
-  // Mostrar botón ver
-  const btn=document.getElementById('btn-ver-diseno');
-  if(btn)btn.style.display='';
-  toast('Archivo registrado: '+file.name);
+  const pipelineId=document.getElementById('modal-pedido')?.dataset.id;
+  if(!pipelineId){toast('Guarda el pedido primero','err');return;}
+  toast('Subiendo diseño...');
+  try{
+    const arr=new Uint8Array(await file.arrayBuffer());
+    const blob=new Blob([arr],{type:'application/pdf'});
+    const r=await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${pipelineId}/diseno.pdf`,{
+      method:'POST',headers:{...SB_H,'Content-Type':'application/pdf','x-upsert':'true'},body:blob
+    });
+    if(!r.ok)throw new Error(await r.text());
+    const url=`${SB_URL}/storage/v1/object/public/fotos-aprobacion/${pipelineId}/diseno.pdf`;
+    await sbPatch('pipeline_mf',{pdf_diseno_url:url},'id=eq.'+pipelineId);
+    const inp=document.getElementById('mp-pdf-diseno');if(inp)inp.value=url;
+    const btn=document.getElementById('btn-ver-diseno');if(btn)btn.style.display='';
+    const p=PIPELINE.find(x=>x.id===pipelineId);if(p)p.pdf_diseno_url=url;
+    toast('Diseño guardado ✓','ok');
+    renderPipeline();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function handlePDFPO(input){
+  const file=input.files[0];if(!file)return;
+  const pipelineId=document.getElementById('modal-pedido')?.dataset.id;
+  if(!pipelineId){toast('Guarda el pedido primero','err');return;}
+  toast('Subiendo orden de compra...');
+  try{
+    const arr=new Uint8Array(await file.arrayBuffer());
+    const blob=new Blob([arr],{type:'application/pdf'});
+    const r=await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${pipelineId}/orden-compra.pdf`,{
+      method:'POST',headers:{...SB_H,'Content-Type':'application/pdf','x-upsert':'true'},body:blob
+    });
+    if(!r.ok)throw new Error(await r.text());
+    const url=`${SB_URL}/storage/v1/object/public/fotos-aprobacion/${pipelineId}/orden-compra.pdf`;
+    await sbPatch('pipeline_mf',{pdf_po_url:url},'id=eq.'+pipelineId);
+    const inp=document.getElementById('mp-pdf-po');if(inp)inp.value=url;
+    const btn=document.getElementById('btn-ver-po');if(btn)btn.style.display='';
+    const p=PIPELINE.find(x=>x.id===pipelineId);if(p)p.pdf_po_url=url;
+    toast('Orden de compra guardada ✓','ok');
+    renderPipeline();
+  }catch(e){toast('Error: '+e.message,'err');}
 }
 
 function verPDFDiseno(){
