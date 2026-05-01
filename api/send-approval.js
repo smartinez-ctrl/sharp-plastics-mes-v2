@@ -6,7 +6,7 @@ const BASE_URL = 'https://sharp-plastics-mes-v2.vercel.app';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { orden_id, orden_op, cliente, sub_cliente, piezas, colores, foto_urls = [], observaciones } = req.body;
+  const { orden_id, orden_op, cliente, sub_cliente, piezas, colores, foto_urls = [], observaciones, diseno_url } = req.body;
   if (!orden_id) return res.status(400).json({ error: 'orden_id requerido' });
 
   console.log('send-approval: orden_id=', orden_id, 'foto_urls:', foto_urls.length, foto_urls.map(u => u ? 'OK' : 'null'));
@@ -30,6 +30,7 @@ export default async function handler(req, res) {
           📷 Ver ${fotosOk.length} fotos de aprobación
         </a>
         <p style="font-size:11px;color:#9ca3af;margin:8px 0 0">Se abre una página con todas las fotos</p>
+      ` + (diseno_url ? `<div style="text-align:center;margin-top:10px"><a href="${diseno_url}" target="_blank" style="display:inline-block;background:#1e2028;color:#f59e0b;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none">🎨 Ver diseño del cliente</a></div>` : '') + `
       </div>`
     : '';
 

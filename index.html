@@ -538,6 +538,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       </div>
     </div>
     <div class="card" id="cierre-costos"></div>
+    <div class="card" id="card-fotos-empaque">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="card-title" style="margin:0">📦 Fotos de empaque final</div>
+        <span style="font-size:10px;color:var(--text3)">Opcional</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="foto-slot" id="empaque-0" onclick="openEmpaqueMenu(0)"
+          ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';handleEmpaquesDrop(0,event)">
+          <div class="foto-icon">📦</div><div class="foto-label">Empaque 1</div></div>
+        <div class="foto-slot" id="empaque-1" onclick="openEmpaqueMenu(1)"
+          ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';handleEmpaquesDrop(1,event)">
+          <div class="foto-icon">📦</div><div class="foto-label">Empaque 2</div></div>
+        <div class="foto-slot" id="empaque-2" onclick="openEmpaqueMenu(2)"
+          ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';handleEmpaquesDrop(2,event)">
+          <div class="foto-icon">📦</div><div class="foto-label">Empaque 3</div></div>
+        <div class="foto-slot" id="empaque-3" onclick="openEmpaqueMenu(3)"
+          ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';handleEmpaquesDrop(3,event)">
+          <div class="foto-icon">📦</div><div class="foto-label">Empaque 4</div></div>
+      </div>
+      <input type="file" id="file-empaque" accept="image/*" style="display:none" onchange="handleEmpaqueFoto(window._empaqueIdx,this)">
+    </div>
     <div class="card">
       <div class="card-title">Firma de cierre</div>
       <div class="field"><label>Aprobado por</label><select id="cierre-firma"><option value="">Seleccionar...</option></select></div>
@@ -890,14 +919,31 @@ function goNuevaOrden(idx){
 }
 
 function prefillOrden(){
-  const v={'ord-cliente':S.orden.cliente,'ord-op':S.orden.op,'ord-pzas':S.orden.pzas||'','ord-producto':S.orden.producto};
+  // Para selects, agregar la opción si no existe antes de seleccionar
+  ['ord-cliente','ord-producto'].forEach(id=>{
+    const el=document.getElementById(id);
+    const val=id==='ord-cliente'?S.orden.cliente:S.orden.producto;
+    if(!el||!val)return;
+    const exists=Array.from(el.options).some(o=>o.value===val||o.text===val);
+    if(!exists){
+      const opt=document.createElement('option');
+      opt.value=val;opt.text=val;
+      el.insertBefore(opt,el.options[el.options.length-1]);
+    }
+    el.value=val;
+  });
+  const v={'ord-op':S.orden.op,'ord-pzas':S.orden.pzas||''};
   Object.entries(v).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
+  // Lotes y máquina
+  const lb=document.getElementById('ord-lote-bot');if(lb)lb.value=S.orden.loteBot||'';
+  const lt=document.getElementById('ord-lote-tap');if(lt)lt.value=S.orden.loteTap||'';
+  const mq=document.getElementById('ord-maquina');if(mq)mq.value=S.orden.maquina||'Shuttle';
 }
 
 function resetOrden(){
   // Reset state
   S.orden={cliente:'',op:'',producto:'',pzas:0,loteBot:'',loteTap:'',maquina:'Shuttle',ajustadores:[],operadores:[],colores:[]};
-  S.tintas=[];S.fotos=[null,null,null,null];S.qa={};S.consumoReal=[];
+  S.tintas=[];S.fotos=[null,null,null,null];S.fotosEmpaque=[null,null,null,null];S.qa={};S.consumoReal=[];
   S.merma={ajuste:{},prod:{}};S.tm={ajuste:{},prod:{}};
   S.activeTM={ajuste:null,prod:null};S.reajustes=0;S.pipelineId=null;
   // Stop all timers
@@ -1594,6 +1640,7 @@ async function enviarAprobacion(){
         colores: S.orden.colores?.length || 0,
         foto_urls: fotoUrls,
         observaciones: obs,
+        diseno_url: S.pipelineId && window._dashRows ? (window._dashRows.find(p=>p.id===S.pipelineId)||{}).pdf_diseno_url||null : null,
       })
     });
     const data = await resp.json();
@@ -1830,6 +1877,42 @@ async function finalizarYCerrar(){
   if(btn){btn.disabled=false;btn.textContent='✅ Guardado';}
   toast('Orden finalizada ✓','ok');
   setTimeout(()=>{showScreen('dashboard');renderDashboard();},1500);
+}
+
+// ── Fotos de empaque ──────────────────────────────────
+if(!window.S||!S.fotosEmpaque){}  // init guard
+function initFotosEmpaque(){if(!S.fotosEmpaque)S.fotosEmpaque=[null,null,null,null];}
+
+function openEmpaqueMenu(i){
+  initFotosEmpaque();
+  window._empaqueIdx=i;
+  document.getElementById('file-empaque').click();
+}
+function handleEmpaqueFoto(i,input){
+  if(!input.files||!input.files[0])return;
+  initFotosEmpaque();
+  const reader=new FileReader();
+  reader.onload=function(e){
+    S.fotosEmpaque[i]=e.target.result;
+    const slot=document.getElementById('empaque-'+i);
+    if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';}
+    toast('Foto empaque '+(i+1)+' cargada');
+  };
+  reader.readAsDataURL(input.files[0]);
+  input.value='';
+}
+function handleEmpaquesDrop(i,event){
+  const file=event.dataTransfer&&event.dataTransfer.files&&event.dataTransfer.files[0];
+  if(!file||!file.type.startsWith('image/')){toast('Solo imágenes','err');return;}
+  initFotosEmpaque();
+  const reader=new FileReader();
+  reader.onload=function(e){
+    S.fotosEmpaque[i]=e.target.result;
+    const slot=document.getElementById('empaque-'+i);
+    if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';}
+    toast('Foto empaque '+(i+1)+' cargada');
+  };
+  reader.readAsDataURL(file);
 }
 
 function renderQA(){
