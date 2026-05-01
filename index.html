@@ -223,6 +223,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <div class="topbar-left"><div class="logo">MES <span>//</span> Pedidos</div></div>
     <div class="topbar-right">
       <div class="user-chip"><div class="user-chip-av" id="dash-av"></div><span id="dash-name"></span></div>
+      <button class="back-btn" onclick="renderDashboard()" title="Actualizar">↻</button>
       <button class="back-btn" onclick="cerrarSesion()">Salir</button>
     </div>
   </div>
@@ -697,7 +698,7 @@ function fmt(s){s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 function chex(n){const m={azul:'#4a9eff',verde:'#34d399',negro:'#555',rojo:'#f87171',amarillo:'#fbbf24',blanco:'#e8eaf0',naranja:'#fb923c',morado:'#a78bfa',rosa:'#f472b6'};return m[(n||'').toLowerCase()]||'#8890a4';}
 function mxn(n){return'$'+(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const el=document.getElementById('screen-'+id);if(el)el.classList.add('active');}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='dashboard')renderDashboard();}
 function dismissKeyboard(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();}
 function renderSteps(elId,current){const el=document.getElementById(elId);if(!el)return;const cur=STEPS.indexOf(current);el.innerHTML=STEPS.map((s,i)=>`<div class="step-dot ${i<cur?'done':i===cur?'active':''}"></div>`).join('');}
 function updateOrderStrip(){const el=document.getElementById('strip-nombre-ajuste');if(el)el.textContent=(S.orden.cliente?S.orden.cliente+' · ':'')+S.orden.op+' · '+(S.orden.pzas||0).toLocaleString()+' pzas';}
