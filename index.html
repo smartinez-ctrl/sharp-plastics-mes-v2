@@ -1446,9 +1446,24 @@ function goFotos(){
   guardarOrden('fotos');
   showScreen('fotos');
   renderSteps('steps-fotos','fotos');
-  // Resetear estado aprobación al entrar a fotos
+  // Detener polls anteriores
   if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
-  setAprobacionStatus('idle');
+  if(window._timerRespuestaIv){clearInterval(window._timerRespuestaIv);window._timerRespuestaIv=null;}
+  // Verificar si ya fue aprobada anteriormente
+  if(S.ordenId){
+    fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.ordenId+'&select=aprobacion_estado',{
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    }).then(r=>r.json()).then(rows=>{
+      if(rows&&rows[0]&&rows[0].aprobacion_estado==='aprobado'){
+        setAprobacionStatus('aprobado');
+        toast('✅ Esta orden ya fue aprobada');
+      } else {
+        setAprobacionStatus('idle');
+      }
+    }).catch(()=>setAprobacionStatus('idle'));
+  } else {
+    setAprobacionStatus('idle');
+  }
 }
 
 function setAprobacionStatus(state, msg){
