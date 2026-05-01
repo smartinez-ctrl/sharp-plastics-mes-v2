@@ -515,7 +515,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 <div class="screen" id="screen-cierre">
   <div class="topbar">
     <div class="topbar-left">
-      <button class="back-btn" onclick="showScreen('produccion');renderSteps('steps-prod','produccion')">←</button>
+      <button class="back-btn" onclick="showScreen('produccion');renderSteps('steps-prod','produccion');timerPlay('prod')">←</button>
       <div class="logo">MES <span>//</span> Cierre & QA</div>
     </div>
     <div class="topbar-right"><div class="badge badge-green">✓ Completada</div></div>
@@ -978,6 +978,7 @@ function resetOrden(){
   if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
   if(window._autosaveIv){clearInterval(window._autosaveIv);window._autosaveIv=null;}
   window._monitorEmailEnviado=false;
+  window._cierreInicializado=false;
   S.ordenId=null;
   setAprobacionStatus('idle');
   // Reset observaciones y aprobado por
@@ -1951,8 +1952,12 @@ function goCierre(){
   if(window._autosaveIv){clearInterval(window._autosaveIv);window._autosaveIv=null;}
   guardarOrden('completado');
   showScreen('cierre');
-  renderCierre();
-  setTimeout(enviarEmailCierre, 1500);
+  // Solo renderizar la primera vez — al regresar de producción los datos ya están
+  if(!window._cierreInicializado){
+    window._cierreInicializado=true;
+    renderCierre();
+    setTimeout(enviarEmailCierre, 1500);
+  }
 }
 
 async function enviarEmailCierre(){
@@ -2293,7 +2298,7 @@ function generarPDFInterno(){
   ${S.fotos&&S.fotos.some(f=>f)?`
   <div class="section">Fotos de producción</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-    ${S.fotos.map((f,i)=>f?`<div style="text-align:center"><img src="${f}" style="width:100%;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;margin-top:3px">${['Frente','Reverso','Lado izquierdo','Lado derecho'][i]}</div></div>`:'').join('')}
+    ${S.fotos.map((f,i)=>f?`<div style="text-align:center"><div style="aspect-ratio:4/3;overflow:hidden;border-radius:6px;border:1px solid #e5e7eb"><img src="${f}" style="width:100%;height:100%;object-fit:cover;display:block"></div><div style="font-size:9px;color:#6b7280;margin-top:3px">${['Frente','Reverso','Lado izquierdo','Lado derecho'][i]}</div></div>`:'').join('')}
   </div>`:''}
 
   <!-- QA -->
@@ -2328,16 +2333,6 @@ function generarPDFInterno(){
   setTimeout(()=>w.print(),600);
 }
 
-
-
-function goCierre(){
-  timerStop('prod');
-  guardarOrden('completado');
-  showScreen('cierre');
-  renderCierre();
-  // Enviar email de cierre después de que renderCierre inicialice consumoReal
-  setTimeout(enviarEmailCierre, 1500);
-}
 
 
 
@@ -2385,7 +2380,7 @@ function generarPDF(){
       comps.forEach(x=>{tintasRows+=`<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:4px 10px 4px 20px;font-size:11px">${x.nombre||x.sku||'—'}</td><td style="text-align:center;font-size:11px">${x.gramos}g</td><td style="text-align:right;font-size:11px">$${x.precio?((x.gramos/1000)*x.precio).toFixed(2):'—'}</td></tr>`;});
     }
   });
-  const fotosHTML=S.fotos.some(f=>f)?`<div style="margin-bottom:18px"><div style="font-size:13px;font-weight:700;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-bottom:10px">Fotos de aprobación</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${S.fotos.map((f,i)=>f?`<div><img src="${f}" style="width:100%;border-radius:8px;border:1px solid #e5e7eb"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:4px">${['Frente','Reverso','Lado izquierdo','Lado derecho'][i]}</div></div>`:'').join('')}</div></div>`:'';
+  const fotosHTML=S.fotos.some(f=>f)?`<div style="margin-bottom:18px"><div style="font-size:13px;font-weight:700;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-bottom:10px">Fotos de aprobación</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${S.fotos.map((f,i)=>f?`<div><div style="aspect-ratio:4/3;overflow:hidden;border-radius:8px;border:1px solid #e5e7eb"><img src="${f}" style="width:100%;height:100%;object-fit:cover;display:block"></div><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:4px">${['Frente','Reverso','Lado izquierdo','Lado derecho'][i]}</div></div>`:'').join('')}</div></div>`:'';
   const coloresStr=(S.orden.colores||[]).map(c=>c.nombre+(c.pantone?' · '+c.pantone:'')).join(' / ')||'—';
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>QA — ${S.orden.op||'Orden'}</title>
   <style>
