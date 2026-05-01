@@ -1662,8 +1662,8 @@ async function cargarDatosProduccion(p){
       '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">📄 Reportes</div>'+
       '<div style="display:flex;gap:8px">'+
         '<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id='+p.id+'" target="_blank" class="btn btn-secondary" style="flex:1;text-align:center;text-decoration:none">📊 Monitor</a>'+
-        '<button class="btn btn-ghost" style="flex:1" onclick="toast('Abre la orden en producción para generar el PDF')">📋 PDF calidad</button>'+
-        '<button class="btn btn-ghost" style="flex:1" onclick="toast('Abre la orden en producción para generar el PDF')">📊 PDF interno</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="toast(&quot;Abre la orden en producci&oacute;n para generar el PDF&quot;)">📋 PDF calidad</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="toast(&quot;Abre la orden en producci&oacute;n para generar el PDF&quot;)">📊 PDF interno</button>'+
       '</div>';
   }catch(e){
     if(el)el.innerHTML='<div style="color:var(--red);padding:16px">Error: '+e.message+'</div>';
