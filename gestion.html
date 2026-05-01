@@ -570,7 +570,10 @@ function renderPipeline(){
       <td class="td-mono" style="color:var(--green)">${p.margen?p.margen.toFixed(1)+'%':'—'}</td>
       <td>${p.updated_at?new Date(p.updated_at).toLocaleDateString('es-MX',{day:'numeric',month:'short'}):'—'}</td>
       <td><span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}">${p.estado}</span></td>
-      <td>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();eliminarPedido('${p.id}')">🗑</button>`:''}</td>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap">
+        <button class="btn btn-ghost btn-xs" onclick="verReportesProduccion('${p.id}')" title="Ver reportes de producción">📄</button>
+        ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
+      </td>
     </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">Sin completados</td></tr>';
 }
 
@@ -1604,12 +1607,76 @@ async function guardarVentaEdit(id){
 }
 
 function switchDetTab(tab){
-  const dv=document.getElementById('det-venta'),dc=document.getElementById('det-costo');
+  const dv=document.getElementById('det-venta'),dc=document.getElementById('det-costo'),dp=document.getElementById('det-prod');
   if(dv)dv.style.display=tab==='venta'?'':'none';
   if(dc)dc.style.display=tab==='costo'?'':'none';
-  const tv=document.getElementById('tab-venta'),tc=document.getElementById('tab-costo');
+  if(dp)dp.style.display=tab==='prod'?'':'none';
+  const tv=document.getElementById('tab-venta'),tc=document.getElementById('tab-costo'),tp=document.getElementById('tab-prod');
   if(tv){tv.style.background=tab==='venta'?'var(--bg2)':'transparent';tv.style.color=tab==='venta'?'var(--green)':'var(--text2)';tv.style.fontWeight=tab==='venta'?'600':'500';tv.style.boxShadow=tab==='venta'?'0 1px 4px rgba(0,0,0,0.3)':'none';}
   if(tc){tc.style.background=tab==='costo'?'var(--bg2)':'transparent';tc.style.color=tab==='costo'?'var(--red)':'var(--text2)';tc.style.fontWeight=tab==='costo'?'600':'500';tc.style.boxShadow=tab==='costo'?'0 1px 4px rgba(0,0,0,0.3)':'none';}
+  if(tp){tp.style.background=tab==='prod'?'var(--bg2)':'transparent';tp.style.color=tab==='prod'?'var(--amber)':'var(--text2)';tp.style.fontWeight=tab==='prod'?'600':'500';tp.style.boxShadow=tab==='prod'?'0 1px 4px rgba(0,0,0,0.3)':'none';}
+  if(tab==='prod'&&window._pedidoActual)cargarDatosProduccion(window._pedidoActual);
+}
+
+
+async function cargarDatosProduccion(p){
+  const el=document.getElementById('det-prod-content');
+  if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Cargando...</div>';
+  try{
+    const rows=await sbGet('ordenes_produccion','pipeline_id=eq.'+p.id+'&order=created_at.desc&limit=1&select=*');
+    if(!rows||!rows.length){
+      el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">📭</div>Sin datos de producción registrados</div>';
+      return;
+    }
+    const o=rows[0];
+    const buenas=o.piezas_buenas||0;
+    const pzas=o.piezas_total||0;
+    const rend=pzas?((buenas/pzas)*100).toFixed(1):0;
+    const tAj=fmtSeg(o.tiempo_ajuste_seg||0);
+    const tPr=fmtSeg(o.tiempo_produccion_seg||0);
+    const mermaPr=o.merma_produccion||{};
+    const totalMerma=Object.values(mermaPr).reduce((s,v)=>s+(v||0),0);
+    const coloresHtml=(o.colores||[]).map(c=>'<span style="font-size:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:1px 7px;margin-right:4px">'+c.nombre+(c.pantone?' · '+c.pantone:'')+'</span>').join('');
+    const mermaRows=Object.entries(mermaPr).filter(([,v])=>v>0).map(([k,v])=>'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span>'+k+'</span><span style="color:var(--red);font-family:monospace">'+v+'</span></div>').join('');
+    const consumoRows=(o.consumo_real_tintas||[]).map((cr,i)=>{
+      const col=(o.colores||[])[i]||{nombre:'Color '+(i+1)};
+      const real=(parseFloat(cr.gramos_usados)||0)-(parseFloat(cr.gramos_sobrante)||0);
+      if(!real)return '';
+      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span>'+col.nombre+'</span><span style="font-family:monospace;color:var(--amber)">'+real.toFixed(1)+'g</span></div>';
+    }).join('');
+    el.innerHTML=
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px">'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center"><div style="font-family:monospace;font-size:18px;font-weight:700;color:var(--green)">'+buenas.toLocaleString()+'</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-top:2px">Buenas</div></div>'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center"><div style="font-family:monospace;font-size:18px;font-weight:700;color:var(--red)">'+totalMerma+'</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-top:2px">Merma</div></div>'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center"><div style="font-family:monospace;font-size:18px;font-weight:700;color:var(--amber)">'+rend+'%</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-top:2px">Rendimiento</div></div>'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center"><div style="font-family:monospace;font-size:14px;font-weight:700">'+tPr+'</div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;margin-top:2px">Producción</div></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:10px 14px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Ajuste</div><div style="font-family:monospace;font-size:14px;font-weight:700;color:var(--amber)">'+tAj+'</div></div>'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:10px 14px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Máquina</div><div style="font-size:13px;font-weight:600">'+(o.maquina||'—')+'</div></div>'+
+      '</div>'+
+      (coloresHtml?'<div style="margin-bottom:12px">'+coloresHtml+'</div>':'')+
+      (mermaRows?'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Merma por causa</div>'+mermaRows+'</div>':'')+
+      (consumoRows?'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Consumo real de tintas</div>'+consumoRows+'</div>':'')+
+      '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">📄 Reportes</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id='+p.id+'" target="_blank" class="btn btn-secondary" style="flex:1;text-align:center;text-decoration:none">📊 Monitor</a>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="toast('Abre la orden en producción para generar el PDF')">📋 PDF calidad</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="toast('Abre la orden en producción para generar el PDF')">📊 PDF interno</button>'+
+      '</div>';
+  }catch(e){
+    if(el)el.innerHTML='<div style="color:var(--red);padding:16px">Error: '+e.message+'</div>';
+  }
+}
+
+function fmtSeg(s){s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return [h,m,ss].map(x=>String(x).padStart(2,'0')).join(':');}
+
+function verReportesProduccion(pipelineId){
+  const p=PIPELINE.find(x=>x.id===pipelineId);
+  if(!p)return;
+  abrirDetallePedido(pipelineId);
+  setTimeout(()=>switchDetTab('prod'),600);
 }
 
 function poblarSelectPipeline(){
@@ -1729,9 +1796,11 @@ function renderDetallePedido(p) {
   // Si hay costo guardado en pipeline, mostrarlo en el total con MO
   var costoGuardado = p.costo_total || costoTotal;
 
+  var tieneProduccion = p.estado === 'Completado' || p.estado === 'Entregado';
   var tabsHTML = '<div style="display:flex;gap:2px;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content">'
     + '<div id="tab-venta" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg2);color:var(--green);box-shadow:0 1px 4px rgba(0,0,0,0.3)" onclick="switchDetTab(\'venta\')">💰 Precio de venta</div>'
     + '<div id="tab-costo" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2)" onclick="switchDetTab(\'costo\')">🔴 Costo interno</div>'
+    + (tieneProduccion ? '<div id="tab-prod" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2)" onclick="switchDetTab(\'prod\')">📄 Producción</div>' : '')
     + '</div>';
 
   var ventaHTML = '<div id="det-venta">'
@@ -1807,7 +1876,16 @@ function renderDetallePedido(p) {
     + '</div>'
     + '</div></div>';
 
-  return tabsHTML + ventaHTML + costoHTML;
+  // HTML del tab de producción
+  var prodHTML = '';
+  if (tieneProduccion) {
+    prodHTML = '<div id="det-prod" style="display:none">';
+    // Buscar orden de producción para este pipeline
+    prodHTML += '<div id="det-prod-content" style="text-align:center;padding:20px;color:var(--text3)">Cargando datos de producción...</div>';
+    prodHTML += '</div>';
+  }
+
+  return tabsHTML + ventaHTML + costoHTML + prodHTML;
 }
 
 function recalcCosto(id, val, qty){
