@@ -617,6 +617,8 @@ function initPipelineDrag(){
       const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
       const tgtIdx=activos.findIndex(p=>p.id===tgtId);
       console.log('srcIdx=',srcIdx,'tgtIdx=',tgtIdx,'total activos=',activos.length);
+      console.log('src id en pipeline:',activos[srcIdx]?.id,'vs _dragSrcId:',_dragSrcId);
+      console.log('tgt id en pipeline:',activos[tgtIdx]?.id,'vs tgtId:',tgtId);
       if(srcIdx<0||tgtIdx<0){_dragSrcId=null;return;}
       const [moved]=activos.splice(srcIdx,1);
       activos.splice(tgtIdx,0,moved);
