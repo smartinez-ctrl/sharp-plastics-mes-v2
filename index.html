@@ -385,10 +385,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
   </div>
   <div class="scroll"><div class="scroll-narrow">
     <div class="foto-grid">
-      <div class="foto-slot" id="foto-0" onclick="openFotoMenu(0)"><div class="foto-icon">📷</div><div class="foto-label">Frente</div></div>
-      <div class="foto-slot" id="foto-1" onclick="openFotoMenu(1)"><div class="foto-icon">📷</div><div class="foto-label">Reverso</div></div>
-      <div class="foto-slot" id="foto-2" onclick="openFotoMenu(2)"><div class="foto-icon">📷</div><div class="foto-label">Lado izquierdo</div></div>
-      <div class="foto-slot" id="foto-3" onclick="openFotoMenu(3)"><div class="foto-icon">📷</div><div class="foto-label">Lado derecho</div></div>
+      <div class="foto-slot" id="foto-0" onclick="openFotoMenu(0)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(0,event)"><div class="foto-icon">📷</div><div class="foto-label">Frente</div></div>
+      <div class="foto-slot" id="foto-1" onclick="openFotoMenu(1)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(1,event)"><div class="foto-icon">📷</div><div class="foto-label">Reverso</div></div>
+      <div class="foto-slot" id="foto-2" onclick="openFotoMenu(2)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(2,event)"><div class="foto-icon">📷</div><div class="foto-label">Lado izquierdo</div></div>
+      <div class="foto-slot" id="foto-3" onclick="openFotoMenu(3)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(3,event)"><div class="foto-icon">📷</div><div class="foto-label">Lado derecho</div></div>
     </div>
     <input type="file" id="fi0" accept="image/*" style="display:none" onchange="handleFoto(0,this)">
     <input type="file" id="fi1" accept="image/*" style="display:none" onchange="handleFoto(1,this)">
@@ -1396,6 +1396,24 @@ document.getElementById('merma-modal').addEventListener('click',e=>{if(e.target=
 // ══════════════════════════════════════════════════════
 // FOTOS
 // ══════════════════════════════════════════════════════
+function handleFotoDrop(i, event){
+  const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){toast('Solo imagenes','err');return;}
+  const reader = new FileReader();
+  reader.onload = function(e){
+    S.fotos[i] = e.target.result;
+    const slot = document.getElementById('foto-'+i);
+    const labels = ['Frente','Reverso','Lado izquierdo','Lado derecho'];
+    if(slot){
+      slot.className='foto-slot taken';
+      slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
+    }
+    toast('Foto '+labels[i]+' cargada');
+  };
+  reader.readAsDataURL(file);
+}
+
 function openFotoMenu(i){
   const labels=['Frente','Reverso','Lado izquierdo','Lado derecho'];
   const existing=document.getElementById('photo-menu-overlay');if(existing)existing.remove();
