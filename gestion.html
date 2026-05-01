@@ -574,21 +574,24 @@ async function pipeDrop(e){
   e.currentTarget.style.borderTop='';
   const targetId=e.currentTarget.dataset.id;
   if(!_dragSrcId||_dragSrcId===targetId)return;
-  // Reordenar en PIPELINE array
   const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
   const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
   const tgtIdx=activos.findIndex(p=>p.id===targetId);
   if(srcIdx<0||tgtIdx<0)return;
+  // Reordenar activos
   activos.splice(tgtIdx,0,activos.splice(srcIdx,1)[0]);
-  // Reasignar posiciones
-  const updates=activos.map((p,i)=>({id:p.id,pos:i}));
-  // Update en PIPELINE global
-  updates.forEach(u=>{const p=PIPELINE.find(x=>x.id===u.id);if(p)p.orden_posicion=u.pos;});
+  // Actualizar orden_posicion en PIPELINE global y en array local
+  activos.forEach((p,i)=>{
+    p.orden_posicion=i;
+    const gp=PIPELINE.find(x=>x.id===p.id);
+    if(gp)gp.orden_posicion=i;
+  });
+  // Re-renderizar inmediatamente
   renderPipeline();
   // Guardar en Supabase en background
-  Promise.all(updates.map(u=>sbPatch('pipeline_mf',{orden_posicion:u.pos},'id=eq.'+u.id)))
+  Promise.all(activos.map((p,i)=>sbPatch('pipeline_mf',{orden_posicion:i},'id=eq.'+p.id)))
     .then(()=>toast('Orden guardado ✓'))
-    .catch(e=>toast('Error guardando orden: '+e.message,'err'));
+    .catch(e=>toast('Error: '+e.message,'err'));
   _dragSrcId=null;
 }
 
