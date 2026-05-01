@@ -1901,16 +1901,27 @@ async function guardarVentaEdit(id){
   const total=window._ventaEditTotal;const margen=window._margenEdit;
   if(!total)return;
   try{
-    // Obtener precios unitarios de los inputs
-    const botInp=document.querySelector('[data-id="botellas"][data-field="price"]');
-    const tapInp=document.querySelector('[data-id="tapas"][data-field="price"]');
-    const botQInp=document.querySelector('[data-id="botellas"][data-field="qty"]');
-    const tapQInp=document.querySelector('[data-id="tapas"][data-field="qty"]');
-    const vBot2=(parseFloat(botInp?.value)||0)*(parseFloat(botQInp?.value)||0);
-    const vTap2=(parseFloat(tapInp?.value)||0)*(parseFloat(tapQInp?.value)||0);
-    await sbPatch('pipeline_mf',{venta_total:total,margen:margen,venta_botellas:vBot2,venta_tapas:vTap2},`id=eq.${id}`);
-    const p=PIPELINE.find(x=>x.id===id);if(p){p.venta_total=total;p.margen=margen;p.venta_botellas=vBot2;p.venta_tapas=vTap2;}
-    toast('Venta actualizada ✓','ok');await loadPipeline();
+    const getVal=(dataId,field)=>{
+      const inp=document.querySelector(`[data-id="${dataId}"][data-field="${field}"]`);
+      return parseFloat(inp?.value)||0;
+    };
+    const sub=(dataId)=>getVal(dataId,'qty')*getVal(dataId,'price');
+    const patch={
+      venta_total:total,
+      margen:margen,
+      venta_botellas:sub('botellas'),
+      venta_tapas:sub('tapas'),
+      venta_tintas:sub('tintas'),
+      venta_pantallas:sub('pantallas'),
+      venta_mdo:sub('mdo'),
+      venta_empaque:sub('empaque'),
+    };
+    await sbPatch('pipeline_mf',patch,`id=eq.${id}`);
+    const p=PIPELINE.find(x=>x.id===id);
+    if(p)Object.assign(p,patch);
+    toast('Venta actualizada ✓','ok');
+    renderPipeline();
+    closeModal('modal-pedido');
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
