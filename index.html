@@ -647,6 +647,7 @@ const MERMA_TIPOS=['Shadow','Descuadre','Falta tinta','Mal flameo','Perforada/de
 const TM_TIPOS=[
   {k:'comida',icon:'🍽',label:'Salida a comer'},
   {k:'tintas',icon:'🎨',label:'Prep. tintas'},
+  {k:'reajuste',icon:'🔄',label:'Reajuste'},
   {k:'mant',icon:'🔧',label:'Mantenimiento'},
   {k:'presion',icon:'💨',label:'Baja presión'},
   {k:'espera',icon:'⏳',label:'Espera material'},
@@ -1834,7 +1835,7 @@ async function enviarEmailCierre(){
     const pct=S.orden.pzas?((buenas/S.orden.pzas)*100).toFixed(1):0;
     const seg_bot=tProdSeg&&buenas?(tProdSeg/buenas).toFixed(1)+'s':'—';
     const pzas_hora=tProdSeg&&buenas?Math.round(buenas/(tProdSeg/3600)):'—';
-    const tipos={comida:'Salida a comer',tintas:'Prep. tintas',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
+    const tipos={comida:'Salida a comer',tintas:'Prep. tintas',reajuste:'Reajuste',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
     const consumoConEst=(S.consumoReal||[]).map((cr,i)=>{
       const t=S.tintas[i]||{componentes:[]};
       const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
@@ -1972,7 +1973,7 @@ function generarPDFInterno(){
   const primer=document.getElementById('proc-primer')?.checked?'Sí':'No';
   const presion=document.getElementById('presion-aire')?.value||'—';
   const coloresStr=(S.orden.colores||[]).map(c=>c.nombre+(c.pantone?' · '+c.pantone:'')).join(' / ')||'—';
-  const tipos={comida:'Salida a comer',tintas:'Prep. tintas',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
+  const tipos={comida:'Salida a comer',tintas:'Prep. tintas',reajuste:'Reajuste',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
 
   // Personal
   const USERS_ALL=window._allUsers||[];
