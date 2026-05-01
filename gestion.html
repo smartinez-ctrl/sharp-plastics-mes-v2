@@ -1497,7 +1497,16 @@ function renderProyeccion(){
   document.getElementById('timeline-container').innerHTML=`<div class="timeline-wrap"><div class="timeline-header">${weeks.map(w=>`<div class="timeline-month">${w}</div>`).join('')}</div>${barsHTML}</div>`;
 
   const mesMap={};
-  activos.forEach(p=>{const f=p.fecha_entrega||p.fecha_inicio;if(!f)return;const k=new Date(f+'T12:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});if(!mesMap[k])mesMap[k]={v:0,c:0};mesMap[k].v+=(p.venta_total||0);mesMap[k].c+=(p.costo_total||0);});
+  activos.forEach(p=>{
+    const f=p.fecha_entrega||p.fecha_inicio;
+    if(!f)return;
+    const fechaCobro=new Date(f+'T12:00:00');
+    fechaCobro.setDate(fechaCobro.getDate()+30); // cobro 30 días después de entrega
+    const k=fechaCobro.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+    if(!mesMap[k])mesMap[k]={v:0,c:0};
+    mesMap[k].v+=(p.venta_total||0);
+    mesMap[k].c+=(p.costo_total||0);
+  });
   const meses=Object.entries(mesMap).sort();
   const maxV=Math.max(...meses.map(([,v])=>v.v),1);
   document.getElementById('proyeccion-barras').innerHTML=meses.length?meses.map(([mes,v])=>`<div class="proj-card"><div class="proj-month" style="text-transform:capitalize">${mes}</div><div class="proj-bar-wrap"><div class="proj-bar" style="width:${(v.v/maxV)*100}%"></div></div><div class="proj-val">${mxn(v.v)}</div></div>`).join(''):'<div style="text-align:center;padding:20px;color:var(--text3)">Agrega fechas de entrega para ver la proyección</div>';
