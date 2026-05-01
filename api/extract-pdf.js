@@ -24,7 +24,6 @@ export default async function handler(req, res) {
   "capacidad": 600,
   "piezas": 205,
   "fecha_pedido": "fecha exacta del campo Order Date en formato YYYY-MM-DD",
-  "fecha_entrega": "fecha del campo Required Ship Date o Ship Date en formato YYYY-MM-DD",
   "direccion_envio": "dirección completa bajo Ship To incluyendo nombre, calle, ciudad, estado y país",
   "color_botella": "color exacto de BOTTLE o COLOR OF BOTTLE. Si dice See Mock Up, busca en el Mock Up el color de la botella",
   "color_tapa": "color exacto de TOP o COLOR OF THE BOTTLE TOP. Si dice See Mock Up, busca en el Mock Up",
