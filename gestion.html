@@ -287,6 +287,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
     <div class="stat-card"><div class="stat-val" style="color:var(--amber)" id="proy-mes2-val">—</div><div class="stat-label" id="proy-mes2-label">Próximo mes</div></div>
     <div class="stat-card"><div class="stat-val" style="color:var(--blue)" id="proy-util-val">—</div><div class="stat-label">Utilidad proyectada</div></div>
     <div class="stat-card"><div class="stat-val" style="color:var(--purple)" id="proy-pzas-val">—</div><div class="stat-label">Piezas en pipeline</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)" id="proy-ventas-total-val">—</div><div class="stat-label">Ventas totales pipeline</div></div>
   </div>
   <div class="card"><div class="card-title">Timeline de producción</div><div id="timeline-container"><div class="loading">Cargando...</div></div></div>
   <div class="card"><div class="card-title">Proyección de ventas por mes</div><div id="proyeccion-barras"><div class="loading">Calculando...</div></div></div>
@@ -1507,6 +1508,8 @@ function renderProyeccion(){
   const util=activos.reduce((s,p)=>s+((p.venta_total||0)-(p.costo_total||0)),0);
   document.getElementById('proy-util-val').textContent=util>0?mxn(util):'—';
   document.getElementById('proy-pzas-val').textContent=activos.reduce((s,p)=>s+(p.piezas||0),0).toLocaleString();
+  const ventasTotal=activos.reduce((s,p)=>s+(p.venta_total||0),0);
+  document.getElementById('proy-ventas-total-val').textContent=ventasTotal>0?mxn(ventasTotal):'—';
 }
 
 // CATÁLOGOS
