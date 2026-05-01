@@ -514,7 +514,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 <!-- CIERRE -->
 <div class="screen" id="screen-cierre">
   <div class="topbar">
-    <div class="topbar-left"><div class="logo">MES <span>//</span> Cierre & QA</div></div>
+    <div class="topbar-left">
+      <button class="back-btn" onclick="showScreen('produccion');renderSteps('steps-prod','produccion')">←</button>
+      <div class="logo">MES <span>//</span> Cierre & QA</div>
+    </div>
     <div class="topbar-right"><div class="badge badge-green">✓ Completada</div></div>
   </div>
   <div class="scroll"><div class="scroll-narrow">
