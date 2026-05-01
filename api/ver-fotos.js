@@ -55,10 +55,11 @@ export default async function handler(req, res) {
     .info-item { }
     .info-label { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: #6b7280; margin-bottom: 2px; }
     .info-val { font-size: 14px; font-weight: 700; }
-    .fotos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .foto-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-    .foto-card img { width: 100%; display: block; }
-    .foto-label { padding: 10px 14px; font-size: 12px; font-weight: 600; color: #374151; border-top: 1px solid #f1f5f9; }
+    .fotos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .foto-card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .foto-card .foto-img-wrap { width: 100%; aspect-ratio: 4/3; overflow: hidden; }
+    .foto-card .foto-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .foto-label { padding: 8px 12px; font-size: 11px; font-weight: 600; color: #374151; border-top: 1px solid #f1f5f9; }
     .print-btn { display: block; text-align: center; margin: 20px 0; }
     .print-btn button { background: #0d0f12; color: #fff; border: none; border-radius: 8px; padding: 12px 32px; font-size: 14px; font-weight: 600; cursor: pointer; }
     @media print { .print-btn { display: none; } body { background: #fff; } .container { margin: 0; } }
@@ -79,7 +80,7 @@ export default async function handler(req, res) {
     <div class="fotos-grid">
       ${fotoUrls.map(f => `
         <div class="foto-card">
-          <img src="${f.url}" alt="${f.label}">
+          <div class="foto-img-wrap"><img src="${f.url}" alt="${f.label}"></div>
           <div class="foto-label">${f.label}</div>
         </div>`).join('')}
     </div>
