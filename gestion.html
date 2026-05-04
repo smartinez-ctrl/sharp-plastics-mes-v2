@@ -709,6 +709,47 @@ function colDrop(e,idx){
 }
 function colDragEnd(){document.querySelectorAll('.pipe-col-hdr').forEach(h=>h.style.borderLeft='');_colDragSrc=null;}
 
+// ── Column resize ─────────────────────────────────────
+let _colWidths=null; // px widths override
+let _resizeCol=null, _resizeStartX=0, _resizeStartW=0;
+
+function getColWidths(){
+  if(_colWidths)return _colWidths;
+  // Default: convert fr to px estimate based on container
+  const container=document.getElementById('pipeline-activos');
+  const total=(container?.offsetWidth||1200)-18; // minus handle col
+  const cols=getColOrder().map(i=>PIPE_COL_DEFS[i]);
+  const totalFr=cols.reduce((s,c)=>s+parseFloat(c.fr),0);
+  return cols.map(c=>Math.round(parseFloat(c.fr)/totalFr*total));
+}
+
+function startColResize(e,ci){
+  e.stopPropagation();e.preventDefault();
+  _resizeCol=ci;
+  _resizeStartX=e.clientX;
+  _resizeStartW=getColWidths()[ci];
+  if(!_colWidths)_colWidths=getColWidths();
+  document.addEventListener('mousemove',doColResize);
+  document.addEventListener('mouseup',endColResize);
+}
+function doColResize(e){
+  if(_resizeCol===null)return;
+  const diff=e.clientX-_resizeStartX;
+  const newW=Math.max(40,_resizeStartW+diff);
+  _colWidths[_resizeCol]=newW;
+  // Update grid directly without full re-render
+  const grids=document.querySelectorAll('#pipeline-activos>div');
+  const template='18px '+_colWidths.map(w=>w+'px').join(' ');
+  grids.forEach(g=>g.style.gridTemplateColumns=template);
+  const compGrids=document.querySelectorAll('#pipeline-completados>div');
+  compGrids.forEach(g=>g.style.gridTemplateColumns=template);
+}
+function endColResize(){
+  _resizeCol=null;
+  document.removeEventListener('mousemove',doColResize);
+  document.removeEventListener('mouseup',endColResize);
+}
+
 function sortPipeline(col){
   if(window._pipeSort&&window._pipeSort.col===col){
     window._pipeSort.asc=!window._pipeSort.asc;
@@ -752,15 +793,17 @@ function renderPipeline(){
   const PIPE_COLS = '3fr 1fr 0.5fr 0.7fr 1fr 1.1fr 0.8fr 1.1fr 0.8fr 1.3fr';
   // Columnas en orden actual
   const cols=getColOrder().map(i=>PIPE_COL_DEFS[i]);
-  const PIPE_COLS_DYN=cols.map(c=>c.fr).join(' ');
+  const PIPE_COLS_DYN=_colWidths
+    ? _colWidths.map(w=>w+'px').join(' ')
+    : cols.map(c=>c.fr).join(' ');
 
   const sortIcon=c=>window._pipeSort&&window._pipeSort.col===c?(window._pipeSort.asc?'↑':'↓'):'';
   const sortHdr=(label,col,align,ci)=>`<span class="pipe-col-hdr" draggable="true"
     ondragstart="colDragStart(event,${ci})" ondragover="colDragOver(event,${ci})"
     ondrop="colDrop(event,${ci})" ondragend="colDragEnd()"
     onclick="${col?`sortPipeline('${col}')`:''}"
-    style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:${window._pipeSort?.col===col?'var(--amber)':'var(--text2)'};text-align:${align};cursor:${col?'pointer':'grab'};user-select:none;padding:0 2px"
-    >${label}${col?' '+sortIcon(col):''}</span>`;
+    style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:${window._pipeSort?.col===col?'var(--amber)':'var(--text2)'};text-align:${align};cursor:${col?'pointer':'grab'};user-select:none;padding:0 2px;position:relative"
+    >${label}${col?' '+sortIcon(col):''}<span onmousedown="startColResize(event,${ci})" style="position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:col-resize;background:transparent;z-index:10" onclick="event.stopPropagation()"></span></span>`;
 
   const hdrCells=cols.map((c,ci)=>{
     if(c.id==='btns') return '<span></span>';
