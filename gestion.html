@@ -831,7 +831,7 @@ function renderPipeline(){
       margen:`<div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>`,
       estado:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:3px">${p.costo_revisado?'<span style="font-size:9px;color:var(--green)">✓</span>':''}<span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴':p.estado}</span></div>`,
       arte:`<div style="display:flex;gap:4px;align-items:center;justify-content:center" onclick="event.stopPropagation()"><div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" onclick="cycleArte('${p.id}','positivos')" title="Positivos"><span style="font-size:8px;color:var(--text3);line-height:1">POS</span><span style="font-size:14px;line-height:1">${arteIcon(p.positivos)}</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" onclick="cycleArte('${p.id}','pantallas')" title="Pantallas"><span style="font-size:8px;color:var(--text3);line-height:1">PAN</span><span style="font-size:14px;line-height:1">${arteIcon(p.pantallas)}</span></div></div>`,
-      btns:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">${p.estado==='En producción'?`<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id=${p.id}" target="_blank" class="btn btn-xs" style="background:#ef4444;color:#fff;font-weight:700;animation:pulse-red 1.5s infinite" title="Ver en vivo">🔴 LIVE</a>`:''} ${p.pdf_po_url?`<a href="${p.pdf_po_url}" target="_blank" class="btn btn-ghost btn-xs" title="Orden de compra (PO)">📋</a>`:''} ${p.pdf_diseno_url?`<a href="${p.pdf_diseno_url}" target="_blank" class="btn btn-ghost btn-xs" title="Diseño / Mock up">🎨</a>`:''}<button class="btn btn-primary btn-xs" title="Cotizador" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button><button class="btn btn-ghost btn-xs" title="PDF cliente" onclick="abrirPDFCliente(PIPELINE.find(x=>x.id==='${p.id}'))">📤</button><button class="btn btn-ghost btn-xs" title="PDF interno" onclick="abrirPDFInterno(PIPELINE.find(x=>x.id==='${p.id}'))">📊</button>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}</div>`,
+      btns:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">${(p.estado==='En producción'||p.estado==='En produccion')?`<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id=${p.id}" target="_blank" class="btn btn-xs" style="background:#ef4444;color:#fff;font-weight:700;animation:pulse-red 1.5s infinite" title="Ver en vivo">🔴 LIVE</a>`:''} ${p.pdf_po_url?`<a href="${p.pdf_po_url}" target="_blank" class="btn btn-ghost btn-xs" title="Orden de compra (PO)">📋</a>`:''} ${p.pdf_diseno_url?`<a href="${p.pdf_diseno_url}" target="_blank" class="btn btn-ghost btn-xs" title="Diseño / Mock up">🎨</a>`:''}<button class="btn btn-primary btn-xs" title="Cotizador" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button><button class="btn btn-ghost btn-xs" title="PDF cliente" onclick="abrirPDFCliente(PIPELINE.find(x=>x.id==='${p.id}'))">📤</button><button class="btn btn-ghost btn-xs" title="PDF interno" onclick="abrirPDFInterno(PIPELINE.find(x=>x.id==='${p.id}'))">📊</button>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}</div>`,
     };
     const rowCells=cols.map(c=>cellMap[c.id]||'<div></div>').join('\n      ');
     return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="false" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:18px ${PIPE_COLS_DYN};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
@@ -1532,9 +1532,9 @@ function calcCotizador(){
 
   let costoTintas=0;
   COT_COLORES.forEach(col=>{
-    col.componentes.forEach(x=>{costoTintas+=(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);});
+    col.componentes.forEach(x=>{const pk=x.precio_kg||x.precio||0;costoTintas+=(x.gramos&&pk?(x.gramos/1000)*pk:0);});
     const tgC=col.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-    col.aditivos.forEach(a=>{const grA=a.pct!==undefined?(a.pct/100*tgC):(a.gramos||0);costoTintas+=(grA&&a.precio_kg?(grA/1000)*a.precio_kg:0);});
+    col.aditivos.forEach(a=>{const pk=a.precio_kg||a.precio||0;const grA=a.pct!==undefined?(a.pct/100*tgC):(a.gramos||0);costoTintas+=(grA&&pk?(grA/1000)*pk:0);});
   });
 
   const tarifas=CAT.tarifas_mdo.slice().sort((a,b)=>a.num_color-b.num_color);
@@ -2320,17 +2320,18 @@ function renderFormulaTintas(formula, pedidoId) {
   var html = formula.map(function(col, ci) {
     var tg = (col.componentes||[]).reduce(function(s,x){return s+(parseFloat(x.gramos)||0);}, 0);
     var tgAdits = 0;
-    var tcComps = (col.componentes||[]).reduce(function(s,x){return s+(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);}, 0);
+    var tcComps = (col.componentes||[]).reduce(function(s,x){var pk=x.precio_kg||x.precio||0;return s+(x.gramos&&pk?(x.gramos/1000)*pk:0);}, 0);
     var tcAdits = (col.aditivos||[]).reduce(function(s,a){
+      var pk=a.precio_kg||a.precio||0;
       var gr = a.pct!==undefined ? (a.pct/100*tg) : (parseFloat(a.gramos)||0);
       tgAdits += gr;
-      return s+(gr&&a.precio_kg?(gr/1000)*a.precio_kg:0);
+      return s+(gr&&pk?(gr/1000)*pk:0);
     }, 0);
     var tc = tcComps + tcAdits;
     totalCosto += tc;
     var nombreColor = (col.nombre||('Color '+(ci+1))) + (col.pantone?' · '+col.pantone:'');
     var comps = (col.componentes||[]).map(function(x) {
-      var sub = x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0;
+      var pk=x.precio_kg||x.precio||0; var sub = x.gramos&&pk?(x.gramos/1000)*pk:0;
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">'
         + '<span style="font-size:11px;color:var(--text2);flex:1">' + (x.codigo?'<span style="color:var(--text3);margin-right:4px">'+x.codigo+'</span>':'') + (x.nombre||'—') + '</span>'
         + '<span style="font-size:11px;color:var(--text3);margin:0 8px">' + (parseFloat(x.gramos||0).toFixed(1)) + 'g</span>'
@@ -2339,7 +2340,7 @@ function renderFormulaTintas(formula, pedidoId) {
     }).join('');
     var adits = (col.aditivos||[]).map(function(a) {
       var gr = a.pct!==undefined ? (a.pct/100*tg) : (parseFloat(a.gramos)||0);
-      var sub = gr&&a.precio_kg?(gr/1000)*a.precio_kg:0;
+      var apk=a.precio_kg||a.precio||0; var sub = gr&&apk?(gr/1000)*apk:0;
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">'
         + '<span style="font-size:10px;color:var(--text3);flex:1">↳ ' + (a.nombre||'Aditivo') + (a.pct!==undefined?' ('+a.pct+'%)':'') + '</span>'
         + '<span style="font-size:10px;color:var(--text3);margin:0 8px">' + (parseFloat(gr).toFixed(2).replace(/\.?0+$/,'')) + 'g</span>'
