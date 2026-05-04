@@ -1083,8 +1083,10 @@ async function guardarPedido(){
 }
 
 async function eliminarPedido(id){
-  if(!confirm('¿Eliminar este pedido?'))return;
-  try{await sbDelete('pipeline_mf',`id=eq.${id}`);toast('Eliminado','ok');await loadPipeline();}
+  const p=PIPELINE.find(x=>x.id===id);
+  const nombre=p?(p.sub_cliente||p.cliente||'este pedido')+' — PO '+p.po:'este pedido';
+  if(!confirm(`⚠️ ¿Eliminar "${nombre}"?\n\nEsta acción no se puede deshacer.`))return;
+  try{await sbDelete('pipeline_mf',`id=eq.${id}`);toast('Pedido eliminado','ok');await loadPipeline();}
   catch(e){toast('Error: '+e.message,'err');}
 }
 
