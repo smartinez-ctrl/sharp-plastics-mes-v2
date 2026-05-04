@@ -881,7 +881,6 @@ async function renderDashboard(){
 // ══════════════════════════════════════════════════════
 async function verPDFCompletado(pipelineId, tipo){
   try{
-    // Obtener datos del pipeline y orden de producción
     const [rPipe, rOrden] = await Promise.all([
       fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=*',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}}),
       fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=*',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}})
@@ -890,7 +889,31 @@ async function verPDFCompletado(pipelineId, tipo){
     const orden = (await rOrden.json())[0];
     if(!pipe){toast('Pedido no encontrado','err');return;}
 
-    // Reconstruir S temporal para generar el PDF
+    // Cargar fotos desde Storage
+    let fotos=[null,null,null,null];
+    if(orden?.id){
+      try{
+        const rF=await fetch(SB_URL+'/storage/v1/object/list/fotos-aprobacion',{
+          method:'POST',
+          headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+          body:JSON.stringify({prefix:orden.id+'/',limit:20,sortBy:{column:'name',order:'asc'}})
+        });
+        const files=await rF.json();
+        if(Array.isArray(files)){
+          // Tomar la foto más reciente por posición (0-3)
+          files.sort((a,b)=>b.name.localeCompare(a.name));
+          files.forEach(f=>{
+            const m=f.name.match(/foto-(\d)-/);
+            if(m){
+              const pos=parseInt(m[1]);
+              if(pos>=0&&pos<=3&&!fotos[pos])
+                fotos[pos]=SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+orden.id+'/'+f.name;
+            }
+          });
+        }
+      }catch(e){console.warn('Error cargando fotos:',e);}
+    }
+
     const tmpS = {
       orden:{
         cliente:pipe.sub_cliente||pipe.cliente||'—',
@@ -912,17 +935,15 @@ async function verPDFCompletado(pipelineId, tipo){
       tm:{ajuste:orden?.tm_ajuste||{},prod:orden?.tm_produccion||{}},
       qa:orden?.qa_resultados||{},
       tintas:pipe.formula_tintas||[],
-      fotos:[],
+      fotos:fotos,
       consumoReal:orden?.consumo_real_tintas||[],
       reajustes:orden?.reajustes||0,
     };
 
-    // Swap S temporalmente
     const origS = {...S};
     Object.assign(S, tmpS);
     if(tipo==='cliente') generarPDF();
     else generarPDFInterno();
-    // Restaurar S
     setTimeout(()=>Object.assign(S, origS), 500);
   }catch(e){toast('Error: '+e.message,'err');}
 }
