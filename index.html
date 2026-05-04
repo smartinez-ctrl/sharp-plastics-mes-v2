@@ -1028,6 +1028,21 @@ function resetOrden(){
   var apr=document.getElementById('foto-aprueba');if(apr)apr.value='';
   // Reset cierre inputs
   var bi=document.getElementById('buenas-input');if(bi){bi.value='0';onBuenasInput(0);}
+  // Reset stats de producción
+  ['stat-buenas','stat-merma','stat-avance','stat-pct-merma'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.textContent='0';
+    if(el&&id==='stat-avance')el.textContent='0%';
+    if(el&&id==='stat-pct-merma')el.textContent='0%';
+  });
+  var pb2=document.getElementById('prog-bar');if(pb2)pb2.style.width='0';
+  var pt=document.getElementById('prog-txt');if(pt)pt.textContent='0 de 0 pzas';
+  var pp=document.getElementById('prog-pct');if(pp)pp.textContent='0%';
+  // Reset merma grids
+  var mgA=document.getElementById('merma-grid-ajuste');if(mgA)mgA.innerHTML='';
+  var mgP=document.getElementById('merma-grid-prod');if(mgP)mgP.innerHTML='';
+  var tgA=document.getElementById('tm-grid-ajuste');if(tgA)tgA.innerHTML='';
+  var tgP=document.getElementById('tm-grid-prod');if(tgP)tgP.innerHTML='';
   var cx=document.getElementById('cierreXhatch');if(cx)cx.value='';
   var ca=document.getElementById('cierreAgua');if(ca)ca.value='';
   var cf=document.getElementById('cierre-firma');if(cf)cf.value='';
