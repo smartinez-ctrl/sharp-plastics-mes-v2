@@ -1022,12 +1022,14 @@ function resetOrden(){
   window._monitorEmailEnviado=false;
   window._cierreInicializado=false;
   S.ordenId=null;
+  S.pipelineId=null;
   setAprobacionStatus('idle');
   // Reset observaciones y aprobado por
   var obs=document.getElementById('foto-obs');if(obs)obs.value='';
   var apr=document.getElementById('foto-aprueba');if(apr)apr.value='';
   // Reset cierre inputs
-  var bi=document.getElementById('buenas-input');if(bi){bi.value='0';onBuenasInput(0);}
+  var bi=document.getElementById('buenas-input');
+  if(bi){bi.value='0';bi.defaultValue='0';onBuenasInput(0);}
   // Reset stats de producción
   ['stat-buenas','stat-merma','stat-avance','stat-pct-merma'].forEach(function(id){
     var el=document.getElementById(id);
@@ -1797,9 +1799,13 @@ async function goProduccion(){
   if(window._timerRespuestaIv){clearInterval(window._timerRespuestaIv);window._timerRespuestaIv=null;}
   // Guardar primero para tener S.ordenId
   await guardarOrden('produccion');
-  // Autosave cada 30s durante producción
+  // Autosave cada 30s durante producción — solo si estamos en pantalla produccion
   if(window._autosaveIv){clearInterval(window._autosaveIv);}
-  window._autosaveIv=setInterval(()=>guardarOrden('produccion'),30000);
+  window._autosaveIv=setInterval(()=>{
+    if(document.getElementById('screen-produccion')?.classList.contains('active')){
+      guardarOrden('produccion');
+    }
+  },30000);
   // Email de monitor se manda cuando inicia el cronómetro de producción
   // Restaurar tiempo pausado si existe
   if(S.orden&&S.orden.tiempo_pausado&&S.orden.tiempo_pausado>0&&S.timers.prod.s===0){
