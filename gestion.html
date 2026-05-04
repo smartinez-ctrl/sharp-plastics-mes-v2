@@ -676,6 +676,39 @@ function colorChip(t){
   return '<span style="font-size:9px;background:'+bg+';border-radius:3px;padding:2px 6px;color:'+(isLight?'#111':'#fff')+';font-weight:600">'+(t.pantone||t.nombre||'')+'</span>';
 }
 
+// ── Columnas del pipeline ────────────────────────────
+const PIPE_COL_DEFS=[
+  {id:'cliente', label:'Cliente', fr:'3fr', align:'left'},
+  {id:'po', label:'PO', fr:'1fr', align:'left'},
+  {id:'capacidad', label:'ml', fr:'0.5fr', align:'center'},
+  {id:'piezas', label:'Piezas', fr:'0.7fr', align:'center'},
+  {id:'fecha_entrega', label:'F. Entrega', fr:'1fr', align:'center'},
+  {id:'venta_total', label:'Venta', fr:'1.1fr', align:'right'},
+  {id:'margen', label:'Margen', fr:'0.8fr', align:'right'},
+  {id:'estado', label:'Estado', fr:'1.1fr', align:'right'},
+  {id:'arte', label:'Arte', fr:'0.8fr', align:'center'},
+  {id:'btns', label:'', fr:'1.3fr', align:'right'},
+];
+let _colOrder=null; // null = default order
+let _colDragSrc=null;
+
+function getColOrder(){return _colOrder||PIPE_COL_DEFS.map((_,i)=>i);}
+
+function colDragStart(e,idx){_colDragSrc=idx;e.dataTransfer.effectAllowed='move';}
+function colDragOver(e,idx){e.preventDefault();if(_colDragSrc===null||_colDragSrc===idx)return;document.querySelectorAll('.pipe-col-hdr').forEach(h=>h.style.borderLeft='');e.currentTarget.style.borderLeft='2px solid var(--amber)';}
+function colDrop(e,idx){
+  e.preventDefault();
+  document.querySelectorAll('.pipe-col-hdr').forEach(h=>h.style.borderLeft='');
+  if(_colDragSrc===null||_colDragSrc===idx){_colDragSrc=null;return;}
+  const order=getColOrder();
+  const [moved]=order.splice(_colDragSrc,1);
+  order.splice(idx,0,moved);
+  _colOrder=order;
+  _colDragSrc=null;
+  renderPipeline();
+}
+function colDragEnd(){document.querySelectorAll('.pipe-col-hdr').forEach(h=>h.style.borderLeft='');_colDragSrc=null;}
+
 function sortPipeline(col){
   if(window._pipeSort&&window._pipeSort.col===col){
     window._pipeSort.asc=!window._pipeSort.asc;
@@ -717,19 +750,25 @@ function renderPipeline(){
 
   // Header de columnas
   const PIPE_COLS = '3fr 1fr 0.5fr 0.7fr 1fr 1.1fr 0.8fr 1.1fr 0.8fr 1.3fr';
+  // Columnas en orden actual
+  const cols=getColOrder().map(i=>PIPE_COL_DEFS[i]);
+  const PIPE_COLS_DYN=cols.map(c=>c.fr).join(' ');
+
   const sortIcon=c=>window._pipeSort&&window._pipeSort.col===c?(window._pipeSort.asc?'↑':'↓'):'';
-  const sortHdr=(label,col,align='left')=>`<span onclick="sortPipeline('${col}')" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:${align};cursor:pointer;user-select:none;${window._pipeSort?.col===col?'color:var(--amber)':''}">${label} ${sortIcon(col)}</span>`;
-  const pipelineHeader = `<div style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;padding:6px 14px;margin-bottom:2px"><span></span>
-    ${sortHdr('Cliente','cliente')}
-    ${sortHdr('PO','po')}
-    ${sortHdr('ml','capacidad','center')}
-    ${sortHdr('Piezas','piezas','center')}
-    ${sortHdr('F. Entrega','fecha_entrega','center')}
-    ${sortHdr('Venta','venta_total','right')}
-    ${sortHdr('Margen','margen','right')}
-    ${sortHdr('Estado','estado','right')}
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Arte</span>
-    <span></span>
+  const sortHdr=(label,col,align,ci)=>`<span class="pipe-col-hdr" draggable="true"
+    ondragstart="colDragStart(event,${ci})" ondragover="colDragOver(event,${ci})"
+    ondrop="colDrop(event,${ci})" ondragend="colDragEnd()"
+    onclick="${col?`sortPipeline('${col}')`:''}"
+    style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:${window._pipeSort?.col===col?'var(--amber)':'var(--text2)'};text-align:${align};cursor:${col?'pointer':'grab'};user-select:none;padding:0 2px"
+    >${label}${col?' '+sortIcon(col):''}</span>`;
+
+  const hdrCells=cols.map((c,ci)=>{
+    if(c.id==='btns') return '<span></span>';
+    return sortHdr(c.label, c.id==='arte'?'':c.id, c.align, ci);
+  }).join('\n    ');
+
+  const pipelineHeader = `<div style="display:grid;grid-template-columns:18px ${PIPE_COLS_DYN};gap:0;padding:6px 14px;margin-bottom:2px"><span></span>
+    ${hdrCells}
   </div>`;
 
   document.getElementById('pipeline-activos').innerHTML=activos.length?(pipelineHeader+activos.map(p=>{
@@ -738,39 +777,22 @@ function renderPipeline(){
     const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>colorChip(t)).join(' '):'';
     const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="false" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
+    const cellMap={
+      cliente:`<div style="min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${p.sub_cliente||p.cliente||'—'}</div><div style="margin-top:2px">${tintas}</div></div>`,
+      po:`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text)">${p.po||'—'}</div>`,
+      capacidad:`<div style="font-size:12px;text-align:center;color:var(--text)">${p.capacidad||'—'}</div>`,
+      piezas:`<div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center;color:var(--text)">${(p.piezas||0).toLocaleString()}</div>`,
+      fecha_entrega:`<div style="font-size:11px;text-align:center;color:${isUrgent?'var(--red)':'var(--text)'}">${fEnt}</div>`,
+      venta_total:`<div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>`,
+      margen:`<div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>`,
+      estado:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:3px">${p.costo_revisado?'<span style="font-size:9px;color:var(--green)">✓</span>':''}<span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴':p.estado}</span></div>`,
+      arte:`<div style="display:flex;gap:4px;align-items:center;justify-content:center" onclick="event.stopPropagation()"><div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" onclick="cycleArte('${p.id}','positivos')" title="Positivos"><span style="font-size:8px;color:var(--text3);line-height:1">POS</span><span style="font-size:14px;line-height:1">${arteIcon(p.positivos)}</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" onclick="cycleArte('${p.id}','pantallas')" title="Pantallas"><span style="font-size:8px;color:var(--text3);line-height:1">PAN</span><span style="font-size:14px;line-height:1">${arteIcon(p.pantallas)}</span></div></div>`,
+      btns:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">${p.pdf_po_url?`<a href="${p.pdf_po_url}" target="_blank" class="btn btn-ghost btn-xs" title="Orden de compra (PO)">📋</a>`:''} ${p.pdf_diseno_url?`<a href="${p.pdf_diseno_url}" target="_blank" class="btn btn-ghost btn-xs" title="Diseño / Mock up">🎨</a>`:''}<button class="btn btn-primary btn-xs" title="Cotizador" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button><button class="btn btn-ghost btn-xs" title="PDFs" onclick="abrirPDFs_menu(event,'${p.id}')">📄</button>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}</div>`,
+    };
+    const rowCells=cols.map(c=>cellMap[c.id]||'<div></div>').join('\n      ');
+    return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="false" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:18px ${PIPE_COLS_DYN};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
       <div class="drag-handle" title="Arrastrar para reordenar" style="cursor:grab;color:var(--text3);font-size:14px;padding-right:6px;user-select:none" onclick="event.stopPropagation()">⠿</div>
-      <div style="min-width:0;overflow:hidden">
-        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
-        <div style="margin-top:2px">${tintas}</div>
-      </div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text)">${p.po||'—'}</div>
-      <div style="font-size:12px;text-align:center;color:var(--text)">${p.capacidad||'—'}</div>
-      <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center;color:var(--text)">${(p.piezas||0).toLocaleString()}</div>
-      <div style="font-size:11px;text-align:center;color:${isUrgent?'var(--red)':'var(--text3)'}">${fEnt}</div>
-      <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>
-      <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
-      <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px">
-        ${p.costo_revisado?'<span style="font-size:9px;color:var(--green)">✓</span>':''}
-        <span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴':p.estado}</span>
-      </div>
-      <div style="display:flex;gap:4px;align-items:center;justify-content:center" onclick="event.stopPropagation()">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" onclick="cycleArte('${p.id}','positivos')" title="Positivos">
-          <span style="font-size:8px;color:var(--text3);line-height:1">POS</span>
-          <span style="font-size:14px;line-height:1">${arteIcon(p.positivos)}</span>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" onclick="cycleArte('${p.id}','pantallas')" title="Pantallas">
-          <span style="font-size:8px;color:var(--text3);line-height:1">PAN</span>
-          <span style="font-size:14px;line-height:1">${arteIcon(p.pantallas)}</span>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
-        ${p.pdf_po_url?`<a href="${p.pdf_po_url}" target="_blank" class="btn btn-ghost btn-xs" title="Orden de compra (PO)">📋</a>`:''}
-        ${p.pdf_diseno_url?`<a href="${p.pdf_diseno_url}" target="_blank" class="btn btn-ghost btn-xs" title="Diseño / Mock up">🎨</a>`:''}
-        <button class="btn btn-primary btn-xs" title="Cotizador" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button>
-        <button class="btn btn-ghost btn-xs" title="PDFs" onclick="abrirPDFs_menu(event,'${p.id}')">📄</button>
-        ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
-      </div>
+      ${rowCells}
     </div>`;
   }).join('')):'<div style="text-align:center;padding:30px;color:var(--text3)">Sin pedidos activos.</div>';
   initPipelineDrag();
