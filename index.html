@@ -1021,6 +1021,8 @@ async function abrirEditarCompletado(pipelineId){
 
     const oid=o.id;
     // Inicializar cache con datos existentes
+    if(!window._consumoCache)window._consumoCache={};
+    window._consumoCache[oid+'_consumo']=(o.consumo_real_tintas||[]).map(cr=>({gramos_usados:parseFloat(cr.gramos_usados)||0,gramos_sobrante:parseFloat(cr.gramos_sobrante)||0}));
     window._mermaCache[oid+'_merma_ajuste']=Object.assign({},o.merma_ajuste||{});
     window._mermaCache[oid+'_merma_produccion']=Object.assign({},o.merma_produccion||{});
     window._tmCache[oid+'_tm_ajuste']=Object.assign({},o.tm_ajuste||{});
@@ -1153,13 +1155,13 @@ async function abrirEditarCompletado(pipelineId){
                 <div class="field" style="margin:0">
                   <label style="font-size:9px;color:var(--text3)">Gramos usados</label>
                   <input type="number" value="${cr.gramos_usados||0}" min="0" step="0.1"
-                    oninput="guardarConsumoTinta('${oid}',${i},'gramos_usados',this.value,${JSON.stringify(o.consumo_real_tintas).replace(/'/g,'&#39;')})"
+                    oninput="guardarConsumoTinta('${oid}',${i},'gramos_usados',this.value)"
                     style="width:100%;text-align:center;font-family:monospace">
                 </div>
                 <div class="field" style="margin:0">
                   <label style="font-size:9px;color:var(--text3)">Gramos sobrante</label>
                   <input type="number" value="${cr.gramos_sobrante||0}" min="0" step="0.1"
-                    oninput="guardarConsumoTinta('${oid}',${i},'gramos_sobrante',this.value,${JSON.stringify(o.consumo_real_tintas).replace(/'/g,'&#39;')})"
+                    oninput="guardarConsumoTinta('${oid}',${i},'gramos_sobrante',this.value)"
                     style="width:100%;text-align:center;font-family:monospace">
                 </div>
               </div>
@@ -1202,13 +1204,16 @@ async function guardarTiempoOrden(ordenId,campo,valor){
   },800);
 }
 
-async function guardarConsumoTinta(ordenId, idx, campo, valor, consumoActual){
+async function guardarConsumoTinta(ordenId, idx, campo, valor){
+  const cacheKey=ordenId+'_consumo';
+  if(!window._consumoCache)window._consumoCache={};
+  if(!window._consumoCache[cacheKey])window._consumoCache[cacheKey]=[];
+  const arr=window._consumoCache[cacheKey];
+  while(arr.length<=idx)arr.push({gramos_usados:0,gramos_sobrante:0});
+  arr[idx]={...arr[idx],[campo]:parseFloat(valor)||0};
   clearTimeout(_editOrdenTimer[ordenId+'tinta'+idx+campo]);
   _editOrdenTimer[ordenId+'tinta'+idx+campo]=setTimeout(async()=>{
     try{
-      const arr=Array.isArray(consumoActual)?[...consumoActual]:[];
-      while(arr.length<=idx)arr.push({gramos_usados:0,gramos_sobrante:0});
-      arr[idx]={...arr[idx],[campo]:parseFloat(valor)||0};
       await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ordenId,{
         method:'PATCH',
         headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
@@ -1319,7 +1324,10 @@ async function verPDFCompletado(pipelineId, tipo){
         maquina:orden?.maquina||'—',
         loteBot:orden?.lote_botella||'—',
         loteTap:orden?.lote_tapa||'—',
-        colores:pipe.tintas_info||[],
+        colores:(pipe.formula_tintas||[]).map((t,i)=>{
+          const ti=(pipe.tintas_info||[])[i]||{};
+          return {nombre:ti.nombre||ti.pantone||t.nombre||('Color '+(i+1)), pantone:ti.pantone||t.pantone||''};
+        }),
         ajustadores:orden?.ajustadores||[],
         operadores:orden?.operadores||[],
       },
@@ -1350,8 +1358,15 @@ async function verPDFCompletado(pipelineId, tipo){
     setInput('buenas-input', orden?.piezas_buenas||0);
     setInput('cierre-firma', orden?.firma_cierre||'');
     setInput('cierre-obs', orden?.observaciones||'');
-    setInput('cierreXhatch', orden?.crosshatch||'');
-    setInput('cierreAgua', orden?.prueba_agua||'');
+    // selects need special handling
+    const setSelect=(id,val)=>{
+      const el=document.getElementById(id);if(!el)return;
+      const v=val||'';
+      for(let o of el.options){if(o.value===v||o.text===v||o.text.includes(v)){el.value=o.value;return;}}
+      el.value='';
+    };
+    setSelect('cierreXhatch', orden?.crosshatch||'');
+    setSelect('cierreAgua', orden?.prueba_agua||'');
     setInput('uv-int', orden?.uv_intensidad||'');
     setInput('uv-vel', orden?.uv_velocidad||'');
     setInput('flameo-tipo', orden?.flameo_tipo||'Sin flameado');
@@ -2670,24 +2685,28 @@ function generarPDFInterno(){
     return rows;
   }).join('');
 
-  // Consumo real
+  // Consumo real — diferencia = preparado - consumido (merma en gramos y %)
   const consumoRows=(S.consumoReal||[]).map((cr,i)=>{
     const col=S.orden.colores[i]||{nombre:'Color '+(i+1)};
     const t=S.tintas[i]||{componentes:[]};
-    const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-    const usado=parseFloat(cr.gramos_usados)||0;
-    const sobra=parseFloat(cr.gramos_sobrante)||0;
-    const real=usado-sobra;
-    const diff=real-tgEst;
+    const tgEst=(t.componentes||[]).reduce((s,x)=>s+(parseFloat(x.gramos)||0),0)+
+                (t.aditivos||[]).reduce((s,a)=>{const tg=(t.componentes||[]).reduce((st,x)=>st+(parseFloat(x.gramos)||0),0);return s+(a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0));},0);
+    const preparado=parseFloat(cr.gramos_usados)||0;
+    const sobrante=parseFloat(cr.gramos_sobrante)||0;
+    const consumido=preparado-sobrante;
+    const mermaG=preparado>0?sobrante:0;
+    const mermaPct=preparado>0?((sobrante/preparado)*100).toFixed(1):0;
+    const diff=consumido-tgEst;
     const sign=diff>=0?'+':'';
-    const color=Math.abs(diff)<=tgEst*0.1?'#16a34a':Math.abs(diff)<=tgEst*0.2?'#d97706':'#dc2626';
+    const color=Math.abs(diff)<=tgEst*0.15?'#16a34a':Math.abs(diff)<=tgEst*0.3?'#d97706':'#dc2626';
     return `<tr style="border-bottom:1px solid #e5e7eb">
       <td style="padding:5px 10px;font-size:11px;font-weight:600">${col.nombre}${col.pantone?' · '+col.pantone:''}</td>
-      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${tgEst}g</td>
-      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${usado}g preparados</td>
-      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${sobra}g sobrante</td>
-      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;font-weight:700;color:${color}">${usado>0?real.toFixed(1)+'g':' —'}</td>
-      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;color:${color}">${usado>0?sign+diff.toFixed(1)+'g':' —'}</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${tgEst.toFixed(1)}g</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${preparado}g</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${sobrante}g</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;font-weight:700">${preparado>0?consumido.toFixed(1)+'g':'—'}</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;color:#dc2626">${preparado>0?mermaG.toFixed(1)+'g ('+mermaPct+'%)':'—'}</td>
+      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;color:${color}">${preparado>0?sign+diff.toFixed(1)+'g':'—'}</td>
     </tr>`;
   }).join('');
 
@@ -2815,7 +2834,7 @@ function generarPDFInterno(){
   ${consumoRows?`
   <div class="section">Consumo real de tintas</div>
   <table>
-    <thead><tr><th>Color</th><th style="text-align:center">Estimado</th><th style="text-align:center">Preparado</th><th style="text-align:center">Sobrante</th><th style="text-align:center">Consumo neto</th><th style="text-align:center">Diferencia</th></tr></thead>
+    <thead><tr><th>Color</th><th style="text-align:center">Estimado</th><th style="text-align:center">Preparado</th><th style="text-align:center">Sobrante</th><th style="text-align:center">Consumido</th><th style="text-align:center">Merma</th><th style="text-align:center">vs Estimado</th></tr></thead>
     <tbody>${consumoRows}</tbody>
   </table>`:''}
 
