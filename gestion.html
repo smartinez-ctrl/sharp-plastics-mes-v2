@@ -1596,7 +1596,8 @@ async function guardarCotizacion(){
 // PROYECCIÓN
 
 function renderCobros(){
-  const todos=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado'||p.venta_total>0);
+  // Solo pedidos completados o entregados
+  const todos=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado');
   const pendientes=todos.filter(p=>!p.cobrado);
   const pagados=todos.filter(p=>p.cobrado);
   const totalPend=pendientes.reduce((s,p)=>s+(p.venta_total||0),0);
@@ -1613,32 +1614,32 @@ function renderCobros(){
     return `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
       <div>
         <div style="font-weight:600">${p.sub_cliente||p.cliente||'—'}</div>
-        <div style="font-size:10px;color:var(--text3)">${p.po||'—'}</div>
+        <div style="font-size:10px;color:var(--text2)">${p.po||'—'}</div>
       </div>
       <div style="font-family:monospace;color:var(--green);font-weight:700">${p.venta_total?mxn(p.venta_total):'—'}</div>
-      <div style="font-size:11px;color:var(--text3)">${p.piezas||0} pzas</div>
-      <div style="font-size:11px;color:var(--text3)">Entrega: ${fecha}</div>
-      <div style="font-size:11px;color:var(--text3)">${cobrado?'Cobrado: '+fechaCob:''}</div>
+      <div style="font-size:12px;color:var(--text)">${(p.piezas||0).toLocaleString()} pzas</div>
+      <div style="font-size:12px;color:var(--text2)">${fecha}</div>
+      <div style="font-size:12px;color:var(--text2)">${cobrado?'✓ '+fechaCob:''}</div>
       <div>
         ${cobrado
           ? `<button class="btn btn-ghost btn-xs" onclick="toggleCobro('${p.id}',false)">↩ Desmarcar</button>`
-          : `<button class="btn btn-primary btn-xs" style="width:100%" onclick="toggleCobro('${p.id}',true)">💵 Marcar cobrado</button>`
+          : `<button class="btn btn-primary btn-xs" style="width:100%" onclick="toggleCobro('${p.id}',true)">💵 Cobrado</button>`
         }
       </div>
     </div>`;
   };
 
   const headerHTML=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px;gap:8px;padding:6px 14px;margin-bottom:2px">
-    ${['Cliente','Venta','Piezas','Entrega','',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">${h}</span>`).join('')}
+    ${['Cliente','Venta','Piezas','F. Entrega','F. Cobro',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">${h}</span>`).join('')}
   </div>`;
 
   document.getElementById('cobros-pendientes').innerHTML=pendientes.length
     ? headerHTML+pendientes.map(p=>rowHTML(p,false)).join('')
-    : '<div style="text-align:center;padding:20px;color:var(--text3)">Sin pedidos pendientes de cobro</div>';
+    : '<div style="text-align:center;padding:20px;color:var(--text2)">Sin pedidos pendientes de cobro</div>';
 
   document.getElementById('cobros-pagados').innerHTML=pagados.length
     ? headerHTML+pagados.map(p=>rowHTML(p,true)).join('')
-    : '<div style="text-align:center;padding:20px;color:var(--text3)">Sin cobros registrados</div>';
+    : '<div style="text-align:center;padding:20px;color:var(--text2)">Sin cobros registrados</div>';
 }
 
 async function toggleCobro(id, cobrado){
