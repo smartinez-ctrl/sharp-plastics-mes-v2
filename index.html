@@ -769,12 +769,13 @@ function checkPin(){
   }
   S.user=S.pinTarget;
   const rol=S.user.role;
-  if(rol==='master'||rol==='facturacion'){
+  const forceProd=new URLSearchParams(window.location.search).get('prod')==='1';
+  if((rol==='master'||rol==='facturacion')&&!forceProd){
     sessionStorage.setItem('sp_user',JSON.stringify({id:S.user.id,nombre:S.user.name,rol:S.user.role,color:S.user.color}));
     window.location.href='gestion.html';
     return;
   }
-  if(rol==='supervisor'||rol==='operador'){
+  if(rol==='master'||rol==='facturacion'||rol==='supervisor'||rol==='operador'){
     updateUserChips();
     applyRoleRestrictions();
     showScreen('dashboard');

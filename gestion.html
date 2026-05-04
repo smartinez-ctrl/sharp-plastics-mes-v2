@@ -495,7 +495,7 @@ const USER=JSON.parse(sessionStorage.getItem('sp_user')||'null');
 if(!USER||!(USER.rol==='master'||USER.rol==='facturacion')){window.location.href='index.html';}
 window.addEventListener('focus',function(){const u=JSON.parse(sessionStorage.getItem('sp_user')||'null');if(!u||!(u.rol==='master'||u.rol==='facturacion'))window.location.href='index.html';});
 
-function irAProduccion(){window.open(location.origin+'/index.html','_blank');}
+function irAProduccion(){window.open(location.origin+'/?prod=1','_blank');}
 function cerrarSesion(){sessionStorage.removeItem('sp_user');window.location.href='index.html';}
 
 if(USER){
