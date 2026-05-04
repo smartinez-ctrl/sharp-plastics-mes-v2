@@ -869,7 +869,7 @@ async function renderDashboard(){
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div style="font-size:15px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
             <div style="display:flex;align-items:center;gap:6px">
-              ${p.estado==='En producción'?'<span style="font-size:10px;background:#ef4444;color:#fff;padding:2px 8px;border-radius:20px;font-weight:700;animation:pulse-red 1.5s infinite">🔴 EN VIVO</span>':''}
+              ${p.estado==='En producción'?`<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id=${p.id}" target="_blank" style="font-size:10px;background:#ef4444;color:#fff;padding:2px 8px;border-radius:20px;font-weight:700;animation:pulse-red 1.5s infinite;text-decoration:none;cursor:pointer;touch-action:manipulation">🔴 EN VIVO</a>`:''}
               <div class="badge ${p.estado==='En producción'?'badge-blue':'badge-amber'}" style="font-size:9px">${p.estado}</div>
             </div>
           </div>
