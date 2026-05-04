@@ -676,6 +676,15 @@ function colorChip(t){
   return '<span style="font-size:9px;background:'+bg+';border-radius:3px;padding:2px 6px;color:'+(isLight?'#111':'#fff')+';font-weight:600">'+(t.pantone||t.nombre||'')+'</span>';
 }
 
+function sortPipeline(col){
+  if(window._pipeSort&&window._pipeSort.col===col){
+    window._pipeSort.asc=!window._pipeSort.asc;
+  } else {
+    window._pipeSort={col,asc:true};
+  }
+  renderPipeline();
+}
+
 function filtrarPipeline(q){
   q=(q||'').toLowerCase().trim();
   window._pipelineQuery=q;
@@ -685,8 +694,17 @@ function filtrarPipeline(q){
 function renderPipeline(){
   const q=window._pipelineQuery||'';
   const matchQ=p=>{if(!q)return true;const s=((p.sub_cliente||'')+' '+(p.cliente||'')+' '+(p.po||'')+' '+(p.capacidad||'')).toLowerCase();return s.includes(q);};
-  const activos=PIPELINE.filter(p=>(p.estado==='Pendiente'||p.estado==='En producción')&&matchQ(p));
-  const completados=PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado')&&matchQ(p));
+  const sortFn=(a,b)=>{
+    if(!window._pipeSort)return 0;
+    const {col,asc}=window._pipeSort;
+    const av=col==='cliente'?(a.sub_cliente||a.cliente||''):(a[col]||'');
+    const bv=col==='cliente'?(b.sub_cliente||b.cliente||''):(b[col]||'');
+    const res=typeof av==='number'?av-bv:String(av).localeCompare(String(bv));
+    return asc?res:-res;
+  };  let activos=PIPELINE.filter(p=>(p.estado==='Pendiente'||p.estado==='En producción')&&matchQ(p));
+  if(window._pipeSort)activos=[...activos].sort(sortFn);
+  let completados=PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado')&&matchQ(p));
+  if(window._pipeSort)completados=[...completados].sort(sortFn);
   document.getElementById('badge-pipeline').textContent=activos.length;
   document.getElementById('pipeline-sub').textContent=`${activos.length} activos · ${completados.length} completados`;
   document.getElementById('st-activos').textContent=activos.length;
@@ -699,15 +717,17 @@ function renderPipeline(){
 
   // Header de columnas
   const PIPE_COLS = '3fr 1fr 0.5fr 0.7fr 1fr 1.1fr 0.8fr 1.1fr 0.8fr 1.3fr';
+  const sortIcon=c=>window._pipeSort&&window._pipeSort.col===c?(window._pipeSort.asc?'↑':'↓'):'';
+  const sortHdr=(label,col,align='left')=>`<span onclick="sortPipeline('${col}')" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:${align};cursor:pointer;user-select:none;${window._pipeSort?.col===col?'color:var(--amber)':''}">${label} ${sortIcon(col)}</span>`;
   const pipelineHeader = `<div style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;padding:6px 14px;margin-bottom:2px"><span></span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">PO</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">ml</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Piezas</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Entrega</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Venta</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Margen</span>
-    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Estado</span>
+    ${sortHdr('Cliente','cliente')}
+    ${sortHdr('PO','po')}
+    ${sortHdr('ml','capacidad','center')}
+    ${sortHdr('Piezas','piezas','center')}
+    ${sortHdr('F. Entrega','fecha_entrega','center')}
+    ${sortHdr('Venta','venta_total','right')}
+    ${sortHdr('Margen','margen','right')}
+    ${sortHdr('Estado','estado','right')}
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Arte</span>
     <span></span>
   </div>`;
@@ -724,9 +744,9 @@ function renderPipeline(){
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="margin-top:2px">${tintas}</div>
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text2)">${p.po||'—'}</div>
-      <div style="font-size:12px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
-      <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text)">${p.po||'—'}</div>
+      <div style="font-size:12px;text-align:center;color:var(--text)">${p.capacidad||'—'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center;color:var(--text)">${(p.piezas||0).toLocaleString()}</div>
       <div style="font-size:11px;text-align:center;color:${isUrgent?'var(--red)':'var(--text3)'}">${fEnt}</div>
       <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
