@@ -1480,23 +1480,26 @@ async function cargarOrdenExistente(pipelineId){
     },300);
     // parámetros se restauran en el setTimeout de abajo
     toast('✅ Orden restaurada — '+fmt(o.tiempo_produccion_seg||0)+' producción','ok');
-    // Actualizar displays y arrancar cronómetro después de que la pantalla esté visible
+    // Ir directo a pantalla de producción y arrancar cronómetro
     setTimeout(()=>{
-      // Asegurar que t.s tenga el valor correcto para reanudar
       S.timers.prod.s = o.tiempo_produccion_seg||0;
       S.timers.prod.total = o.tiempo_produccion_seg||0;
       S.timers.ajuste.s = o.tiempo_ajuste_seg||0;
       S.timers.ajuste.total = o.tiempo_ajuste_seg||0;
-      const tAjEl=document.getElementById('timer-ajuste');
-      const tPrEl=document.getElementById('timer-prod');
-      if(tAjEl)tAjEl.textContent=fmt(S.timers.ajuste.s);
-      if(tPrEl)tPrEl.textContent=fmt(S.timers.prod.s);
-      updateProdStats();
-      syncTimerBars&&syncTimerBars();
-      // Arrancar cronómetro de producción automáticamente
-      window._monitorEmailEnviado=true; // evitar re-enviar email
-      timerPlay('prod');
-    },600);
+      window._monitorEmailEnviado=true; // no re-enviar email
+      // Ir a pantalla de producción
+      showScreen('produccion');
+      renderSteps('steps-prod','produccion');
+      setTimeout(()=>{
+        const tPrEl=document.getElementById('timer-prod');
+        if(tPrEl)tPrEl.textContent=fmt(S.timers.prod.s);
+        const biEl=document.getElementById('buenas-input');
+        if(biEl){biEl.value=o.piezas_buenas||0;onBuenasInput(biEl.value);}
+        updateProdStats();
+        syncTimerBars&&syncTimerBars();
+        timerPlay('prod');
+      },200);
+    },400);
   }catch(e){toast('Error al cargar orden: '+e.message,'err');}
 }
 
