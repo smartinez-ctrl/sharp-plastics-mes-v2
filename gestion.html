@@ -700,7 +700,22 @@ function renderPipeline(){
   document.getElementById('pipeline-activos').innerHTML=activos.length?(pipelineHeader+activos.map(p=>{
     const isUrgent=p.fecha_entrega&&(new Date(p.fecha_entrega+'T12:00:00')-new Date())<4*24*60*60*1000;
     const margenColor=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
-    const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>`<span style="font-size:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;color:var(--text3)">${t.pantone||t.nombre||''}</span>`).join(' '):'';
+    const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>{
+      const raw=(t.pantone||t.nombre||'').toLowerCase();
+      const colorMap={
+        'black':'#222','negro':'#222','white':'#f5f5f5','blanco':'#f5f5f5',
+        'red':'#dc2626','rojo':'#dc2626','blue':'#2563eb','azul':'#2563eb',
+        'green':'#16a34a','verde':'#16a34a','yellow':'#eab308','amarillo':'#eab308',
+        'orange':'#f97316','naranja':'#f97316','purple':'#9333ea','morado':'#9333ea',
+        'pink':'#ec4899','rosa':'#ec4899','gray':'#6b7280','gris':'#6b7280',
+        'silver':'#94a3b8','gold':'#d97706','oro':'#d97706','clear':'#cbd5e1','natural':'#cbd5e1',
+      };
+      let bg='var(--bg4)';
+      for(const [k,v] of Object.entries(colorMap)){if(raw.includes(k)){bg=v;break;}}
+      const isLight=bg==='#f5f5f5'||bg==='#cbd5e1'||bg==='#eab308';
+      const txtColor=isLight?'#111':'#fff';
+      return `<span style="font-size:9px;background:${bg};border-radius:3px;padding:2px 6px;color:${txtColor};font-weight:600">${t.pantone||t.nombre||''}</span>`;
+    }).join(' '):\'\' ;
     const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="false" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
@@ -709,7 +724,7 @@ function renderPipeline(){
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="margin-top:2px">${tintas}</div>
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3)">${p.po||'—'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text2)">${p.po||'—'}</div>
       <div style="font-size:12px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
       <div style="font-size:11px;text-align:center;color:${isUrgent?'var(--red)':'var(--text3)'}">${fEnt}</div>
@@ -734,7 +749,8 @@ function renderPipeline(){
   }).join('')):'<div style="text-align:center;padding:30px;color:var(--text3)">Sin pedidos activos.</div>';
   initPipelineDrag();
 
-  const compHeader = `<div style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;padding:6px 14px;margin-bottom:2px">
+  const compHeader = `<div style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;padding:6px 14px;margin-bottom:2px">
+    <span></span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">PO</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">ml</span>
@@ -744,24 +760,35 @@ function renderPipeline(){
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Margen</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Estado</span>
     <span></span>
+    <span></span>
   </div>`;
   document.getElementById('pipeline-completados').innerHTML=completados.length?(compHeader+completados.slice(0,10).map(p=>{
     const fPed2=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt2=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const margenColor2=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
-    return `<div class="pipeline-card" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;opacity:0.85">
+    const tintasC=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>{
+      const raw=(t.pantone||t.nombre||'').toLowerCase();
+      const colorMap={'black':'#222','negro':'#222','white':'#f5f5f5','blanco':'#f5f5f5','red':'#dc2626','rojo':'#dc2626','blue':'#2563eb','azul':'#2563eb','green':'#16a34a','verde':'#16a34a','yellow':'#eab308','amarillo':'#eab308','orange':'#f97316','naranja':'#f97316','purple':'#9333ea','morado':'#9333ea','pink':'#ec4899','rosa':'#ec4899','gray':'#6b7280','gris':'#6b7280','silver':'#94a3b8','gold':'#d97706','clear':'#cbd5e1','natural':'#cbd5e1'};
+      let bg='var(--bg4)';for(const [k,v] of Object.entries(colorMap)){if(raw.includes(k)){bg=v;break;}}
+      const isLight=bg==='#f5f5f5'||bg==='#cbd5e1'||bg==='#eab308';
+      return `<span style="font-size:9px;background:${bg};border-radius:3px;padding:2px 6px;color:${isLight?'#111':'#fff'};font-weight:600">${t.pantone||t.nombre||''}</span>`;
+    }).join(' '):'';
+    return `<div class="pipeline-card" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;opacity:0.85">
+      <div></div>
       <div style="min-width:0;overflow:hidden">
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
+        ${tintasC?`<div style="margin-top:3px">${tintasC}</div>`:''}
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text3)">${p.po||'—'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text2)">${p.po||'—'}</div>
       <div style="font-size:12px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
-      <div style="font-size:11px;text-align:center;color:var(--text3)">${fEnt2}</div>
+      <div style="font-size:11px;text-align:center;color:var(--text2)">${fEnt2}</div>
       <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor2};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>
       <div style="display:flex;align-items:center;justify-content:flex-end">
         <span class="badge ${BADGE_MAP[p.estado]||'badge-green'}" style="font-size:9px">${p.estado}</span>
       </div>
+      <div></div>
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-xs" title="Fotos empaque" onclick="abrirFotosEmpaque('${p.id}')">📦</button>
         <button class="btn btn-ghost btn-xs" title="PDF cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
