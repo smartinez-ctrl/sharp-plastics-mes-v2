@@ -1005,41 +1005,101 @@ async function abrirEditarCompletado(pipelineId){
     const rows=await r.json();
     const o=rows&&rows[0];
     if(!o){body.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px">Sin datos de producción</div>';return;}
-    const fld=(label,field,type,val)=>`
-      <div class="field" style="margin-bottom:10px">
-        <label style="font-size:10px;color:var(--text2)">${label}</label>
-        <input type="${type}" value="${val||''}" 
-          oninput="guardarCampoOrden('${o.id}','${field}',this.value,'${type}')"
-          style="width:100%;${type==='number'?'text-align:center':''}">
-      </div>`;
-    const fldSel=(label,field,opts,val)=>`
-      <div class="field" style="margin-bottom:10px">
-        <label style="font-size:10px;color:var(--text2)">${label}</label>
-        <select oninput="guardarCampoOrden('${o.id}','${field}',this.value,'text')" style="width:100%">
-          ${opts.map(op=>`<option value="${op}" ${op===val?'selected':''}>${op}</option>`).join('')}
-        </select>
-      </div>`;
-    body.innerHTML=`
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Datos generales</div>
-        ${fld('Máquina','maquina','text',o.maquina)}
-        ${fld('Piezas buenas','piezas_buenas','number',o.piezas_buenas)}
-        ${fldSel('Crosshatch','crosshatch',['Aprobado','Rechazado','N/A'],o.crosshatch)}
-        ${fldSel('Prueba de agua','prueba_agua',['Aprobado','Rechazado','N/A'],o.prueba_agua)}
-      </div>
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Tiempos</div>
-        ${fld('Tiempo ajuste (seg)','tiempo_ajuste_seg','number',o.tiempo_ajuste_seg)}
-        ${fld('Tiempo producción (seg)','tiempo_produccion_seg','number',o.tiempo_produccion_seg)}
-      </div>
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Observaciones</div>
-        <div class="field" style="margin:0">
-          <textarea oninput="guardarCampoOrden('${o.id}','observaciones',this.value,'text')" 
-            style="width:100%;min-height:80px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px">${o.observaciones||''}</textarea>
+
+    const oid=o.id;
+    const fld=(label,field,type,val)=>`<div class="field" style="margin-bottom:10px">
+      <label style="font-size:10px;color:var(--text2)">${label}</label>
+      <input type="${type}" value="${val!=null?val:''}" 
+        oninput="guardarCampoOrden('${oid}','${field}',this.value,'${type}')"
+        style="width:100%;${type==='number'?'text-align:center':''}">
+    </div>`;
+    const fldSel=(label,field,opts,val)=>`<div class="field" style="margin-bottom:10px">
+      <label style="font-size:10px;color:var(--text2)">${label}</label>
+      <select onchange="guardarCampoOrden('${oid}','${field}',this.value,'text')" style="width:100%">
+        ${opts.map(op=>`<option value="${op}" ${op==val?'selected':''}>${op}</option>`).join('')}
+      </select>
+    </div>`;
+    const fldCheck=(label,field,val)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer" onclick="this.querySelector('input').click()">
+      <input type="checkbox" ${val?'checked':''} onchange="guardarCampoOrden('${oid}','${field}',this.checked,'bool')" style="width:16px;height:16px;cursor:pointer">
+      <label style="font-size:12px;cursor:pointer">${label}</label>
+    </div>`;
+    const sec=(title,html)=>`<div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">${title}</div>
+      ${html}
+    </div>`;
+
+    // Merma rows
+    const MERMA_TIPOS=['Shadow','Descuadre','Falta tinta','Mal flameo','Perforada/deforme','Soleo','Otro 1','Otro 2'];
+    const mAj=o.merma_ajuste||{};
+    const mPr=o.merma_produccion||{};
+    const mermaHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'+
+      MERMA_TIPOS.map(t=>`<div style="display:flex;flex-direction:column;gap:2px">
+        <label style="font-size:9px;color:var(--text3)">${t}</label>
+        <div style="display:flex;gap:4px">
+          <input type="number" placeholder="Aj" value="${mAj[t]||''}" min="0"
+            oninput="guardarMermaOrden('${oid}','ajuste','${t}',this.value)"
+            style="width:50%;text-align:center;font-size:11px;padding:4px">
+          <input type="number" placeholder="Pr" value="${mPr[t]||''}" min="0"
+            oninput="guardarMermaOrden('${oid}','produccion','${t}',this.value)"
+            style="width:50%;text-align:center;font-size:11px;padding:4px">
         </div>
-      </div>
-      <div style="font-size:10px;color:var(--text3);text-align:center">Los cambios se guardan automáticamente</div>`;
+      </div>`).join('')+
+      '</div><div style="display:flex;gap:8px;margin-top:8px"><span style="font-size:9px;color:var(--text3);flex:1;text-align:center">Aj = Ajuste</span><span style="font-size:9px;color:var(--text3);flex:1;text-align:center">Pr = Producción</span></div>';
+
+    // TM rows
+    const TM_TIPOS={comida:'Salida a comer',tintas:'Prep. tintas',reajuste:'Reajuste',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
+    const tmAj=o.tm_ajuste||{};
+    const tmPr=o.tm_produccion||{};
+    const tmHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'+
+      Object.entries(TM_TIPOS).map(([k,label])=>`<div style="display:flex;flex-direction:column;gap:2px">
+        <label style="font-size:9px;color:var(--text3)">${label}</label>
+        <div style="display:flex;gap:4px">
+          <input type="number" placeholder="Aj(s)" value="${(typeof tmAj[k]==='object'?(tmAj[k].total||0):tmAj[k])||''}" min="0"
+            oninput="guardarTMOrden('${oid}','ajuste','${k}',this.value)"
+            style="width:50%;text-align:center;font-size:11px;padding:4px">
+          <input type="number" placeholder="Pr(s)" value="${(typeof tmPr[k]==='object'?(tmPr[k].total||0):tmPr[k])||''}" min="0"
+            oninput="guardarTMOrden('${oid}','produccion','${k}',this.value)"
+            style="width:50%;text-align:center;font-size:11px;padding:4px">
+        </div>
+      </div>`).join('')+
+      '</div><div style="font-size:9px;color:var(--text3);margin-top:6px;text-align:center">Valores en segundos · Aj = Ajuste · Pr = Producción</div>';
+
+    body.innerHTML=
+      sec('⏱ Tiempos',
+        fld('Tiempo ajuste (seg)','tiempo_ajuste_seg','number',o.tiempo_ajuste_seg)+
+        fld('Tiempo producción (seg)','tiempo_produccion_seg','number',o.tiempo_produccion_seg)+
+        fld('Reajustes','reajustes','number',o.reajustes)
+      )+
+      sec('📋 Datos generales',
+        fld('Máquina','maquina','text',o.maquina)+
+        fld('Piezas buenas','piezas_buenas','number',o.piezas_buenas)+
+        fld('Lote botella','lote_botella','text',o.lote_botella)+
+        fld('Lote tapa','lote_tapa','text',o.lote_tapa)
+      )+
+      sec('🔆 Parámetros UV y proceso',
+        fldSel('Flameo tipo','flameo_tipo',['Sin flameado','Manual','Dispositivo','CNC'],o.flameo_tipo||'Sin flameado')+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        fld('Flameo tiempo (s)','flameo_tiempo','number',o.flameo_tiempo)+
+        fld('Flameo vueltas','flameo_vueltas','number',o.flameo_vueltas)+
+        fld('UV Intensidad','uv_intensidad','number',o.uv_intensidad)+
+        fld('UV Velocidad','uv_velocidad','number',o.uv_velocidad)+
+        fld('Presión aire (psi)','presion_aire','number',o.presion_aire)+
+        '</div>'+
+        fldCheck('Proceso alcohol','proceso_alcohol',o.proceso_alcohol)+
+        fldCheck('Proceso primer','proceso_primer',o.proceso_primer)
+      )+
+      sec('🗑 Merma por causa',mermaHTML)+
+      sec('⏸ Tiempos muertos',tmHTML)+
+      sec('✅ Calidad',
+        fldSel('Crosshatch','crosshatch',['','Aprobado','Rechazado','N/A'],o.crosshatch||'')+
+        fldSel('Prueba de agua','prueba_agua',['','Aprobado','Rechazado','N/A'],o.prueba_agua||'')
+      )+
+      sec('📝 Observaciones',`<div class="field" style="margin:0">
+        <textarea oninput="guardarCampoOrden('${oid}','observaciones',this.value,'text')" 
+          style="width:100%;min-height:80px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px;box-sizing:border-box">${o.observaciones||''}</textarea>
+      </div>`)+
+      '<div style="font-size:10px;color:var(--text3);text-align:center;padding-bottom:8px">Los cambios se guardan automáticamente ✓</div>';
+
   }catch(e){body.innerHTML='<div style="color:var(--red);padding:16px">Error: '+e.message+'</div>';}
 }
 
@@ -1047,16 +1107,56 @@ let _editOrdenTimer={};
 async function guardarCampoOrden(ordenId, campo, valor, tipo){
   clearTimeout(_editOrdenTimer[ordenId+campo]);
   _editOrdenTimer[ordenId+campo]=setTimeout(async()=>{
-    const v=tipo==='number'?(parseFloat(valor)||0):valor;
+    const v=tipo==='number'?(parseFloat(valor)||0):tipo==='bool'?valor:valor;
     try{
       await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ordenId,{
         method:'PATCH',
         headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
         body:JSON.stringify({[campo]:v})
       });
-      toast('✓ Guardado','ok');
+      toast('✓','ok');
     }catch(e){toast('Error: '+e.message,'err');}
   },600);
+}
+
+// Cache for merma/TM edits before saving
+window._mermaCache={};
+window._tmCache={};
+
+async function guardarMermaOrden(ordenId, fase, tipo, valor){
+  const key=ordenId+'_merma_'+fase;
+  if(!window._mermaCache[key])window._mermaCache[key]={};
+  window._mermaCache[key][tipo]=parseInt(valor)||0;
+  clearTimeout(_editOrdenTimer[key]);
+  _editOrdenTimer[key]=setTimeout(async()=>{
+    const campo=fase==='ajuste'?'merma_ajuste':'merma_produccion';
+    try{
+      await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ordenId,{
+        method:'PATCH',
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({[campo]:window._mermaCache[key]})
+      });
+      toast('✓','ok');
+    }catch(e){toast('Error: '+e.message,'err');}
+  },800);
+}
+
+async function guardarTMOrden(ordenId, fase, key, valor){
+  const cacheKey=ordenId+'_tm_'+fase;
+  if(!window._tmCache[cacheKey])window._tmCache[cacheKey]={};
+  window._tmCache[cacheKey][key]=parseInt(valor)||0;
+  clearTimeout(_editOrdenTimer[cacheKey]);
+  _editOrdenTimer[cacheKey]=setTimeout(async()=>{
+    const campo=fase==='ajuste'?'tm_ajuste':'tm_produccion';
+    try{
+      await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ordenId,{
+        method:'PATCH',
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({[campo]:window._tmCache[cacheKey]})
+      });
+      toast('✓','ok');
+    }catch(e){toast('Error: '+e.message,'err');}
+  },800);
 }
 
 async function verPDFCompletado(pipelineId, tipo){
