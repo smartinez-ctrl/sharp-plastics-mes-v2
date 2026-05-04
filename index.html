@@ -1066,8 +1066,18 @@ async function abrirEditarCompletado(pipelineId){
 
     body.innerHTML=
       sec('⏱ Tiempos',
-        fld('Tiempo ajuste (seg)','tiempo_ajuste_seg','number',o.tiempo_ajuste_seg)+
-        fld('Tiempo producción (seg)','tiempo_produccion_seg','number',o.tiempo_produccion_seg)+
+        `<div class="field" style="margin-bottom:10px">
+          <label style="font-size:10px;color:var(--text2)">Tiempo ajuste (HH:MM:SS)</label>
+          <input type="text" value="${fmtSeg2(o.tiempo_ajuste_seg)}" placeholder="0:00:00"
+            oninput="guardarTiempoOrden('${oid}','tiempo_ajuste_seg',this.value)"
+            style="width:100%;text-align:center;font-family:monospace">
+        </div>
+        <div class="field" style="margin-bottom:10px">
+          <label style="font-size:10px;color:var(--text2)">Tiempo producción (HH:MM:SS)</label>
+          <input type="text" value="${fmtSeg2(o.tiempo_produccion_seg)}" placeholder="0:00:00"
+            oninput="guardarTiempoOrden('${oid}','tiempo_produccion_seg',this.value)"
+            style="width:100%;text-align:center;font-family:monospace">
+        </div>`+
         fld('Reajustes','reajustes','number',o.reajustes)
       )+
       sec('📋 Datos generales',
@@ -1101,6 +1111,32 @@ async function abrirEditarCompletado(pipelineId){
       '<div style="font-size:10px;color:var(--text3);text-align:center;padding-bottom:8px">Los cambios se guardan automáticamente ✓</div>';
 
   }catch(e){body.innerHTML='<div style="color:var(--red);padding:16px">Error: '+e.message+'</div>';}
+}
+
+function fmtSeg2(s){
+  s=Math.floor(s||0);
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;
+  return h+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+function parseSeg(str){
+  const p=String(str).split(':').map(Number);
+  if(p.length===3)return (p[0]*3600+p[1]*60+p[2]);
+  if(p.length===2)return (p[0]*60+p[1]);
+  return parseInt(str)||0;
+}
+async function guardarTiempoOrden(ordenId,campo,valor){
+  clearTimeout(_editOrdenTimer[ordenId+campo]);
+  _editOrdenTimer[ordenId+campo]=setTimeout(async()=>{
+    const seg=parseSeg(valor);
+    try{
+      await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ordenId,{
+        method:'PATCH',
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({[campo]:seg})
+      });
+      toast('✓','ok');
+    }catch(e){toast('Error: '+e.message,'err');}
+  },800);
 }
 
 let _editOrdenTimer={};
