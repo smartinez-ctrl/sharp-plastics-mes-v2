@@ -661,6 +661,18 @@ async function cycleArte(id, campo){
   }catch(e){p[campo]=cur;renderPipeline();toast('Error: '+e.message,'err');}
 }
 
+function getColorBg(str){
+  const raw=(str||'').toLowerCase();
+  const colorMap={'black':'#222','negro':'#222','white':'#f5f5f5','blanco':'#f5f5f5','red':'#dc2626','rojo':'#dc2626','blue':'#2563eb','azul':'#2563eb','green':'#16a34a','verde':'#16a34a','yellow':'#eab308','amarillo':'#eab308','orange':'#f97316','naranja':'#f97316','purple':'#9333ea','morado':'#9333ea','pink':'#ec4899','rosa':'#ec4899','gray':'#6b7280','gris':'#6b7280','silver':'#94a3b8','gold':'#d97706','clear':'#cbd5e1','natural':'#cbd5e1'};
+  for(const k of Object.keys(colorMap)){if(raw.includes(k))return colorMap[k];}
+  return 'var(--bg4)';
+}
+function colorChip(t){
+  const bg=getColorBg(t.pantone||t.nombre||'');
+  const isLight=bg==='#f5f5f5'||bg==='#cbd5e1'||bg==='#eab308';
+  return '<span style="font-size:9px;background:'+bg+';border-radius:3px;padding:2px 6px;color:'+(isLight?'#111':'#fff')+';font-weight:600">'+(t.pantone||t.nombre||'')+'</span>';
+}
+
 function filtrarPipeline(q){
   q=(q||'').toLowerCase().trim();
   window._pipelineQuery=q;
@@ -700,22 +712,7 @@ function renderPipeline(){
   document.getElementById('pipeline-activos').innerHTML=activos.length?(pipelineHeader+activos.map(p=>{
     const isUrgent=p.fecha_entrega&&(new Date(p.fecha_entrega+'T12:00:00')-new Date())<4*24*60*60*1000;
     const margenColor=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
-    const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>{
-      const raw=(t.pantone||t.nombre||'').toLowerCase();
-      const colorMap={
-        'black':'#222','negro':'#222','white':'#f5f5f5','blanco':'#f5f5f5',
-        'red':'#dc2626','rojo':'#dc2626','blue':'#2563eb','azul':'#2563eb',
-        'green':'#16a34a','verde':'#16a34a','yellow':'#eab308','amarillo':'#eab308',
-        'orange':'#f97316','naranja':'#f97316','purple':'#9333ea','morado':'#9333ea',
-        'pink':'#ec4899','rosa':'#ec4899','gray':'#6b7280','gris':'#6b7280',
-        'silver':'#94a3b8','gold':'#d97706','oro':'#d97706','clear':'#cbd5e1','natural':'#cbd5e1',
-      };
-      let bg='var(--bg4)';
-      for(const [k,v] of Object.entries(colorMap)){if(raw.includes(k)){bg=v;break;}}
-      const isLight=bg==='#f5f5f5'||bg==='#cbd5e1'||bg==='#eab308';
-      const txtColor=isLight?'#111':'#fff';
-      return `<span style="font-size:9px;background:${bg};border-radius:3px;padding:2px 6px;color:${txtColor};font-weight:600">${t.pantone||t.nombre||''}</span>`;
-    }).join(' '):\'\' ;
+    const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>colorChip(t)).join(' '):'';
     const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="false" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
@@ -766,13 +763,7 @@ function renderPipeline(){
     const fPed2=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt2=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const margenColor2=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
-    const tintasC=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>{
-      const raw=(t.pantone||t.nombre||'').toLowerCase();
-      const colorMap={'black':'#222','negro':'#222','white':'#f5f5f5','blanco':'#f5f5f5','red':'#dc2626','rojo':'#dc2626','blue':'#2563eb','azul':'#2563eb','green':'#16a34a','verde':'#16a34a','yellow':'#eab308','amarillo':'#eab308','orange':'#f97316','naranja':'#f97316','purple':'#9333ea','morado':'#9333ea','pink':'#ec4899','rosa':'#ec4899','gray':'#6b7280','gris':'#6b7280','silver':'#94a3b8','gold':'#d97706','clear':'#cbd5e1','natural':'#cbd5e1'};
-      let bg='var(--bg4)';for(const [k,v] of Object.entries(colorMap)){if(raw.includes(k)){bg=v;break;}}
-      const isLight=bg==='#f5f5f5'||bg==='#cbd5e1'||bg==='#eab308';
-      return `<span style="font-size:9px;background:${bg};border-radius:3px;padding:2px 6px;color:${isLight?'#111':'#fff'};font-weight:600">${t.pantone||t.nombre||''}</span>`;
-    }).join(' '):'';
+    const tintasC=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>colorChip(t)).join(' '):'';
     return `<div class="pipeline-card" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:18px ${PIPE_COLS};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px;opacity:0.85">
       <div></div>
       <div style="min-width:0;overflow:hidden">
