@@ -2420,7 +2420,15 @@ function renderFormulaTintas(formula, pedidoId) {
   }
   var totalCosto = 0;
   var html = formula.map(function(col, ci) {
-    var tg = (col.componentes||[]).reduce(function(s,x){return s+(parseFloat(x.gramos)||0);}, 0);
+    // Deduplicar y filtrar gramos=0
+    var seen={};
+    var compsFilt=(col.componentes||[]).filter(function(x){
+      var key=(x.sku||x.nombre||'')+'_'+(parseFloat(x.gramos)||0);
+      if(seen[key]||!(parseFloat(x.gramos)||0))return false;
+      seen[key]=true;return true;
+    });
+    col=Object.assign({},col,{componentes:compsFilt});
+    var tg = compsFilt.reduce(function(s,x){return s+(parseFloat(x.gramos)||0);}, 0);
     var tgAdits = 0;
     var tcComps = (col.componentes||[]).reduce(function(s,x){var pk=x.precio_kg||x.precio||0;return s+(x.gramos&&pk?(x.gramos/1000)*pk:0);}, 0);
     var tcAdits = (col.aditivos||[]).reduce(function(s,a){

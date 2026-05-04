@@ -2675,13 +2675,25 @@ function generarPDFInterno(){
   // Fórmula de tintas completa
   const tintasRows=(S.tintas||[]).map((t,i)=>{
     const col=S.orden.colores[i]||{nombre:'Color '+(i+1)};
-    const comps=t.componentes||[];
-    const adits=t.aditivos||[];
+    // Deduplicar por sku+nombre y filtrar gramos=0
+    const seen=new Set();
+    const comps=(t.componentes||[]).filter(x=>{
+      const key=(x.sku||x.nombre||'')+'_'+(parseFloat(x.gramos)||0);
+      if(seen.has(key)||!(parseFloat(x.gramos)||0))return false;
+      seen.add(key);return true;
+    });
+    const adits=(t.aditivos||[]);
     const tg=comps.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
     const tgAdits=adits.reduce((s,a)=>{const g=a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0);return s+g;},0);
+    if(!comps.length&&!adits.length)return '';
     let rows=`<tr style="background:#f0f4f8"><td colspan="3" style="padding:5px 10px;font-size:11px;font-weight:700">${col.nombre}${col.pantone?' · '+col.pantone:''} — ${tg}g tintas + ${tgAdits.toFixed(1)}g aditivos</td></tr>`;
     comps.forEach(x=>{rows+=`<tr><td style="padding:3px 10px 3px 20px;font-size:11px">${x.nombre||x.sku||'—'}</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:center">${x.gramos}g</td><td style="padding:3px 10px;font-size:11px;color:#6b7280;text-align:right">${x.prov||''}</td></tr>`;});
-    adits.forEach(a=>{const g=a.pct?(a.pct/100*tg).toFixed(1):(a.gramos||0);rows+=`<tr style="color:#6b7280"><td style="padding:3px 10px 3px 20px;font-size:10px">↳ ${a.nombre||'Aditivo'}${a.pct?' ('+a.pct+'%)':''}</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:center">${g}g</td><td style="padding:3px 10px;font-size:10px;text-align:right">${a.prov||''}</td></tr>`;});
+    adits.forEach(a=>{
+      // Buscar nombre del aditivo en catálogo si viene vacío
+      const nomAdit=a.nombre||(CAT&&CAT.aditivos&&CAT.aditivos.find(x=>x.id===a.aditivo_id)?.nombre)||'Aditivo';
+      const g=a.pct?(a.pct/100*tg).toFixed(1):(parseFloat(a.gramos)||0);
+      rows+=`<tr style="color:#6b7280"><td style="padding:3px 10px 3px 20px;font-size:10px">↳ ${nomAdit}${a.pct?' ('+a.pct+'%)':''}</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:center">${g}g</td><td style="padding:3px 10px;font-size:10px;text-align:right">${a.prov||''}</td></tr>`;
+    });
     return rows;
   }).join('');
 
