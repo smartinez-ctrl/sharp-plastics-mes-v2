@@ -199,6 +199,9 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
 <div id="page-cobros" class="page">
   <div class="ph-row">
     <div><div class="page-title">Cobros</div><div class="page-sub">Seguimiento de pagos por pedido</div></div>
+    <div class="page-actions">
+      <button class="btn btn-secondary btn-sm" onclick="exportarCobrosExcel()">📊 Exportar Excel</button>
+    </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
     <div class="stat-card"><div class="stat-val" id="cob-pendiente-val" style="color:var(--amber)">—</div><div class="stat-label">Por cobrar</div></div>
@@ -1646,6 +1649,51 @@ function renderCobros(){
   document.getElementById('cobros-pagados').innerHTML=pagados.length
     ? headerHTML+pagados.map(p=>rowHTML(p,true)).join('')
     : '<div style="text-align:center;padding:20px;color:var(--text2)">Sin cobros registrados</div>';
+}
+
+function exportarCobrosExcel(){
+  const todos=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado');
+  if(!todos.length){toast('Sin pedidos completados','err');return;}
+
+  // SheetJS CDN
+  const script=document.createElement('script');
+  script.src='https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
+  script.onload=function(){
+    const rows=[['Pedido','No. OC','Fecha Entrega','Piezas','Total Venta','Fecha Cobro','Estado Cobro']];
+    todos.forEach(p=>{
+      const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX'):'—';
+      const fCob=p.fecha_cobro?new Date(p.fecha_cobro+'T12:00:00').toLocaleDateString('es-MX'):'—';
+      rows.push([
+        p.sub_cliente||p.cliente||'—',
+        p.po||'—',
+        fEnt,
+        p.piezas||0,
+        p.venta_total||0,
+        p.cobrado?fCob:'—',
+        p.cobrado?'Cobrado':'Pendiente',
+      ]);
+    });
+    // Totales
+    rows.push([]);
+    rows.push(['TOTAL PENDIENTE','','','',PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&!p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0),'','']);
+    rows.push(['TOTAL COBRADO','','','',PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0),'','']);
+
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    // Ancho de columnas
+    ws['!cols']=[{wch:30},{wch:15},{wch:15},{wch:10},{wch:15},{wch:15},{wch:15}];
+    // Formato moneda en columna E (índice 4)
+    for(let i=2;i<=rows.length;i++){
+      const cell=ws[XLSX.utils.encode_cell({r:i-1,c:4})];
+      if(cell&&typeof cell.v==='number') cell.z='$#,##0.00';
+    }
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,'Cobros',ws);
+    const fecha=new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb,'Sharp-Plastics-Cobros-'+fecha+'.xlsx');
+    toast('Excel exportado ✓','ok');
+  };
+  if(window.XLSX){script.onload();}
+  else document.head.appendChild(script);
 }
 
 async function toggleCobro(id, cobrado){
