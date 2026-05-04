@@ -2690,7 +2690,7 @@ function generarPDFInterno(){
     comps.forEach(x=>{rows+=`<tr><td style="padding:3px 10px 3px 20px;font-size:11px">${x.nombre||x.sku||'—'}</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:center">${x.gramos}g</td><td style="padding:3px 10px;font-size:11px;color:#6b7280;text-align:right">${x.prov||''}</td></tr>`;});
     adits.forEach(a=>{
       // Buscar nombre del aditivo en catálogo si viene vacío
-      const nomAdit=a.nombre||(CAT&&CAT.aditivos&&CAT.aditivos.find(x=>x.id===a.aditivo_id)?.nombre)||'Aditivo';
+      const nomAdit=a.nombre||'Aditivo';
       const g=a.pct?(a.pct/100*tg).toFixed(1):(parseFloat(a.gramos)||0);
       rows+=`<tr style="color:#6b7280"><td style="padding:3px 10px 3px 20px;font-size:10px">↳ ${nomAdit}${a.pct?' ('+a.pct+'%)':''}</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:center">${g}g</td><td style="padding:3px 10px;font-size:10px;text-align:right">${a.prov||''}</td></tr>`;
     });
