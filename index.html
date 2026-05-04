@@ -843,7 +843,7 @@ async function renderDashboard(){
   try{
     const rows=await sbGet('pipeline_mf','order=orden_posicion.asc,created_at.asc');
     const activos=rows.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
-    const completados=rows.filter(p=>p.estado==='Completado'||p.estado==='Entregado');
+    const completados=rows.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&!p.oculto);
     window._dashRows=activos;
     const esOperador=S.user&&S.user.role==='operador';
     let html='';
@@ -892,6 +892,7 @@ async function renderDashboard(){
           <button class="btn btn-ghost btn-sm" style="flex:1" onclick="verPDFCompletado('${p.id}','interno')">📊 PDF interno</button>
           <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEmpaqueProduccion('${p.id}')" title="Fotos empaque">📦</button>
           ${S.user&&S.user.role==='master'?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEditarCompletado('${p.id}')" title="Editar">✏️</button>`:''}
+          <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation;opacity:0.5" onclick="ocultarCompletadoProd('${p.id}')" title="Ocultar">🙈</button>
         </div>
       </div>`).join('');
     }
@@ -992,6 +993,18 @@ async function guardarEmpaqueProd(){
     cerrarEmpaqueProduccion();
   }catch(e){toast('Error: '+e.message,'err');}
   finally{if(btn){btn.disabled=false;btn.textContent='💾 Guardar fotos';}}
+}
+
+async function ocultarCompletadoProd(pipelineId){
+  try{
+    await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId,{
+      method:'PATCH',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({oculto:true})
+    });
+    toast('🙈 Oculto — visible en pipeline de gestión');
+    renderDashboard();
+  }catch(e){toast('Error: '+e.message,'err');}
 }
 
 async function abrirEditarCompletado(pipelineId){
