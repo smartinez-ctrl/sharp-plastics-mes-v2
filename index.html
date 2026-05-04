@@ -1130,9 +1130,12 @@ async function abrirEditarCompletado(pipelineId){
       sec('🎨 Consumo real de tintas',
         `<div style="font-size:10px;color:var(--text3);margin-bottom:10px">Gramos usados y sobrante por color</div>`+
         (o.consumo_real_tintas&&o.consumo_real_tintas.length?
-          o.consumo_real_tintas.map((cr,i)=>`
+          o.consumo_real_tintas.map((cr,i)=>{
+            const col=(o.colores||[])[i]||{};
+            const nombre=col.nombre||col.pantone||('Color '+(i+1));
+            return `
             <div style="background:var(--bg4);border-radius:8px;padding:10px;margin-bottom:8px">
-              <div style="font-size:11px;font-weight:600;margin-bottom:8px">Color ${i+1}</div>
+              <div style="font-size:11px;font-weight:600;margin-bottom:8px">Color ${i+1} — <span style="color:var(--amber)">${nombre}</span></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <div class="field" style="margin:0">
                   <label style="font-size:9px;color:var(--text3)">Gramos usados</label>
@@ -1147,7 +1150,8 @@ async function abrirEditarCompletado(pipelineId){
                     style="width:100%;text-align:center;font-family:monospace">
                 </div>
               </div>
-            </div>`).join('')
+            </div>`;
+          }).join('')
           : '<div style="color:var(--text3);font-size:11px;text-align:center;padding:12px">Sin consumo registrado</div>')
       )+
       sec('📝 Observaciones',`<div class="field" style="margin:0">
