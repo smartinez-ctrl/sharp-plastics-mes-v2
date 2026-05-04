@@ -823,8 +823,15 @@ async function abrirDetallePedido(id){
     const formula=p.formula_tintas||[];
     let costoTintas=0;
     formula.forEach(col=>{
-      (col.componentes||[]).forEach(x=>{costoTintas+=(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);});
-      (col.aditivos||[]).forEach(a=>{costoTintas+=(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0);});
+      (col.componentes||[]).forEach(x=>{
+        const pk=x.precio_kg||x.precio||0;
+        costoTintas+=(x.gramos&&pk?(x.gramos/1000)*pk:0);
+      });
+      (col.aditivos||[]).forEach(a=>{
+        const pk=a.precio_kg||a.precio||0;
+        const g=a.gramos||(a.pct&&col.componentes?(a.pct/100*col.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0)):0);
+        costoTintas+=(g&&pk?(g/1000)*pk:0);
+      });
     });
     const costoTotal=piezas*costBot+piezas*costTap+costoTintas+colores*costPant+colores*costPos+piezas*(tfP+tfT);
     resumen.innerHTML=`
@@ -1291,7 +1298,7 @@ function renderColorBlocks(){
   const aOpts='<option value="">Seleccionar...</option>'+CAT.aditivos.map(a=>`<option value="${a.id}" data-precio="${a.precio_kg}">${a.nombre} (${a.proveedor})</option>`).join('');
   el.innerHTML=COT_COLORES.map((col,ci)=>{
     const tg=col.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-    const tc=col.componentes.reduce((s,x)=>s+(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0),0)+col.aditivos.reduce((s,a)=>{const grA=a.pct!==undefined?(a.pct/100*tg):(a.gramos||0);return s+(grA&&a.precio_kg?(grA/1000)*a.precio_kg:0);},0);
+    const tc=col.componentes.reduce((s,x)=>{const pk=x.precio_kg||x.precio||0;return s+(x.gramos&&pk?(x.gramos/1000)*pk:0);},0)+col.aditivos.reduce((s,a)=>{const pk=a.precio_kg||a.precio||0;const grA=a.pct!==undefined?(a.pct/100*tg):(a.gramos||0);return s+(grA&&pk?(grA/1000)*pk:0);},0);
     const comps=col.componentes.map((x,xi)=>`<div class="tinta-row-grid">
       <div class="field" style="margin:0"><label style="font-size:10px">Tinta</label><select onchange="updTintaComp(${ci},${xi},'tinta',this)">${tOpts.replace(`value="${x.tinta_id}"`,`value="${x.tinta_id}" selected`)}</select></div>
       <div class="field" style="margin:0"><label style="font-size:10px">Gramos</label><input type="number" value="${x.gramos||''}" placeholder="0" style="text-align:center" oninput="updTintaComp(${ci},${xi},'gramos',this)"></div>
