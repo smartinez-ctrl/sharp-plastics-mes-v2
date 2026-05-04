@@ -1478,12 +1478,19 @@ async function cargarOrdenExistente(pipelineId){
       if(bi)bi.value=o.piezas_buenas||0;
       updateProdStats();
     },300);
-    // Mostrar stats del cronómetro
-    const tAjEl=document.getElementById('timer-ajuste');
-    const tPrEl=document.getElementById('timer-prod');
-    if(tAjEl)tAjEl.textContent=fmt(S.timers.ajuste.total);
-    if(tPrEl)tPrEl.textContent=fmt(S.timers.prod.total);
+    // parámetros se restauran en el setTimeout de abajo
     toast('✅ Orden restaurada — '+fmt(o.tiempo_produccion_seg||0)+' producción','ok');
+    // Actualizar displays del cronómetro después de que la pantalla esté visible
+    setTimeout(()=>{
+      const tAjEl=document.getElementById('timer-ajuste');
+      const tPrEl=document.getElementById('timer-prod');
+      if(tAjEl)tAjEl.textContent=fmt(S.timers.ajuste.total||S.timers.ajuste.s||0);
+      if(tPrEl)tPrEl.textContent=fmt(S.timers.prod.total||S.timers.prod.s||0);
+      // Actualizar stats de producción
+      updateProdStats();
+      // Sincronizar barra de progreso
+      syncTimerBars&&syncTimerBars();
+    },400);
   }catch(e){toast('Error al cargar orden: '+e.message,'err');}
 }
 
