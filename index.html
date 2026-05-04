@@ -1327,8 +1327,14 @@ async function verPDFCompletado(pipelineId, tipo){
         ajuste:{s:orden?.tiempo_ajuste_seg||0,total:orden?.tiempo_ajuste_seg||0},
         prod:{s:orden?.tiempo_produccion_seg||0,total:orden?.tiempo_produccion_seg||0}
       },
-      merma:{ajuste:orden?.merma_ajuste||{},prod:orden?.merma_produccion||{}},
-      tm:{ajuste:orden?.tm_ajuste||{},prod:orden?.tm_produccion||{}},
+      merma:{
+        ajuste:orden?.merma_ajuste||{},
+        prod:orden?.merma_produccion||{}
+      },
+      tm:{
+        ajuste:orden?.tm_ajuste||{},
+        prod:orden?.tm_produccion||{}
+      },
       qa:orden?.qa_resultados||{},
       tintas:pipe.formula_tintas||[],
       fotos:fotos,
@@ -1338,21 +1344,34 @@ async function verPDFCompletado(pipelineId, tipo){
 
     const origS = {...S};
     Object.assign(S, tmpS);
-    // Set crosshatch/agua DOM inputs so generarPDF can read them
-    const xh = document.getElementById('cierreXhatch');
-    const ag = document.getElementById('cierreAgua');
-    const cf = document.getElementById('cierre-firma');
-    const origXh = xh?.value, origAg = ag?.value, origCf = cf?.value;
-    if(xh) xh.value = orden?.crosshatch||'';
-    if(ag) ag.value = orden?.prueba_agua||'';
-    if(cf) cf.value = orden?.observaciones||'';
+    // Set DOM inputs so generarPDF/generarPDFInterno can read them
+    const setInput=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
+    const setCheck=(id,val)=>{const el=document.getElementById(id);if(el)el.checked=!!val;};
+    setInput('buenas-input', orden?.piezas_buenas||0);
+    setInput('cierre-firma', orden?.firma_cierre||'');
+    setInput('cierre-obs', orden?.observaciones||'');
+    setInput('cierreXhatch', orden?.crosshatch||'');
+    setInput('cierreAgua', orden?.prueba_agua||'');
+    setInput('uv-int', orden?.uv_intensidad||'');
+    setInput('uv-vel', orden?.uv_velocidad||'');
+    setInput('flameo-tipo', orden?.flameo_tipo||'Sin flameado');
+    setInput('flameo-tiempo', orden?.flameo_tiempo||0);
+    setInput('flameo-vueltas', orden?.flameo_vueltas||0);
+    setInput('presion-aire', orden?.presion_aire||'');
+    setCheck('proc-alcohol', orden?.proceso_alcohol);
+    setCheck('proc-primer', orden?.proceso_primer);
     if(tipo==='cliente') generarPDF();
     else generarPDFInterno();
     setTimeout(()=>{
       Object.assign(S, origS);
-      if(xh) xh.value = origXh||'';
-      if(ag) ag.value = origAg||'';
-      if(cf) cf.value = origCf||'';
+      // Restore DOM
+      setInput('buenas-input',0);
+      setInput('cierre-firma','');setInput('cierre-obs','');
+      setInput('cierreXhatch','');setInput('cierreAgua','');
+      setInput('uv-int','');setInput('uv-vel','');
+      setInput('flameo-tipo','');setInput('flameo-tiempo','');
+      setInput('flameo-vueltas','');setInput('presion-aire','');
+      setCheck('proc-alcohol',false);setCheck('proc-primer',false);
     }, 500);
   }catch(e){toast('Error: '+e.message,'err');}
 }
