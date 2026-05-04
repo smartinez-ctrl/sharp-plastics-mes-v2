@@ -556,6 +556,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 </div>
 
 <!-- MODAL MERMA -->
+<div class="modal-overlay" id="modal-editar-completado">
+  <div style="background:var(--bg2);border-radius:16px;padding:20px;width:92%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:700">✏️ Editar producción</div>
+      <button onclick="document.getElementById('modal-editar-completado').classList.remove('open')" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer">×</button>
+    </div>
+    <div id="editar-completado-body"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-empaque-prod">
   <div style="background:var(--bg2);border-radius:16px;padding:20px;width:92%;max-width:480px;max-height:90vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -881,6 +891,7 @@ async function renderDashboard(){
           <button class="btn btn-ghost btn-sm" style="flex:1" onclick="verPDFCompletado('${p.id}','cliente')">📋 PDF cliente</button>
           <button class="btn btn-ghost btn-sm" style="flex:1" onclick="verPDFCompletado('${p.id}','interno')">📊 PDF interno</button>
           <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEmpaqueProduccion('${p.id}')" title="Fotos empaque">📦</button>
+          ${S.user&&S.user.role==='master'?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEditarCompletado('${p.id}')" title="Editar">✏️</button>`:''}
         </div>
       </div>`).join('');
     }
@@ -981,6 +992,71 @@ async function guardarEmpaqueProd(){
     cerrarEmpaqueProduccion();
   }catch(e){toast('Error: '+e.message,'err');}
   finally{if(btn){btn.disabled=false;btn.textContent='💾 Guardar fotos';}}
+}
+
+async function abrirEditarCompletado(pipelineId){
+  const modal=document.getElementById('modal-editar-completado');
+  const body=document.getElementById('editar-completado-body');
+  body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Cargando...</div>';
+  modal.classList.add('open');
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=*',
+      {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const rows=await r.json();
+    const o=rows&&rows[0];
+    if(!o){body.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px">Sin datos de producción</div>';return;}
+    const fld=(label,field,type,val)=>`
+      <div class="field" style="margin-bottom:10px">
+        <label style="font-size:10px;color:var(--text2)">${label}</label>
+        <input type="${type}" value="${val||''}" 
+          oninput="guardarCampoOrden('${o.id}','${field}',this.value,'${type}')"
+          style="width:100%;${type==='number'?'text-align:center':''}">
+      </div>`;
+    const fldSel=(label,field,opts,val)=>`
+      <div class="field" style="margin-bottom:10px">
+        <label style="font-size:10px;color:var(--text2)">${label}</label>
+        <select oninput="guardarCampoOrden('${o.id}','${field}',this.value,'text')" style="width:100%">
+          ${opts.map(op=>`<option value="${op}" ${op===val?'selected':''}>${op}</option>`).join('')}
+        </select>
+      </div>`;
+    body.innerHTML=`
+      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Datos generales</div>
+        ${fld('Máquina','maquina','text',o.maquina)}
+        ${fld('Piezas buenas','piezas_buenas','number',o.piezas_buenas)}
+        ${fldSel('Crosshatch','crosshatch',['Aprobado','Rechazado','N/A'],o.crosshatch)}
+        ${fldSel('Prueba de agua','prueba_agua',['Aprobado','Rechazado','N/A'],o.prueba_agua)}
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Tiempos</div>
+        ${fld('Tiempo ajuste (seg)','tiempo_ajuste_seg','number',o.tiempo_ajuste_seg)}
+        ${fld('Tiempo producción (seg)','tiempo_produccion_seg','number',o.tiempo_produccion_seg)}
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px">Observaciones</div>
+        <div class="field" style="margin:0">
+          <textarea oninput="guardarCampoOrden('${o.id}','observaciones',this.value,'text')" 
+            style="width:100%;min-height:80px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px">${o.observaciones||''}</textarea>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);text-align:center">Los cambios se guardan automáticamente</div>`;
+  }catch(e){body.innerHTML='<div style="color:var(--red);padding:16px">Error: '+e.message+'</div>';}
+}
+
+let _editOrdenTimer={};
+async function guardarCampoOrden(ordenId, campo, valor, tipo){
+  clearTimeout(_editOrdenTimer[ordenId+campo]);
+  _editOrdenTimer[ordenId+campo]=setTimeout(async()=>{
+    const v=tipo==='number'?(parseFloat(valor)||0):valor;
+    try{
+      await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ordenId,{
+        method:'PATCH',
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({[campo]:v})
+      });
+      toast('✓ Guardado','ok');
+    }catch(e){toast('Error: '+e.message,'err');}
+  },600);
 }
 
 async function verPDFCompletado(pipelineId, tipo){
