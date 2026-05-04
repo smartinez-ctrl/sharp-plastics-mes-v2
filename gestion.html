@@ -2181,7 +2181,7 @@ async function cargarDatosProduccion(p){
         '<button class="btn btn-ghost" style="flex:1" onclick="verPDFCompletadoGestion(\''+p.id+'\',\'cliente\')">📋 PDF cliente</button>'+
         '<button class="btn btn-ghost" style="flex:1" onclick="verPDFCompletadoGestion(\''+p.id+'\',\'interno\')">📊 PDF interno</button>'+
       '</div>'+
-      (USER.rol==\'master\' ? '<div style="background:var(--bg3);border:2px solid var(--amber);border-radius:12px;padding:14px">'+
+      (USER.rol==='master' ? '<div style="background:var(--bg3);border:2px solid var(--amber);border-radius:12px;padding:14px">'+
         '<div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">✏️ Edición Master</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
           '<div class="field" style="margin:0"><label style="font-size:10px">Máquina</label><input type="text" id="prod-edit-maquina" value="'+(o.maquina||'')+'" oninput="editProdField(\''+o.id+'\',\'maquina\',this.value)"></div>'+
