@@ -563,6 +563,9 @@ async function loadCatalogos(){
   });
 }
 
+// Auto-refresh pipeline cada 30s para detectar cambios de estado
+setInterval(()=>{if(document.getElementById('page-pipeline')?.classList.contains('active'))loadPipeline();},30000);
+
 async function loadPipeline(){
   try{
     PIPELINE=await sbGet('pipeline_mf','order=orden_posicion.asc,created_at.desc');
@@ -2173,15 +2176,42 @@ async function cargarDatosProduccion(p){
       (coloresHtml?'<div style="margin-bottom:12px">'+coloresHtml+'</div>':'')+
       (mermaRows?'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Merma por causa</div>'+mermaRows+'</div>':'')+
       (consumoRows?'<div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Consumo real de tintas</div>'+consumoRows+'</div>':'')+
-      '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">📄 Reportes</div>'+
-      '<div style="display:flex;gap:8px">'+
-        '<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id='+p.id+'" target="_blank" class="btn btn-secondary" style="flex:1;text-align:center;text-decoration:none">📊 Monitor</a>'+
-        '<button class="btn btn-ghost" style="flex:1" onclick="toast(&quot;Abre la orden en producci&oacute;n para generar el PDF&quot;)">📋 PDF calidad</button>'+
-        '<button class="btn btn-ghost" style="flex:1" onclick="toast(&quot;Abre la orden en producci&oacute;n para generar el PDF&quot;)">📊 PDF interno</button>'+
-      '</div>';
+      '<div style="display:flex;gap:8px;margin-bottom:14px">'+
+        '<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id='+p.id+'" target="_blank" class="btn btn-secondary" style="flex:1;text-align:center;text-decoration:none">🔴 Ver LIVE</a>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="verPDFCompletadoGestion(\''+p.id+'\',\'cliente\')">📋 PDF cliente</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="verPDFCompletadoGestion(\''+p.id+'\',\'interno\')">📊 PDF interno</button>'+
+      '</div>'+
+      (USER.rol==\'master\' ? '<div style="background:var(--bg3);border:2px solid var(--amber);border-radius:12px;padding:14px">'+
+        '<div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">✏️ Edición Master</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+          '<div class="field" style="margin:0"><label style="font-size:10px">Máquina</label><input type="text" id="prod-edit-maquina" value="'+(o.maquina||'')+'" oninput="editProdField(\''+o.id+'\',\'maquina\',this.value)"></div>'+
+          '<div class="field" style="margin:0"><label style="font-size:10px">Piezas buenas</label><input type="number" id="prod-edit-buenas" value="'+(o.piezas_buenas||0)+'" oninput="editProdField(\''+o.id+'\',\'piezas_buenas\',this.value)"></div>'+
+          '<div class="field" style="margin:0"><label style="font-size:10px">Crosshatch</label><input type="text" id="prod-edit-xhatch" value="'+(o.crosshatch||'')+'" oninput="editProdField(\''+o.id+'\',\'crosshatch\',this.value)"></div>'+
+          '<div class="field" style="margin:0"><label style="font-size:10px">Prueba de agua</label><input type="text" id="prod-edit-agua" value="'+(o.prueba_agua||'')+'" oninput="editProdField(\''+o.id+'\',\'prueba_agua\',this.value)"></div>'+
+        '</div>'+
+        '<div class="field" style="margin:0"><label style="font-size:10px">Observaciones finales</label><textarea id="prod-edit-obs" style="width:100%;min-height:60px" oninput="editProdField(\''+o.id+'\',\'observaciones\',this.value)">'+(o.observaciones||'')+'</textarea></div>'+
+      '</div>' : '');
   }catch(e){
     if(el)el.innerHTML='<div style="color:var(--red);padding:16px">Error: '+e.message+'</div>';
   }
+}
+
+// Edición de producción por Master
+let _prodEditTimer={};
+function editProdField(ordenId, campo, valor){
+  clearTimeout(_prodEditTimer[ordenId+campo]);
+  _prodEditTimer[ordenId+campo]=setTimeout(async()=>{
+    const v=typeof valor==='string'?valor:(parseFloat(valor)||0);
+    try{
+      await sbPatch('ordenes_produccion',{[campo]:v},'id=eq.'+ordenId);
+      toast('Guardado ✓','ok');
+    }catch(e){toast('Error: '+e.message,'err');}
+  },800);
+}
+
+async function verPDFCompletadoGestion(pipelineId, tipo){
+  // Use the same function from index.html logic but from gestion context
+  toast('Abre el pedido desde producción para ver los PDFs');
 }
 
 function fmtSeg(s){s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return [h,m,ss].map(x=>String(x).padStart(2,'0')).join(':');}
