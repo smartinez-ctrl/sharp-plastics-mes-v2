@@ -1006,7 +1006,7 @@ async function abrirDetallePedido(id){
     // Prioridad: 1) venta guardada/piezas, 2) catálogo, 3) fallback
     const pBot=p.venta_botellas>0&&piezas?parseFloat((p.venta_botellas/piezas).toFixed(2)):(pvBotD?pvBotD.precio:pBotFallback);
     const pTap=p.venta_tapas>0&&piezas?parseFloat((p.venta_tapas/piezas).toFixed(2)):(pvTapD?pvTapD.precio:pTapFallback);
-    const formula=p.formula_tintas||[];
+    const formula=(p.formula_tintas||[]).map(function(col,i){var ti=(p.tintas_info||[])[i]||{};return Object.assign({},col,{nombre:ti.nombre||ti.pantone||col.nombre||'',pantone:ti.pantone||col.pantone||''});});
     let costoTintas=0;
     formula.forEach(col=>{
       (col.componentes||[]).forEach(x=>{
@@ -2541,7 +2541,7 @@ function renderDetallePedido(p) {
   // Precio SIEMPRE desde catálogo (stock2500 con color) para consistencia con importar
   var pBot = pvBotDef ? pvBotDef.precio : 0;
   var pTap = pvTapDef ? pvTapDef.precio : 0;
-  var formula = p.formula_tintas||[];
+  var formula = ((p.formula_tintas||[]).map(function(col,i){var ti=(p.tintas_info||[])[i]||{};return Object.assign({},col,{nombre:ti.nombre||ti.pantone||col.nombre||'',pantone:ti.pantone||col.pantone||''});})).map(function(col,i){var ti=(p.tintas_info||[])[i]||{};return Object.assign({},col,{nombre:ti.nombre||ti.pantone||col.nombre||'',pantone:ti.pantone||col.pantone||''});});
   // Calcular total venta desde catálogo para consistencia
   var tfTintasD = CAT.tarifas_fijas['tintas_fijo_por_botella']||4;
   var tfPantD = CAT.tarifas_fijas['pantallas_positivos_por_color']||1160;
@@ -2888,7 +2888,7 @@ function abrirPDFInterno(p){
   const costPos=tf['costo_positivo']||115;
   const tfP=tf['papel_empaque_por_pieza']||0.15;
   const tfT=tf['tag_etiqueta_por_pieza']||0.15;
-  const formula=p.formula_tintas||[];
+  const formula=(p.formula_tintas||[]).map(function(col,i){var ti=(p.tintas_info||[])[i]||{};return Object.assign({},col,{nombre:ti.nombre||ti.pantone||col.nombre||'',pantone:ti.pantone||col.pantone||''});});
   let costoTintas=0;
   formula.forEach(function(col){
     (col.componentes||[]).forEach(function(x){costoTintas+=(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);});
