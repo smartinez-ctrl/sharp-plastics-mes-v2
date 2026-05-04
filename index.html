@@ -1007,6 +1007,11 @@ async function abrirEditarCompletado(pipelineId){
     if(!o){body.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px">Sin datos de producción</div>';return;}
 
     const oid=o.id;
+    // Inicializar cache con datos existentes
+    window._mermaCache[oid+'_merma_ajuste']=Object.assign({},o.merma_ajuste||{});
+    window._mermaCache[oid+'_merma_produccion']=Object.assign({},o.merma_produccion||{});
+    window._tmCache[oid+'_tm_ajuste']=Object.assign({},o.tm_ajuste||{});
+    window._tmCache[oid+'_tm_produccion']=Object.assign({},o.tm_produccion||{});
     const fld=(label,field,type,val)=>`<div class="field" style="margin-bottom:10px">
       <label style="font-size:10px;color:var(--text2)">${label}</label>
       <input type="${type}" value="${val!=null?val:''}" 
@@ -1054,10 +1059,10 @@ async function abrirEditarCompletado(pipelineId){
       Object.entries(TM_TIPOS).map(([k,label])=>`<div style="display:flex;flex-direction:column;gap:2px">
         <label style="font-size:9px;color:var(--text3)">${label}</label>
         <div style="display:flex;gap:4px">
-          <input type="number" placeholder="Aj(s)" value="${(typeof tmAj[k]==='object'?(tmAj[k].total||0):tmAj[k])||''}" min="0"
+          <input type="number" placeholder="Aj(s)" value="${tmAj[k]?(typeof tmAj[k]==='object'?((tmAj[k].total||0)+(tmAj[k].ss||0)):tmAj[k]):''}" min="0"
             oninput="guardarTMOrden('${oid}','ajuste','${k}',this.value)"
             style="width:50%;text-align:center;font-size:11px;padding:4px">
-          <input type="number" placeholder="Pr(s)" value="${(typeof tmPr[k]==='object'?(tmPr[k].total||0):tmPr[k])||''}" min="0"
+          <input type="number" placeholder="Pr(s)" value="${tmPr[k]?(typeof tmPr[k]==='object'?((tmPr[k].total||0)+(tmPr[k].ss||0)):tmPr[k]):''}" min="0"
             oninput="guardarTMOrden('${oid}','produccion','${k}',this.value)"
             style="width:50%;text-align:center;font-size:11px;padding:4px">
         </div>
