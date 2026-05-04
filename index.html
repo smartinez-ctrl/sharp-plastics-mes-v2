@@ -1037,37 +1037,55 @@ async function abrirEditarCompletado(pipelineId){
     const MERMA_TIPOS=['Shadow','Descuadre','Falta tinta','Mal flameo','Perforada/deforme','Soleo','Otro 1','Otro 2'];
     const mAj=o.merma_ajuste||{};
     const mPr=o.merma_produccion||{};
-    const mermaHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'+
-      MERMA_TIPOS.map(t=>`<div style="display:flex;flex-direction:column;gap:2px">
-        <label style="font-size:9px;color:var(--text3)">${t}</label>
-        <div style="display:flex;gap:4px">
-          <input type="number" placeholder="Aj" value="${mAj[t]||''}" min="0"
+    const mermaHTML=
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:4px">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:4px 8px;background:var(--bg4);border-radius:6px 0 0 0;text-align:center">Ajuste</div>'+
+        '<div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:4px 8px;background:var(--bg4);border-radius:0 6px 0 0;text-align:center">Producción</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)">'+
+      MERMA_TIPOS.map(t=>
+        `<div style="background:var(--bg3);padding:6px 8px">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:3px">${t}</div>
+          <input type="number" value="${mAj[t]||0}" min="0"
             oninput="guardarMermaOrden('${oid}','ajuste','${t}',this.value)"
-            style="width:50%;text-align:center;font-size:11px;padding:4px">
-          <input type="number" placeholder="Pr" value="${mPr[t]||''}" min="0"
-            oninput="guardarMermaOrden('${oid}','produccion','${t}',this.value)"
-            style="width:50%;text-align:center;font-size:11px;padding:4px">
+            style="width:100%;text-align:center;font-size:12px;font-family:monospace">
         </div>
-      </div>`).join('')+
-      '</div><div style="display:flex;gap:8px;margin-top:8px"><span style="font-size:9px;color:var(--text3);flex:1;text-align:center">Aj = Ajuste</span><span style="font-size:9px;color:var(--text3);flex:1;text-align:center">Pr = Producción</span></div>';
+        <div style="background:var(--bg3);padding:6px 8px">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:3px">${t}</div>
+          <input type="number" value="${mPr[t]||0}" min="0"
+            oninput="guardarMermaOrden('${oid}','produccion','${t}',this.value)"
+            style="width:100%;text-align:center;font-size:12px;font-family:monospace">
+        </div>`
+      ).join('')+
+      '</div>';
 
     // TM rows
     const TM_TIPOS={comida:'Salida a comer',tintas:'Prep. tintas',reajuste:'Reajuste',mant:'Mantenimiento',presion:'Baja presión',espera:'Espera material',limpieza:'Limpieza',otro:'Otro'};
     const tmAj=o.tm_ajuste||{};
     const tmPr=o.tm_produccion||{};
-    const tmHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'+
-      Object.entries(TM_TIPOS).map(([k,label])=>`<div style="display:flex;flex-direction:column;gap:2px">
-        <label style="font-size:9px;color:var(--text3)">${label}</label>
-        <div style="display:flex;gap:4px">
-          <input type="number" placeholder="Aj(s)" value="${tmAj[k]?(typeof tmAj[k]==='object'?((tmAj[k].total||0)+(tmAj[k].ss||0)):tmAj[k]):''}" min="0"
+    const tmHTML=
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:4px">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:4px 8px;background:var(--bg4);border-radius:6px 0 0 0;text-align:center">Ajuste (seg)</div>'+
+        '<div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:4px 8px;background:var(--bg4);border-radius:0 6px 0 0;text-align:center">Producción (seg)</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)">'+
+      Object.entries(TM_TIPOS).map(([k,label])=>{
+        const vAj=tmAj[k]?(typeof tmAj[k]==='object'?((tmAj[k].total||0)+(tmAj[k].ss||0)):tmAj[k]):0;
+        const vPr=tmPr[k]?(typeof tmPr[k]==='object'?((tmPr[k].total||0)+(tmPr[k].ss||0)):tmPr[k]):0;
+        return `<div style="background:var(--bg3);padding:6px 8px">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:3px">${label}</div>
+          <input type="number" value="${vAj}" min="0"
             oninput="guardarTMOrden('${oid}','ajuste','${k}',this.value)"
-            style="width:50%;text-align:center;font-size:11px;padding:4px">
-          <input type="number" placeholder="Pr(s)" value="${tmPr[k]?(typeof tmPr[k]==='object'?((tmPr[k].total||0)+(tmPr[k].ss||0)):tmPr[k]):''}" min="0"
-            oninput="guardarTMOrden('${oid}','produccion','${k}',this.value)"
-            style="width:50%;text-align:center;font-size:11px;padding:4px">
+            style="width:100%;text-align:center;font-size:12px;font-family:monospace">
         </div>
-      </div>`).join('')+
-      '</div><div style="font-size:9px;color:var(--text3);margin-top:6px;text-align:center">Valores en segundos · Aj = Ajuste · Pr = Producción</div>';
+        <div style="background:var(--bg3);padding:6px 8px">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:3px">${label}</div>
+          <input type="number" value="${vPr}" min="0"
+            oninput="guardarTMOrden('${oid}','produccion','${k}',this.value)"
+            style="width:100%;text-align:center;font-size:12px;font-family:monospace">
+        </div>`;
+      }).join('')+
+      '</div><div style="font-size:9px;color:var(--text3);margin-top:4px;text-align:center">Valores en segundos</div>';
 
     body.innerHTML=
       sec('⏱ Tiempos',
