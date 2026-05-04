@@ -942,9 +942,22 @@ async function verPDFCompletado(pipelineId, tipo){
 
     const origS = {...S};
     Object.assign(S, tmpS);
+    // Set crosshatch/agua DOM inputs so generarPDF can read them
+    const xh = document.getElementById('cierreXhatch');
+    const ag = document.getElementById('cierreAgua');
+    const cf = document.getElementById('cierre-firma');
+    const origXh = xh?.value, origAg = ag?.value, origCf = cf?.value;
+    if(xh) xh.value = orden?.crosshatch||'';
+    if(ag) ag.value = orden?.prueba_agua||'';
+    if(cf) cf.value = orden?.observaciones||'';
     if(tipo==='cliente') generarPDF();
     else generarPDFInterno();
-    setTimeout(()=>Object.assign(S, origS), 500);
+    setTimeout(()=>{
+      Object.assign(S, origS);
+      if(xh) xh.value = origXh||'';
+      if(ag) ag.value = origAg||'';
+      if(cf) cf.value = origCf||'';
+    }, 500);
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
@@ -2473,7 +2486,7 @@ function generarPDF(){
       const itemEN=itemsEN[ii]||itemES;
       tot++;const v=S.qa[itemES]||'';if(v==='P')pass++;
       const color=v==='P'?'#16a34a':v==='NC'?'#dc2626':'#6b7280';
-      const label=v==='P'?'✓ Pass':v==='NC'?'✗ Non-conforming':v==='NA'?'N/A':'Pending';
+      const label=v==='P'?'✓ Approved':v==='NC'?'✗ Non-conforming':v==='NA'?'N/A':'Pending';
       qaRows+=`<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:12px">${itemEN}</td><td style="padding:6px 10px;font-size:12px;font-weight:600;color:${color};text-align:right">${label}</td></tr>`;
     });
   });
@@ -2537,8 +2550,8 @@ function generarPDF(){
     </tr>
     <tr>
       <td colspan="2"><span class="lbl">Colors / Pantone</span><span class="val">${coloresStr}</span></td>
-      <td><span class="lbl">Crosshatch Test</span><span class="val" style="color:${xhatch.includes('Aprobado')?'#16a34a':'#dc2626'}">${xhatch}</span></td>
-      <td><span class="lbl">Water Test</span><span class="val" style="color:${agua.includes('Aprobado')?'#16a34a':'#dc2626'}">${agua}</span></td>
+      <td><span class="lbl">Crosshatch Test</span><span class="val" style="color:${xhatch.includes('Aprobado')?'#16a34a':'#dc2626'}">${xhatch.replace('Aprobado','Approved').replace('Rechazado','Rejected')}</span></td>
+      <td><span class="lbl">Water Test</span><span class="val" style="color:${agua.includes('Aprobado')?'#16a34a':'#dc2626'}">${agua.replace('Aprobado','Approved').replace('Rechazado','Rejected')}</span></td>
     </tr>
   </table>
 
