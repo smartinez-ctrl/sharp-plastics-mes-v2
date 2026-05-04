@@ -2456,11 +2456,13 @@ function renderFormulaTintas(formula, pedidoId) {
     var tgAdits = 0;
     var tcComps = (col.componentes||[]).reduce(function(s,x){var pk=x.precio_kg||x.precio||0;return s+(x.gramos&&pk?(x.gramos/1000)*pk:0);}, 0);
     var tcAdits = (col.aditivos||[]).reduce(function(s,a){
-      var pk=a.precio_kg||a.precio||0;
+      var apk=a.precio_kg||a.precio||0;
+      if(!apk&&a.aditivo_id){var ca=CAT.aditivos.find(function(x){return x.id===a.aditivo_id;});if(ca)apk=ca.precio_kg||0;}
+      if(!apk&&a.nombre){var ca2=CAT.aditivos.find(function(x){return x.nombre===a.nombre;});if(ca2)apk=ca2.precio_kg||0;}
       var pct=parseFloat(a.pct)||0;
       var gr = pct>0 ? (pct/100*tg) : (parseFloat(a.gramos)||0);
       tgAdits += gr;
-      return s+(gr&&pk?(gr/1000)*pk:0);
+      return s+(gr&&apk?(gr/1000)*apk:0);
     }, 0);
     var tc = tcComps + tcAdits;
     totalCosto += tc;
@@ -2476,7 +2478,17 @@ function renderFormulaTintas(formula, pedidoId) {
     var adits = (col.aditivos||[]).map(function(a) {
       var pct=parseFloat(a.pct)||0;
       var gr = pct>0 ? (pct/100*tg) : (parseFloat(a.gramos)||0);
-      var apk=a.precio_kg||a.precio||0; var sub = gr&&apk?(gr/1000)*apk:0;
+      // Look up price from CAT if not saved
+      var apk=a.precio_kg||a.precio||0;
+      if(!apk&&a.aditivo_id){
+        var catAdit=CAT.aditivos.find(function(x){return x.id===a.aditivo_id;});
+        if(catAdit)apk=catAdit.precio_kg||0;
+      }
+      if(!apk&&a.nombre){
+        var catAdit2=CAT.aditivos.find(function(x){return x.nombre===a.nombre;});
+        if(catAdit2)apk=catAdit2.precio_kg||0;
+      }
+      var sub = gr&&apk?(gr/1000)*apk:0;
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">'
         + '<span style="font-size:10px;color:var(--text3);flex:1">↳ ' + (a.nombre||'Aditivo') + (a.pct!==undefined?' ('+a.pct+'%)':'') + '</span>'
         + '<span style="font-size:10px;color:var(--text3);margin:0 8px">' + (parseFloat(gr).toFixed(2).replace(/\.?0+$/,'')) + 'g</span>'
