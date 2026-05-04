@@ -1026,6 +1026,15 @@ function resetOrden(){
   // Reset observaciones y aprobado por
   var obs=document.getElementById('foto-obs');if(obs)obs.value='';
   var apr=document.getElementById('foto-aprueba');if(apr)apr.value='';
+  // Reset cierre inputs
+  var bi=document.getElementById('buenas-input');if(bi){bi.value='0';onBuenasInput(0);}
+  var cx=document.getElementById('cierreXhatch');if(cx)cx.value='';
+  var ca=document.getElementById('cierreAgua');if(ca)ca.value='';
+  var cf=document.getElementById('cierre-firma');if(cf)cf.value='';
+  var co=document.getElementById('cierre-obs');if(co)co.value='';
+  var cr=document.getElementById('cierre-resumen');if(cr)cr.innerHTML='';
+  var cs=document.getElementById('cierre-stats');if(cs)cs.innerHTML='';
+  var cc=document.getElementById('cierre-costos');if(cc)cc.innerHTML='';
   // Reset new-color inputs
   var nc=document.getElementById('new-color-nombre');if(nc)nc.value='';
   var np=document.getElementById('new-color-pantone');if(np)np.value='';
