@@ -907,8 +907,17 @@ async function abrirDetallePedido(id){
   const flds={'mp-subcli':p.sub_cliente,'mp-po':p.po,'mp-cap':p.capacidad,'mp-piezas':p.piezas,'mp-colores':p.colores,'mp-fecha-entrega':p.fecha_entrega,'mp-fecha-pedido':p.fecha_pedido,'mp-fecha-inicio':p.fecha_inicio,'mp-horas':p.horas_estimadas,'mp-col-bot':p.color_botella,'mp-col-tap':p.color_tapa,'mp-col-boq':p.color_boquilla,'mp-envio':p.direccion_envio,'mp-notas':p.notas,'mp-estado':p.estado||'Pendiente','mp-pdf-diseno':p.pdf_diseno_url||'','mp-pdf-po':p.pdf_po_url||''};
   Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el){el.value=v||'';el.disabled=soloLectura&&k!=='mp-pdf-diseno'&&k!=='mp-pdf-po';}});
   // Bloquear botón guardar para no-master en completados
-  const btnGuardar=document.querySelector('#modal-pedido .btn-primary[onclick="guardarPedido()"]');
-  if(btnGuardar){btnGuardar.style.display=soloLectura?'none':'';}
+  // Block/unblock inputs for completed orders
+  setTimeout(()=>{
+    const modal=document.getElementById('modal-pedido');
+    if(!modal)return;
+    modal.querySelectorAll('input:not([id="mp-pdf-diseno"]):not([id="mp-pdf-po"]):not([id="mp-fecha-pedido"]),select,textarea').forEach(el=>{
+      if(soloLectura) el.setAttribute('disabled','true');
+      else el.removeAttribute('disabled');
+    });
+    const btns=modal.querySelectorAll('button.btn-primary,button[onclick="guardarPedido()"]');
+    btns.forEach(b=>{if(b.textContent.includes('Guardar'))b.style.display=soloLectura?'none':'';});
+  },50);
   document.getElementById('modal-pedido').dataset.id=id;
   // Mostrar botón ver PDF si hay diseño guardado
   setTimeout(function(){
@@ -2494,7 +2503,7 @@ function renderDetallePedido(p) {
     + '</div>'
     + '</div>'
     + '</div>'
-    + (tieneProduccion ? (function(){
+    + ((true) ? (function(){
         var mermaReal = p.costo_merma_real||0;
         var tintasReal = p.costo_tintas_real||0;
         var costoRealTotal = mermaReal + tintasReal;
