@@ -1440,6 +1440,7 @@ async function cargarOrdenExistente(pipelineId){
     const rows=await sbGet('ordenes_produccion','pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=*');
     if(!rows||!rows.length){toast('Sin datos previos, iniciando nueva orden');return;}
     const o=rows[0];
+    console.log('[DIAG cargarOrden] pipeline_id=',pipelineId,'orden.id=',o.id,'tiempo_produccion_seg=',o.tiempo_produccion_seg,'tiempo_ajuste_seg=',o.tiempo_ajuste_seg);
     S.ordenId=o.id;
     // Restaurar timers
     S.timers.ajuste.total=o.tiempo_ajuste_seg||0;
@@ -1491,6 +1492,13 @@ async function cargarOrdenExistente(pipelineId){
       showScreen('produccion');
       renderSteps('steps-prod','produccion');
       setTimeout(()=>{
+        // Sanity check: si algo entre los setTimeouts modificó S.timers.prod.s, restaurarlo
+        if(S.timers.prod.s !== (o.tiempo_produccion_seg||0)){
+          console.warn('[DIAG cargarOrden] S.timers.prod.s fue modificado entre setTimeouts:',S.timers.prod.s,'→ restaurando a',o.tiempo_produccion_seg||0);
+          S.timers.prod.s = o.tiempo_produccion_seg||0;
+          S.timers.prod.total = o.tiempo_produccion_seg||0;
+        }
+        console.log('[DIAG cargarOrden] antes de timerPlay: S.timers.prod.s=',S.timers.prod.s,'S.timers.prod.total=',S.timers.prod.total,'S.timers.prod.running=',S.timers.prod.running);
         const tPrEl=document.getElementById('timer-prod');
         if(tPrEl)tPrEl.textContent=fmt(S.timers.prod.s);
         const biEl=document.getElementById('buenas-input');
@@ -1927,9 +1935,14 @@ function removeAdit(ti,ai){if(S.tintas[ti])S.tintas[ti].aditivos.splice(ai,1);re
 // ══════════════════════════════════════════════════════
 function timerPlay(name){
   const t=S.timers[name];if(t.running)return;
+  console.log('[DIAG timerPlay]',name,'al entrar: t.s=',t.s,'t.total=',t.total,'_monitorEmailEnviado=',window._monitorEmailEnviado);
   const esPrimerInicio=name==='prod'&&t.s===0&&!window._monitorEmailEnviado;
   t.running=true;
   t.startTs=Date.now()-(t.s*1000); // reanudar desde donde quedó
+  // Actualizar display INMEDIATAMENTE — no esperar al primer tick del setInterval (500ms)
+  const dispNow=document.getElementById('timer-'+name);
+  if(dispNow){dispNow.textContent=fmt(t.s);dispNow.className='timer-display running mono';}
+  syncTimerBars();
   clearInterval(t.iv);
   t.iv=setInterval(()=>{
     t.s=Math.floor((Date.now()-t.startTs)/1000);
@@ -2396,7 +2409,7 @@ function pausarYSalir(){
     }
   });
   // Guardar estado pausado en Supabase
-  if(S.orden_id){
+  if(S.ordenId){
     const tiempoSegundos=S.timers.prod.s||0;
     const body={
       estado:'En producción',
@@ -2404,7 +2417,7 @@ function pausarYSalir(){
       pausado_por:S.user?.nombre||null,
       pausado_at:new Date().toISOString()
     };
-    fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.orden_id,{
+    fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.ordenId,{
       method:'PATCH',
       headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
       body:JSON.stringify(body)
@@ -2412,7 +2425,7 @@ function pausarYSalir(){
   }
   toast('Producción pausada — tiempo guardado');
   setTimeout(function(){
-    S={...S_DEFAULT()};
+    resetOrden();
     showScreen('dashboard');
     renderDashboard();
   },1000);
