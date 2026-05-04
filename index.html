@@ -62,6 +62,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
 .pulse{animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes pulse-red{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(239,68,68,.5)}70%{box-shadow:0 0 0 6px rgba(239,68,68,0)}}
 .login-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .user-card{background:var(--bg2);border:2px solid var(--border);border-radius:var(--r-lg);padding:18px 12px;cursor:pointer;text-align:center;transition:all 0.2s}
 .user-card:active{transform:scale(0.97)}
@@ -861,11 +862,16 @@ async function renderDashboard(){
         const urgente=diasRestantes!==null&&diasRestantes<=7;
         const btn=esOperador
           ?`<div style="background:var(--bg4);color:var(--text3);border-radius:8px;padding:10px;text-align:center;font-size:12px">Solo lectura</div>`
-          :`<div style="background:var(--green);color:#0d0f12;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${i})">▶ Iniciar</div>`;
+          :p.estado==='En producción'
+            ?`<div style="background:#3b82f6;color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${i})">▶ Continuar orden</div>`
+            :`<div style="background:var(--green);color:#0d0f12;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${i})">▶ Iniciar</div>`;
         return `<div class="card" style="margin-bottom:10px${urgente?';border-left:3px solid var(--red)':''}">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div style="font-size:15px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
-            <div class="badge ${p.estado==='En producción'?'badge-blue':'badge-amber'}" style="font-size:9px">${p.estado}</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              ${p.estado==='En producción'?'<span style="font-size:10px;background:#ef4444;color:#fff;padding:2px 8px;border-radius:20px;font-weight:700;animation:pulse-red 1.5s infinite">🔴 EN VIVO</span>':''}
+              <div class="badge ${p.estado==='En producción'?'badge-blue':'badge-amber'}" style="font-size:9px">${p.estado}</div>
+            </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <div style="font-size:12px;color:var(--text2)">${p.po} · ${(p.piezas||0).toLocaleString()} pzas · ${p.colores||0} col</div>
@@ -1403,8 +1409,8 @@ function goNuevaOrden(idx){
     // Extraer colores desde formula_tintas (nombres de tintas) o campos de color
     if(p.formula_tintas&&p.formula_tintas.length){
       S.orden.colores=p.formula_tintas.map(function(col,ci){
-        const nombres=(col.componentes||[]).map(function(x){return x.nombre||'';}).filter(Boolean);
-        return {nombre:'Color '+(ci+1)+': '+nombres.join('+'),pantone:nombres[0]||''};
+        const ti=(p.tintas_info||[])[ci]||{};
+        return {nombre:ti.nombre||ti.pantone||('Color '+(ci+1)),pantone:ti.pantone||''};
       });
     } else if(p.tintas_info&&p.tintas_info.length){
       S.orden.colores=p.tintas_info.map(t=>({nombre:t.nombre||t.pantone||'Color',pantone:t.pantone||''}));
@@ -1414,14 +1420,71 @@ function goNuevaOrden(idx){
       if(p.color_tapa&&p.color_tapa.toLowerCase()!=='see mock up'&&p.color_tapa!==p.color_botella)cols.push({nombre:'Tapa: '+p.color_tapa,pantone:p.color_tapa});
       if(cols.length)S.orden.colores=cols;
     }
-    // Mandar email de notificación de inicio
-    setTimeout(()=>enviarEmailInicioOrden(p), 500);
+    // Si el pedido está En producción, cargar datos guardados
+    if(p.estado==='En producción'||p.estado==='En produccion'){
+      toast('Cargando orden en proceso...','ok');
+      cargarOrdenExistente(p.id);
+    } else {
+      setTimeout(()=>enviarEmailInicioOrden(p), 500);
+    }
   }
   showScreen('orden');
   renderSteps('steps-orden','orden');
   renderChips();
   renderColores();
   setTimeout(prefillOrden,50);
+}
+
+async function cargarOrdenExistente(pipelineId){
+  try{
+    const rows=await sbGet('ordenes_produccion','pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=*');
+    if(!rows||!rows.length){toast('Sin datos previos, iniciando nueva orden');return;}
+    const o=rows[0];
+    S.ordenId=o.id;
+    // Restaurar timers
+    S.timers.ajuste.total=o.tiempo_ajuste_seg||0;
+    S.timers.ajuste.s=o.tiempo_ajuste_seg||0;
+    S.timers.prod.total=o.tiempo_produccion_seg||0;
+    S.timers.prod.s=o.tiempo_produccion_seg||0;
+    // Restaurar merma
+    S.merma.ajuste=o.merma_ajuste||{};
+    S.merma.prod=o.merma_produccion||{};
+    // Restaurar TM
+    S.tm.ajuste=o.tm_ajuste||{};
+    S.tm.prod=o.tm_produccion||{};
+    // Restaurar QA
+    S.qa=o.qa_resultados||{};
+    // Restaurar consumo real tintas
+    S.consumoReal=o.consumo_real_tintas||[];
+    // Restaurar reajustes
+    S.reajustes=o.reajustes||0;
+    // Restaurar parámetros en DOM
+    const setInput=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
+    const setCheck=(id,val)=>{const el=document.getElementById(id);if(el)el.checked=!!val;};
+    setTimeout(()=>{
+      setInput('ord-maquina',o.maquina||'Shuttle');
+      setInput('ord-lote-bot',o.lote_botella||'');
+      setInput('ord-lote-tap',o.lote_tapa||'');
+      setInput('uv-int',o.uv_intensidad||'');
+      setInput('uv-vel',o.uv_velocidad||'');
+      setInput('presion-aire',o.presion_aire||'');
+      setInput('flameo-tipo',o.flameo_tipo||'');
+      setInput('flameo-tiempo',o.flameo_tiempo||'');
+      setInput('flameo-vueltas',o.flameo_vueltas||'');
+      setCheck('proc-alcohol',o.proceso_alcohol);
+      setCheck('proc-primer',o.proceso_primer);
+      // Restaurar piezas buenas si estaba en producción
+      const bi=document.getElementById('buenas-input');
+      if(bi)bi.value=o.piezas_buenas||0;
+      updateProdStats();
+    },300);
+    // Mostrar stats del cronómetro
+    const tAjEl=document.getElementById('timer-ajuste');
+    const tPrEl=document.getElementById('timer-prod');
+    if(tAjEl)tAjEl.textContent=fmt(S.timers.ajuste.total);
+    if(tPrEl)tPrEl.textContent=fmt(S.timers.prod.total);
+    toast('✅ Orden restaurada — '+fmt(o.tiempo_produccion_seg||0)+' producción','ok');
+  }catch(e){toast('Error al cargar orden: '+e.message,'err');}
 }
 
 function prefillOrden(){
