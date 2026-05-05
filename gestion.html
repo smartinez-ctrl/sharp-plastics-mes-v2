@@ -71,6 +71,7 @@ td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertic
 tr:last-child td{border-bottom:none}
 .td-mono{font-family:"Space Mono",monospace;font-size:11px}
 .pipeline-card{background:var(--bg2);border:1px solid var(--border);border-left:3px solid transparent;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s}
+.pipeline-card>*{min-width:0}
 .pipeline-card:hover{border-color:var(--border2);transform:translateY(-1px)}
 .pipeline-card.urgent{border-left-color:var(--red)}
 .pipeline-card.dragging{opacity:0.4}
@@ -698,17 +699,17 @@ function colorChip(t){
 
 // ── Columnas del pipeline ────────────────────────────
 const PIPE_COL_DEFS=[
-  {id:'cliente', label:'Cliente', fr:'3fr', align:'left'},
+  {id:'cliente', label:'Cliente', fr:'2.5fr', align:'left'},
   {id:'po', label:'PO', fr:'1fr', align:'left'},
   {id:'capacidad', label:'ml', fr:'0.5fr', align:'center'},
-  {id:'color_botella', label:'Color', fr:'0.9fr', align:'center'},
+  {id:'color_botella', label:'Color', fr:'1fr', align:'center'},
   {id:'piezas', label:'Piezas', fr:'0.7fr', align:'center'},
   {id:'fecha_entrega', label:'F. Entrega', fr:'1fr', align:'center'},
-  {id:'venta_total', label:'Venta', fr:'1.1fr', align:'right'},
-  {id:'margen', label:'Margen', fr:'0.8fr', align:'right'},
+  {id:'venta_total', label:'Venta', fr:'1fr', align:'right'},
+  {id:'margen', label:'Margen', fr:'0.7fr', align:'right'},
   {id:'estado', label:'Estado', fr:'1.1fr', align:'right'},
-  {id:'arte', label:'Arte', fr:'0.8fr', align:'center'},
-  {id:'btns', label:'', fr:'1.3fr', align:'right'},
+  {id:'arte', label:'Arte', fr:'0.9fr', align:'center'},
+  {id:'btns', label:'', fr:'2fr', align:'right'},
 ];
 let _colOrder=null; // null = default order
 let _colDragSrc=null;
@@ -888,7 +889,7 @@ function renderPipeline(){
   document.getElementById('st-margen').textContent=mProm>0?mProm.toFixed(1)+'%':'—';
 
   // Header de columnas
-  const PIPE_COLS = '3fr 1fr 0.5fr 0.9fr 0.7fr 1fr 1.1fr 0.8fr 1.1fr 0.8fr 1.3fr';
+  const PIPE_COLS = '2.5fr 1fr 0.5fr 1fr 0.7fr 1fr 1fr 0.7fr 1.1fr 0.9fr 2fr';
   // Columnas en orden actual
   const cols=getColOrder().map(i=>PIPE_COL_DEFS[i]);
   // Sanity check: si _colWidths quedó desfasado (longitud distinta), descartarlo
@@ -931,7 +932,7 @@ function renderPipeline(){
       margen:`<div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:${margenColor};text-align:right">${p.margen?p.margen.toFixed(1)+'%':'—'}</div>`,
       estado:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:3px">${p.costo_revisado?'<span style="font-size:9px;color:var(--green)">✓</span>':''}<span class="badge ${BADGE_MAP[p.estado]||'badge-amber'}" style="font-size:9px">${isUrgent&&p.estado==='Pendiente'?'🔴':p.estado}</span></div>`,
       arte:`<div style="display:flex;gap:4px;align-items:center;justify-content:center" onclick="event.stopPropagation()"><div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" onclick="cycleArte('${p.id}','positivos')" title="Positivos"><span style="font-size:8px;color:var(--text3);line-height:1">POS</span><span style="font-size:14px;line-height:1">${arteIcon(p.positivos)}</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer" onclick="cycleArte('${p.id}','pantallas')" title="Pantallas"><span style="font-size:8px;color:var(--text3);line-height:1">PAN</span><span style="font-size:14px;line-height:1">${arteIcon(p.pantallas)}</span></div></div>`,
-      btns:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">${(p.estado==='En producción'||p.estado==='En produccion')?`<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id=${p.id}" target="_blank" class="btn btn-xs" style="background:#ef4444;color:#fff;font-weight:700;animation:pulse-red 1.5s infinite" title="Ver en vivo">🔴 LIVE</a>`:''} ${p.pdf_po_url?`<a href="${p.pdf_po_url}" target="_blank" class="btn btn-ghost btn-xs" title="Orden de compra (PO)">📋</a>`:''} ${p.pdf_diseno_url?`<a href="${p.pdf_diseno_url}" target="_blank" class="btn btn-ghost btn-xs" title="Diseño / Mock up">🎨</a>`:''}<button class="btn btn-primary btn-xs" title="Cotizador" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button><button class="btn btn-ghost btn-xs" title="PDF cliente" onclick="abrirPDFCliente(PIPELINE.find(x=>x.id==='${p.id}'))">📤</button><button class="btn btn-ghost btn-xs" title="PDF interno" onclick="abrirPDFInterno(PIPELINE.find(x=>x.id==='${p.id}'))">📊</button>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}</div>`,
+      btns:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:3px;flex-wrap:wrap;min-width:0" onclick="event.stopPropagation()">${(p.estado==='En producción'||p.estado==='En produccion')?`<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id=${p.id}" target="_blank" class="btn btn-xs" style="background:#ef4444;color:#fff;font-weight:700;animation:pulse-red 1.5s infinite" title="Ver en vivo">🔴 LIVE</a>`:''} ${p.pdf_po_url?`<a href="${p.pdf_po_url}" target="_blank" class="btn btn-ghost btn-xs" title="Orden de compra (PO)">📋</a>`:''} ${p.pdf_diseno_url?`<a href="${p.pdf_diseno_url}" target="_blank" class="btn btn-ghost btn-xs" title="Diseño / Mock up">🎨</a>`:''}<button class="btn btn-primary btn-xs" title="Cotizador" onclick="irACotizadorDesdePedido('${p.id}')">🧮</button><button class="btn btn-ghost btn-xs" title="PDF cliente" onclick="abrirPDFCliente(PIPELINE.find(x=>x.id==='${p.id}'))">📤</button><button class="btn btn-ghost btn-xs" title="PDF interno" onclick="abrirPDFInterno(PIPELINE.find(x=>x.id==='${p.id}'))">📊</button>${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}</div>`,
     };
     const rowCells=cols.map(c=>cellMap[c.id]||'<div></div>').join('\n      ');
     return `<div class="pipeline-card ${isUrgent?'urgent':p.estado==='En producción'?'en-prod':''}" draggable="false" data-id="${p.id}" onclick="abrirDetallePedido('${p.id}')" style="display:grid;grid-template-columns:18px ${PIPE_COLS_DYN};gap:0;align-items:center;padding:10px 14px;margin-bottom:4px">
