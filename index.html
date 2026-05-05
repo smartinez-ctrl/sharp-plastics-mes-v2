@@ -2968,13 +2968,25 @@ function generarPDFInterno(){
   </table>`:''}
 
   <!-- FOTOS -->
-  ${S.fotos&&S.fotos.some(f=>f)?`
-  <div class="fotos-section" style="page-break-before:always;break-before:page">
-  <div class="section" style="margin-top:0">Fotos de producción</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px">
-    ${S.fotos.map((f,i)=>f?`<div class="foto-item"><img src="${f}" style="width:100%;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;text-align:center;margin-top:3px">${['Frente','Reverso','Lado izquierdo','Lado derecho'][i]}</div></div>`:'').join('')}
-  </div>
-  </div>`:''}
+  ${(()=>{
+    if(!S.fotos||!S.fotos.some(f=>f))return '';
+    const labels=['Frente','Reverso','Lado izquierdo','Lado derecho'];
+    let rows='';
+    for(let i=0;i<S.fotos.length;i+=2){
+      const a=S.fotos[i],b=S.fotos[i+1];
+      const labA=labels[i]||'',labB=labels[i+1]||'';
+      rows+=`<tr style="page-break-inside:avoid;break-inside:avoid">
+        <td style="width:50%;padding:6px 8px 12px 0;vertical-align:top;border:none">
+          ${a?`<img src="${a}" style="width:100%;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;text-align:center;margin-top:3px">${labA}</div>`:''}
+        </td>
+        <td style="width:50%;padding:6px 0 12px 8px;vertical-align:top;border:none">
+          ${b?`<img src="${b}" style="width:100%;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;text-align:center;margin-top:3px">${labB}</div>`:''}
+        </td>
+      </tr>`;
+    }
+    return `<div class="section" style="page-break-after:avoid;break-after:avoid">Fotos de producción</div>
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12px"><tbody>${rows}</tbody></table>`;
+  })()}
 
   <!-- QA -->
   ${Object.keys(S.qa||{}).length?`
@@ -3137,13 +3149,25 @@ function generarPDF(){
   </table>
 
   <!-- 4. FOTOS DE APROBACIÓN -->
-  ${S.fotos.some(f=>f)?`
-  <div class="fotos-section" style="page-break-before:always;break-before:page">
-  <div class="section-title" style="margin-top:0">Approval Photos</div>
-  <div class="fotos-block">
-    ${S.fotos.map((f,i)=>f?`<div class="foto-item"><img src="${f}" style="width:100%;border-radius:8px;border:1px solid #e5e7eb;display:block"><div class="foto-label">${['Front','Back','Left side','Right side'][i]}</div></div>`:'').join('')}
-  </div>
-  </div>`:''}
+  ${(()=>{
+    if(!S.fotos.some(f=>f))return '';
+    const labels=['Front','Back','Left side','Right side'];
+    let rows='';
+    for(let i=0;i<S.fotos.length;i+=2){
+      const a=S.fotos[i],b=S.fotos[i+1];
+      const labA=labels[i]||'',labB=labels[i+1]||'';
+      rows+=`<tr style="page-break-inside:avoid;break-inside:avoid">
+        <td style="width:50%;padding:6px 8px 12px 0;vertical-align:top">
+          ${a?`<img src="${a}" style="width:100%;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:4px">${labA}</div>`:''}
+        </td>
+        <td style="width:50%;padding:6px 0 12px 8px;vertical-align:top">
+          ${b?`<img src="${b}" style="width:100%;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:4px">${labB}</div>`:''}
+        </td>
+      </tr>`;
+    }
+    return `<div class="section-title" style="page-break-after:avoid;break-after:avoid">Approval Photos</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px"><tbody>${rows}</tbody></table>`;
+  })()}
 
   <!-- observaciones no van en PDF cliente -->
 
