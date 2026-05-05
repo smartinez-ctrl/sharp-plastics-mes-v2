@@ -1190,12 +1190,20 @@ async function abrirDetallePedido(id){
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" onclick="guardarCostoEdit('${p.id}')">💾 Guardar cambios de costo</button>
       </div>
-      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:16px">
+      <div id="formula-tintas-real-wrap" style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:16px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em">🎨 Fórmula de tintas — ${formula.length>0?'Estimado guardado':'Sin fórmula aún'}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em">🎨 Fórmula de tintas — Real (preparado)</div>
           <button class="btn btn-secondary btn-sm" onclick="irACotizadorDesdePedido('${p.id}')">🧮 Ir al cotizador</button>
         </div>
-        ${renderFormulaTintas(formula, p.id)}
+        <div id="formula-tintas-real-body">${(()=>{
+          // Render inicial: si ya hay cache de orden con consumo real, mostrar; si no, vacío
+          const oc=window._ordenCache&&window._ordenCache[p.id];
+          if(oc){
+            const html=renderFormulaTintasReal(formula,oc.consumo_real_tintas||[],p.id);
+            return html||'<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px">Sin datos de producción aún</div>';
+          }
+          return '<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px">Cargando datos de producción…</div>';
+        })()}</div>
       </div>
     </div>`;
     document.getElementById('btn-mp-pdf-interno').style.display='';
@@ -2502,6 +2510,116 @@ function jalarPedidoPipeline(id){
 }
 
 
+// Renderiza la fórmula de tintas escalada a los gramos preparados reales (no estimados).
+// Cada componente y aditivo se escala proporcionalmente: gramos_componente_real = gramos_preparado × (gramos_componente_estimado / gramos_total_estimado).
+// Si la orden no tiene consumo_real_tintas o está vacío, devuelve cadena vacía (no muestra la sección).
+// formula = p.formula_tintas (contiene componentes, aditivos, precio_kg)
+// consumoReal = orden.consumo_real_tintas — array de {gramos_usados, gramos_sobrante} por color
+function renderFormulaTintasReal(formula, consumoReal, pedidoId) {
+  if (!formula || !formula.length) return '';
+  if (!consumoReal || !consumoReal.length) return '';
+  // Verificar que al menos un color tenga gramos_usados > 0
+  var algunDato = consumoReal.some(function(cr){ return (parseFloat(cr&&cr.gramos_usados)||0) > 0; });
+  if (!algunDato) return '';
+
+  var totalCosto = 0;
+  var html = formula.map(function(col, ci) {
+    var cr = consumoReal[ci] || {};
+    var preparadoReal = parseFloat(cr.gramos_usados)||0;
+    var sobranteReal = parseFloat(cr.gramos_sobrante)||0;
+    if (!preparadoReal) {
+      // Color sin datos reales — mostrar mensaje
+      var nombreSin = (col.nombre||('Color '+(ci+1))) + (col.pantone?' · '+col.pantone:'');
+      return '<div style="background:var(--bg4);border-radius:9px;padding:12px;margin-bottom:8px;opacity:0.5">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center">'
+        + '<div><span style="font-size:12px;font-weight:700">Color ' + (ci+1) + '</span>'
+        + '<span style="font-size:10px;color:var(--amber);margin-left:6px">' + (col.nombre||col.pantone||'') + '</span></div>'
+        + '<span style="font-size:10px;color:var(--text3);font-style:italic">Sin datos de producción</span>'
+        + '</div></div>';
+    }
+    // Deduplicar y filtrar gramos=0
+    var seen={};
+    var compsFilt=(col.componentes||[]).filter(function(x){
+      var key=(x.sku||x.nombre||'')+'_'+(parseFloat(x.gramos)||0);
+      if(seen[key]||!(parseFloat(x.gramos)||0))return false;
+      seen[key]=true;return true;
+    });
+    var tgEst = compsFilt.reduce(function(s,x){return s+(parseFloat(x.gramos)||0);}, 0);
+    var tgEstAdits = (col.aditivos||[]).reduce(function(s,a){
+      var pct=parseFloat(a.pct)||0;
+      var gr = pct>0 ? (pct/100*tgEst) : (parseFloat(a.gramos)||0);
+      return s+gr;
+    }, 0);
+    var totalEst = tgEst + tgEstAdits;
+    // Factor de escala: gramos_preparados_real / gramos_estimados_total
+    var factor = totalEst>0 ? (preparadoReal/totalEst) : 0;
+
+    // Componentes escalados
+    var tcColor = 0;
+    var compsHTML = compsFilt.map(function(x) {
+      var grEst = parseFloat(x.gramos)||0;
+      var grReal = grEst * factor;
+      var pk = x.precio_kg||x.precio||0;
+      var sub = grReal&&pk ? (grReal/1000)*pk : 0;
+      tcColor += sub;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">'
+        + '<span style="font-size:11px;color:var(--text2);flex:1">' + (x.codigo?'<span style="color:var(--text3);margin-right:4px">'+x.codigo+'</span>':'') + (x.nombre||'—') + '</span>'
+        + '<span style="font-size:11px;color:var(--text3);margin:0 8px">' + grReal.toFixed(1) + 'g</span>'
+        + '<span style="font-family:monospace;font-size:11px;color:var(--amber);min-width:48px;text-align:right">' + mxn(sub) + '</span>'
+        + '</div>';
+    }).join('');
+
+    // Aditivos escalados
+    var aditsHTML = (col.aditivos||[]).map(function(a) {
+      var pct = parseFloat(a.pct)||0;
+      var grEst = pct>0 ? (pct/100*tgEst) : (parseFloat(a.gramos)||0);
+      var grReal = grEst * factor;
+      var apk = a.precio_kg||a.precio||0;
+      if(!apk&&a.aditivo_id){
+        var ca=CAT.aditivos.find(function(x){return x.id===a.aditivo_id;});
+        if(ca)apk=ca.precio_kg||0;
+      }
+      if(!apk&&a.nombre){
+        var ca2=CAT.aditivos.find(function(x){return x.nombre===a.nombre;});
+        if(ca2)apk=ca2.precio_kg||0;
+      }
+      var sub = grReal&&apk ? (grReal/1000)*apk : 0;
+      tcColor += sub;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">'
+        + '<span style="font-size:10px;color:var(--text3);flex:1">↳ ' + (a.nombre||'Aditivo') + (a.pct!==undefined?' ('+a.pct+'%)':'') + '</span>'
+        + '<span style="font-size:10px;color:var(--text3);margin:0 8px">' + grReal.toFixed(2).replace(/\.?0+$/,'') + 'g</span>'
+        + '<span style="font-family:monospace;font-size:10px;color:var(--text3);min-width:48px;text-align:right">' + mxn(sub) + '</span>'
+        + '</div>';
+    }).join('');
+
+    totalCosto += tcColor;
+    var nombreColor = (col.nombre||('Color '+(ci+1))) + (col.pantone?' · '+col.pantone:'');
+    var sobranteHTML = sobranteReal>0
+      ? '<span style="font-size:9px;color:var(--text3);margin-left:8px">(sobrante ' + sobranteReal.toFixed(1) + 'g)</span>'
+      : '';
+
+    return '<div style="background:var(--bg4);border-radius:9px;padding:12px;margin-bottom:8px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      + '<div><span style="font-size:12px;font-weight:700">Color ' + (ci+1) + '</span>'
+      + (col.nombre||col.pantone?'<span style="font-size:10px;color:var(--amber);margin-left:6px">'+(col.nombre||col.pantone)+'</span>':'')
+      + sobranteHTML
+      + '</div>'
+      + '<span style="font-family:monospace;font-size:11px;color:var(--amber)">' + mxn(tcColor) + ' · ' + preparadoReal.toFixed(1) + 'g</span>'
+      + '</div>'
+      + (compsHTML||aditsHTML
+        ? '<div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:grid;grid-template-columns:1fr auto auto"><span>Componente</span><span style="margin-right:8px">Gramos reales</span><span>Costo</span></div>'
+          + compsHTML + aditsHTML
+        : '<div style="font-size:11px;color:var(--text3);text-align:center;padding:8px">Sin componentes</div>')
+      + '</div>';
+  }).join('');
+
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:8px;margin-top:4px">'
+    + '<span style="font-size:12px;font-weight:700">Total tintas (real)</span>'
+    + '<span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--amber)">' + mxn(totalCosto) + '</span>'
+    + '</div>';
+  return html;
+}
+
 function renderFormulaTintas(formula, pedidoId) {
   if (!formula || !formula.length) {
     return '<div style="text-align:center;padding:20px;color:var(--text3)">'
@@ -2779,6 +2897,14 @@ function actualizarFilasMermaReal(pipelineId,mermaCalc,costBot,costTap,costoTint
   // Recalcular subtotales y totales
   recalcMermaRow('bot');
   recalcMermaRow('tin');
+  // Renderizar fórmula de tintas REAL (gramos preparados, escalada proporcionalmente)
+  const formulaBody=document.getElementById('formula-tintas-real-body');
+  if(formulaBody){
+    const oc=window._ordenCache&&window._ordenCache[pipelineId];
+    const consumoReal=(oc&&oc.consumo_real_tintas)||[];
+    const html=renderFormulaTintasReal(p.formula_tintas||[],consumoReal,pipelineId);
+    formulaBody.innerHTML=html||'<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px">Sin datos de producción aún</div>';
+  }
 }
 
 // Recalcular subtotal de la fila merma cuando se edita y refrescar totales
