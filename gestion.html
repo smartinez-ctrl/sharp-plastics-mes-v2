@@ -1128,15 +1128,15 @@ async function abrirDetallePedido(id){
             ${costoRow('Positivos ('+colores+' col)',colores,costPos,'','pos')}
             ${costoRow('Empaque',piezas,(tfP+tfT),'','emp')}
             <tr id="row-merma-bot" style="border-bottom:1px solid var(--border);background:var(--red-bg)">
-              <td style="padding:10px 14px;font-size:13px">Merma botellas <span style="font-size:10px;color:var(--text3)">${mermaCalc.hasData?`— ${mermaCalc.mermaBotPzas} pzas (ajuste+prod)`:'— sin datos aún'}</span></td>
-              <td style="padding:10px 14px;text-align:center;font-family:'Space Mono',monospace;font-size:12px" id="merma-bot-qty">${mermaCalc.mermaBotPzas}</td>
-              <td style="padding:10px 14px;text-align:center;font-family:'Space Mono',monospace;font-size:12px" id="merma-bot-unit">${(costBot+costTap).toFixed(2)}</td>
+              <td style="padding:10px 14px;font-size:13px">Merma botellas <span id="merma-bot-note" style="font-size:10px;color:var(--text3)">${mermaCalc.hasData?`— ${mermaCalc.mermaBotPzas} pzas (auto: ajuste+prod)`:'— sin datos aún'}</span></td>
+              <td style="padding:10px 14px;text-align:center"><input type="number" id="merma-bot-qty" value="${mermaCalc.mermaBotPzas}" min="0" step="1" style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;font-family:'Space Mono',monospace" oninput="recalcMermaRow('bot')"></td>
+              <td style="padding:10px 14px;text-align:center"><input type="number" id="merma-bot-unit" value="${(costBot+costTap).toFixed(2)}" min="0" step="0.01" style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;font-family:'Space Mono',monospace" oninput="recalcMermaRow('bot')"></td>
               <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="merma-bot-sub">${mxn(mermaCalc.costoMermaBot)}</td>
             </tr>
             <tr id="row-merma-tin" style="border-bottom:1px solid var(--border);background:var(--red-bg)">
-              <td style="padding:10px 14px;font-size:13px">Merma tintas <span style="font-size:10px;color:var(--text3)">${mermaCalc.hasData?'— consumo real (usado − sobrante)':'— sin datos aún'}</span></td>
-              <td style="padding:10px 14px;text-align:center;font-family:'Space Mono',monospace;font-size:12px" id="merma-tin-qty">1</td>
-              <td style="padding:10px 14px;text-align:center;font-family:'Space Mono',monospace;font-size:12px" id="merma-tin-unit">${mermaCalc.costoTintasReal.toFixed(2)}</td>
+              <td style="padding:10px 14px;font-size:13px">Merma tintas <span id="merma-tin-note" style="font-size:10px;color:var(--text3)">${mermaCalc.hasData?'— auto: gramos consumidos × $/g de fórmula':'— sin datos aún'}</span></td>
+              <td style="padding:10px 14px;text-align:center"><input type="number" id="merma-tin-qty" value="1" min="0" step="1" style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;font-family:'Space Mono',monospace" oninput="recalcMermaRow('tin')"></td>
+              <td style="padding:10px 14px;text-align:center"><input type="number" id="merma-tin-unit" value="${mermaCalc.costoTintasReal.toFixed(2)}" min="0" step="0.01" style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;font-family:'Space Mono',monospace" oninput="recalcMermaRow('tin')"></td>
               <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="merma-tin-sub">${mxn(mermaCalc.costoTintasReal)}</td>
             </tr>
             <tr style="border-bottom:1px solid var(--border)">
@@ -2760,24 +2760,39 @@ function recalcCosto(id, val, qty){
 function actualizarFilasMermaReal(pipelineId,mermaCalc,costBot,costTap,costoTintasFormula,costoTotal,p){
   // Solo actualizar si el modal sigue abierto con este pedido
   if(!window._pedidoActual||window._pedidoActual.id!==pipelineId)return;
-  const setText=(id,txt)=>{const e=document.getElementById(id);if(e)e.textContent=txt;};
-  setText('merma-bot-qty',mermaCalc.mermaBotPzas);
-  setText('merma-bot-unit',(costBot+costTap).toFixed(2));
-  setText('merma-bot-sub',mxn(mermaCalc.costoMermaBot));
-  setText('merma-tin-unit',mermaCalc.costoTintasReal.toFixed(2));
-  setText('merma-tin-sub',mxn(mermaCalc.costoTintasReal));
-  // Actualizar las notas de las filas
-  const rowBot=document.getElementById('row-merma-bot');
-  if(rowBot){
-    const td1=rowBot.querySelector('td:first-child span');
-    if(td1)td1.textContent='— '+mermaCalc.mermaBotPzas+' pzas (ajuste+prod)';
+  // Solo sobrescribir si el usuario aún no editó manualmente (heurística: marcamos editado al cambiar input)
+  const setVal=(id,v)=>{const e=document.getElementById(id);if(e&&!e.dataset.edited)e.value=v;};
+  setVal('merma-bot-qty',mermaCalc.mermaBotPzas);
+  setVal('merma-bot-unit',(costBot+costTap).toFixed(2));
+  setVal('merma-tin-unit',mermaCalc.costoTintasReal.toFixed(2));
+  // Actualizar las notas
+  const noteBot=document.getElementById('merma-bot-note');
+  if(noteBot)noteBot.textContent='— '+mermaCalc.mermaBotPzas+' pzas (auto: ajuste+prod)';
+  const noteTin=document.getElementById('merma-tin-note');
+  if(noteTin)noteTin.textContent='— auto: gramos consumidos × $/g de fórmula';
+  // Recalcular subtotales y totales
+  recalcMermaRow('bot');
+  recalcMermaRow('tin');
+}
+
+// Recalcular subtotal de la fila merma cuando se edita y refrescar totales
+function recalcMermaRow(tipo){
+  const qtyEl=document.getElementById('merma-'+tipo+'-qty');
+  const unitEl=document.getElementById('merma-'+tipo+'-unit');
+  const subEl=document.getElementById('merma-'+tipo+'-sub');
+  if(!qtyEl||!unitEl||!subEl)return;
+  const qty=parseFloat(qtyEl.value)||0;
+  const unit=parseFloat(unitEl.value)||0;
+  subEl.textContent=mxn(qty*unit);
+  // Marcar como editado manualmente para que el async fetch no sobrescriba
+  if(document.activeElement===qtyEl)qtyEl.dataset.edited='1';
+  if(document.activeElement===unitEl)unitEl.dataset.edited='1';
+  // Marcar también la nota cuando se edita
+  const noteEl=document.getElementById('merma-'+tipo+'-note');
+  if(noteEl&&(qtyEl.dataset.edited||unitEl.dataset.edited)){
+    noteEl.textContent='— editado manualmente';
+    noteEl.style.color='var(--amber)';
   }
-  const rowTin=document.getElementById('row-merma-tin');
-  if(rowTin){
-    const td1=rowTin.querySelector('td:first-child span');
-    if(td1)td1.textContent='— consumo real (usado − sobrante)';
-  }
-  // Recalcular totales
   calcCostoTotal();
 }
 
@@ -2789,12 +2804,14 @@ function calcCostoTotal(){
     const qty=k==='tintas'?1:(p?(['pant','pos'].includes(k)?p.colores||0:p.piezas||0):0);
     if(inp)sinMO+=(parseFloat(inp.value)||0)*qty;
   });
-  // Sumar merma botellas y merma tintas (calculadas desde producción real)
-  const mermaBotSub=document.getElementById('merma-bot-sub');
-  const mermaTinSub=document.getElementById('merma-tin-sub');
-  const parseMxn=(s)=>parseFloat((s||'').toString().replace(/[^0-9.\-]/g,''))||0;
-  if(mermaBotSub)sinMO+=parseMxn(mermaBotSub.textContent);
-  if(mermaTinSub)sinMO+=parseMxn(mermaTinSub.textContent);
+  // Sumar merma botellas y merma tintas (qty × unit, leído de los inputs)
+  ['bot','tin'].forEach(function(k){
+    const qtyEl=document.getElementById('merma-'+k+'-qty');
+    const unitEl=document.getElementById('merma-'+k+'-unit');
+    if(qtyEl&&unitEl){
+      sinMO+=(parseFloat(qtyEl.value)||0)*(parseFloat(unitEl.value)||0);
+    }
+  });
   const horas=parseFloat(document.getElementById('costo-mo-horas')?.value||0);
   const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||0);
   const mo=horas*tarifa;
