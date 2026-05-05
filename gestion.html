@@ -3120,7 +3120,7 @@ function abrirPDFCliente(p){
   w.document.close();
 }
 
-function abrirPDFInterno(p){
+async function abrirPDFInterno(p){
   if(!p)p=window._pedidoActual;
   if(!p){toast('Abre un pedido primero','err');return;}
   const piezas=p.piezas||0, colores=p.colores||0, cap=p.capacidad||0;
@@ -3131,15 +3131,95 @@ function abrirPDFInterno(p){
   const costPos=tf['costo_positivo']||115;
   const tfP=tf['papel_empaque_por_pieza']||0.15;
   const tfT=tf['tag_etiqueta_por_pieza']||0.15;
+
+  // Helper: lee precio del componente/aditivo, fallback al catálogo CAT.aditivos por nombre
+  function getPrecioKg(item){
+    let pk=parseFloat(item.precio_kg||item.precio)||0;
+    if(!pk&&item.nombre&&Array.isArray(CAT.aditivos)){
+      const cat=CAT.aditivos.find(x=>x.nombre===item.nombre);
+      if(cat)pk=parseFloat(cat.precio_kg||cat.precio)||0;
+    }
+    return pk;
+  }
+
+  // Cargar orden de producción para datos reales (merma, consumo de tintas)
+  let orden=null;
+  try{
+    const cached=window._ordenCache&&window._ordenCache[p.id];
+    if(cached){
+      orden=cached;
+    }else{
+      const rows=await sbGet('ordenes_produccion','pipeline_id=eq.'+p.id+'&order=created_at.desc&limit=1&select=*');
+      if(rows&&rows[0]){
+        orden=rows[0];
+        window._ordenCache=window._ordenCache||{};
+        window._ordenCache[p.id]=orden;
+      }
+    }
+  }catch(e){console.warn('No se cargó orden de producción para PDF:',e);}
+
   const formula=(p.formula_tintas||[]).map(function(col,i){var ti=(p.tintas_info||[])[i]||{};return Object.assign({},col,{nombre:ti.nombre||ti.pantone||col.nombre||'',pantone:ti.pantone||col.pantone||''});});
+
+  // Costo de tintas estimado (de la fórmula original con precios — usa fallback al catálogo)
   let costoTintas=0;
   formula.forEach(function(col){
-    (col.componentes||[]).forEach(function(x){costoTintas+=(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);});
-    (col.aditivos||[]).forEach(function(a){costoTintas+=(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0);});
+    const tgComp=(col.componentes||[]).reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+    (col.componentes||[]).forEach(function(x){
+      const pk=getPrecioKg(x);
+      const gr=parseFloat(x.gramos)||0;
+      costoTintas+=(gr/1000)*pk;
+    });
+    (col.aditivos||[]).forEach(function(a){
+      const pk=getPrecioKg(a);
+      const pct=parseFloat(a.pct)||0;
+      const gr=pct>0?(pct/100*tgComp):(parseFloat(a.gramos)||0);
+      costoTintas+=(gr/1000)*pk;
+    });
   });
+
+  // === Cálculos de merma reales (si hay orden de producción) ===
+  let mermaBotPzas=0, costoMermaBot=0, costoMermaTinta=0, totalGrSobrante=0;
+  if(orden){
+    const mAj=orden.merma_ajuste||{};
+    const mPr=orden.merma_produccion||{};
+    mermaBotPzas=Object.values(mAj).reduce((s,v)=>s+(parseFloat(v)||0),0)+
+                 Object.values(mPr).reduce((s,v)=>s+(parseFloat(v)||0),0);
+    costoMermaBot=mermaBotPzas*costBot;
+
+    const consumo=orden.consumo_real_tintas||[];
+    const formulaOr=orden.formula_tintas||formula;
+    consumo.forEach((cr,i)=>{
+      const sobrante=parseFloat(cr.gramos_sobrante)||0;
+      totalGrSobrante+=sobrante;
+      const col=formulaOr[i]||{};
+      const comp=col.componentes||[];
+      const adit=col.aditivos||[];
+      const tgComp=comp.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+      let totalGr=0,totalCosto=0;
+      comp.forEach(x=>{
+        const gr=parseFloat(x.gramos)||0;
+        const pk=getPrecioKg(x);
+        totalGr+=gr; totalCosto+=(gr/1000)*pk;
+      });
+      adit.forEach(a=>{
+        const pct=parseFloat(a.pct)||0;
+        const gr=pct>0?(pct/100*tgComp):(parseFloat(a.gramos)||0);
+        const pk=getPrecioKg(a);
+        totalGr+=gr; totalCosto+=(gr/1000)*pk;
+      });
+      const precioPorGr=totalGr>0?totalCosto/totalGr:0;
+      costoMermaTinta+=sobrante*precioPorGr;
+    });
+  }
+
+  // Aplicar overrides editables del pedido si existen
+  if(p.merma_bot_qty!==undefined&&p.merma_bot_qty!==null){mermaBotPzas=parseFloat(p.merma_bot_qty)||0;}
+  if(p.merma_bot_unit!==undefined&&p.merma_bot_unit!==null){costoMermaBot=mermaBotPzas*(parseFloat(p.merma_bot_unit)||0);}else{costoMermaBot=mermaBotPzas*costBot;}
+  if(p.merma_tin_unit!==undefined&&p.merma_tin_unit!==null){costoMermaTinta=parseFloat(p.merma_tin_unit)||0;}
+
   const moHoras=p.mo_horas||0, moTarifa=p.mo_tarifa||70;
   const costoMO=moHoras*moTarifa;
-  const costoSinMO=piezas*costBot+piezas*costTap+costoTintas+colores*costPant+colores*costPos+piezas*(tfP+tfT);
+  const costoSinMO=piezas*costBot+piezas*costTap+costoTintas+colores*costPant+colores*costPos+piezas*(tfP+tfT)+costoMermaBot+costoMermaTinta;
   const costoTotal=costoSinMO+costoMO;
 
   const filasInternas=[
@@ -3149,11 +3229,19 @@ function abrirPDFInterno(p){
     {c:'Pantallas ('+colores+' × '+mxnPDF(costPant)+')',q:colores,u:costPant,s:colores*costPant},
     {c:'Positivos ('+colores+' × '+mxnPDF(costPos)+')',q:colores,u:costPos,s:colores*costPos},
     {c:'Empaque',q:piezas,u:tfP+tfT,s:piezas*(tfP+tfT)},
-    {c:'Mano de obra ('+moHoras+'h × '+mxnPDF(moTarifa)+')',q:1,u:costoMO,s:costoMO},
   ];
+  // Insertar filas de merma antes de mano de obra (solo si hay datos)
+  if(mermaBotPzas>0||costoMermaBot>0){
+    filasInternas.push({c:'Merma botellas (ajuste+prod)',q:mermaBotPzas,u:mermaBotPzas?(costoMermaBot/mermaBotPzas):costBot,s:costoMermaBot,merma:true});
+  }
+  if(costoMermaTinta>0||totalGrSobrante>0){
+    filasInternas.push({c:'Merma tintas ('+totalGrSobrante.toFixed(1)+'g sobrantes)',q:1,u:costoMermaTinta,s:costoMermaTinta,merma:true});
+  }
+  filasInternas.push({c:'Mano de obra ('+moHoras+'h × '+mxnPDF(moTarifa)+')',q:1,u:costoMO,s:costoMO});
 
   const costoHTML=filasInternas.map(function(f){
-    return '<tr><td>'+f.c+'</td><td style="text-align:center">'+f.q+'</td><td style="text-align:center">'+mxnPDF(f.u)+'</td><td style="text-align:right;font-weight:600">'+mxnPDF(f.s)+'</td></tr>';
+    const bg=f.merma?'background:#fee2e2 !important;':'';
+    return '<tr style="'+bg+'"><td>'+f.c+'</td><td style="text-align:center">'+f.q+'</td><td style="text-align:center">'+mxnPDF(f.u)+'</td><td style="text-align:right;font-weight:600">'+mxnPDF(f.s)+'</td></tr>';
   }).join('');
 
   const tfTintas=tf['tintas_fijo_por_botella']||4;
@@ -3177,9 +3265,36 @@ function abrirPDFInterno(p){
   }).join('');
 
   const formulaHTML=formula.length>0?formula.map(function(col,ci){
-    const rows=(col.componentes||[]).map(function(x){return '<tr><td style="padding-left:16px">'+( x.nombre||'—')+'</td><td>'+( x.gramos||0)+'g</td><td>'+mxnPDF(x.precio_kg)+'/kg</td><td style="text-align:right">'+mxnPDF((x.gramos/1000)*x.precio_kg)+'</td></tr>';}).join('')
-      +(col.aditivos||[]).map(function(a){return '<tr style="color:#888"><td style="padding-left:16px">'+( a.nombre||'Aditivo')+'</td><td>'+( a.gramos||0)+'g</td><td>'+mxnPDF(a.precio_kg)+'/kg</td><td style="text-align:right">'+mxnPDF((a.gramos/1000)*a.precio_kg)+'</td></tr>';}).join('');
-    return '<tr style="background:#f0f0f0"><td colspan="4" style="font-weight:700;padding:6px 10px">Color '+(ci+1)+'</td></tr>'+rows;
+    // Si hay orden con consumo real, escalar gramos a lo preparado
+    const consumoReal=(orden&&orden.consumo_real_tintas)||[];
+    const cr=consumoReal[ci]||{};
+    const preparadoReal=parseFloat(cr.gramos_usados)||0;
+    const tgEst=(col.componentes||[]).reduce(function(s,x){return s+(parseFloat(x.gramos)||0);},0);
+    const tgEstAdits=(col.aditivos||[]).reduce(function(s,a){
+      const pct=parseFloat(a.pct)||0;
+      const gr=pct>0?(pct/100*tgEst):(parseFloat(a.gramos)||0);
+      return s+gr;
+    },0);
+    const totalEst=tgEst+tgEstAdits;
+    const factor=(preparadoReal>0&&totalEst>0)?(preparadoReal/totalEst):1;
+    const esReal=preparadoReal>0;
+    const rows=(col.componentes||[]).map(function(x){
+      const grEst=parseFloat(x.gramos)||0;
+      const gr=grEst*factor;
+      const pk=getPrecioKg(x);
+      const sub=(gr/1000)*pk;
+      return '<tr><td style="padding-left:16px">'+(x.nombre||'—')+'</td><td>'+gr.toFixed(1)+'g</td><td>'+mxnPDF(pk)+'/kg</td><td style="text-align:right">'+mxnPDF(sub)+'</td></tr>';
+    }).join('')
+      +(col.aditivos||[]).map(function(a){
+        const pct=parseFloat(a.pct)||0;
+        const grEst=pct>0?(pct/100*tgEst):(parseFloat(a.gramos)||0);
+        const gr=grEst*factor;
+        const pk=getPrecioKg(a);
+        const sub=(gr/1000)*pk;
+        return '<tr style="color:#888"><td style="padding-left:16px">↳ '+(a.nombre||'Aditivo')+(pct>0?' ('+pct+'%)':'')+'</td><td>'+gr.toFixed(2).replace(/\.?0+$/,'')+'g</td><td>'+mxnPDF(pk)+'/kg</td><td style="text-align:right">'+mxnPDF(sub)+'</td></tr>';
+      }).join('');
+    const titulo='Color '+(ci+1)+(col.nombre?' · '+col.nombre:'')+(col.pantone?' · '+col.pantone:'')+(esReal?' (preparado: '+preparadoReal.toFixed(1)+'g)':' (estimado)');
+    return '<tr style="background:#f0f0f0"><td colspan="4" style="font-weight:700;padding:6px 10px">'+titulo+'</td></tr>'+rows;
   }).join(''):'<tr><td colspan="4" style="text-align:center;color:#999;padding:12px">Sin fórmula de tintas registrada</td></tr>';
 
   const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Interno — '+(p.sub_cliente||p.po)+'</title><style>'
@@ -3220,7 +3335,7 @@ function abrirPDFInterno(p){
     +'<div class="margen-box"><span style="font-size:13px;font-weight:700">Margen: </span><span style="font-size:20px;font-weight:700;color:#d4880f">'+( p.margen||0).toFixed(1)+'%</span>'
     +'<span style="margin-left:20px;font-size:13px">  Utilidad: <strong>'+mxnPDF((p.venta_total||0)-costoTotal)+'</strong></span>'
     +'<span style="margin-left:20px;font-size:13px">  Precio/pieza venta: <strong>'+mxnPDF(piezas?(p.venta_total||0)/piezas:0)+'</strong></span></div>'
-    +'<h2>Fórmula de tintas estimada</h2>'
+    +'<h2>Fórmula de tintas'+(orden?' (preparada)':' (estimada)')+'</h2>'
     +'<table><thead><tr><th>Componente</th><th>Gramos</th><th>$/kg</th><th style="text-align:right">Costo</th></tr></thead>'
     +'<tbody>'+formulaHTML+'</tbody></table>'
     +'<div style="font-size:9px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:10px;margin-top:20px">Sharp Plastics S.A. de C.V. — DOCUMENTO CONFIDENCIAL — MES v2 — '+new Date().toLocaleDateString('es-MX')+'</div>'
