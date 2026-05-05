@@ -1020,6 +1020,55 @@ async function abrirDetallePedido(id){
       });
     });
     const costoTotal=piezas*costBot+piezas*costTap+costoTintas+colores*costPant+colores*costPos+piezas*(tfP+tfT);
+    // Pre-calcular merma desde cache si ya existe (mostrar al instante mientras se actualiza)
+    const cachedOrden=window._ordenCache&&window._ordenCache[p.id];
+    const calcMerma=(orden)=>{
+      if(!orden)return {mermaBotPzas:0,costoMermaBot:0,costoTintasReal:0,hasData:false};
+      const mAj=orden.merma_ajuste||{};
+      const mPr=orden.merma_produccion||{};
+      const mermaBotPzas=Object.values(mAj).reduce((s,v)=>s+(parseFloat(v)||0),0)+
+                        Object.values(mPr).reduce((s,v)=>s+(parseFloat(v)||0),0);
+      const costoMermaBot=mermaBotPzas*(costBot+costTap);
+      // Costo real de tintas: gramos consumidos (usados - sobrante) × precio_kg
+      let costoTintasReal=0;
+      const consumo=orden.consumo_real_tintas||[];
+      const formulaOr=orden.formula_tintas||p.formula_tintas||[];
+      consumo.forEach((cr,i)=>{
+        const usados=parseFloat(cr.gramos_usados)||0;
+        const sobrante=parseFloat(cr.gramos_sobrante)||0;
+        const consumido=Math.max(0,usados-sobrante);
+        const col=formulaOr[i]||{};
+        // Calcular precio promedio por gramo de la fórmula del color
+        const comp=col.componentes||[];
+        const adit=col.aditivos||[];
+        let totalGr=0,totalCosto=0;
+        comp.forEach(x=>{
+          const gr=parseFloat(x.gramos)||0;
+          const pk=parseFloat(x.precio_kg||x.precio)||0;
+          totalGr+=gr; totalCosto+=(gr/1000)*pk;
+        });
+        adit.forEach(a=>{
+          const gr=parseFloat(a.gramos)||(a.pct&&comp.length?(a.pct/100*comp.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0)):0);
+          const pk=parseFloat(a.precio_kg||a.precio)||0;
+          totalGr+=gr; totalCosto+=(gr/1000)*pk;
+        });
+        const precioPorGr=totalGr>0?totalCosto/totalGr:0;
+        costoTintasReal+=consumido*precioPorGr;
+      });
+      return {mermaBotPzas,costoMermaBot,costoTintasReal,hasData:true};
+    };
+    let mermaCalc=calcMerma(cachedOrden);
+    // Fetch async — actualizar cuando llegue
+    if(!cachedOrden){
+      sbGet('ordenes_produccion','pipeline_id=eq.'+p.id+'&order=created_at.desc&limit=1&select=*').then(rows=>{
+        if(rows&&rows[0]){
+          window._ordenCache=window._ordenCache||{};
+          window._ordenCache[p.id]=rows[0];
+          mermaCalc=calcMerma(rows[0]);
+          actualizarFilasMermaReal(p.id,mermaCalc,costBot,costTap,costoTintas,costoTotal,p);
+        }
+      }).catch(e=>console.error('Error cargando orden:',e));
+    }
     resumen.innerHTML=`
     <div style="display:flex;gap:2px;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content">
       <div id="tab-venta" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg2);color:var(--green);box-shadow:0 1px 4px rgba(0,0,0,0.3)" onclick="switchDetTab('venta')">💰 Precio de venta</div>
@@ -1078,6 +1127,18 @@ async function abrirDetallePedido(id){
             ${costoRow('Pantallas ('+colores+' col)',colores,costPant,'','pant')}
             ${costoRow('Positivos ('+colores+' col)',colores,costPos,'','pos')}
             ${costoRow('Empaque',piezas,(tfP+tfT),'','emp')}
+            <tr id="row-merma-bot" style="border-bottom:1px solid var(--border);background:var(--red-bg)">
+              <td style="padding:10px 14px;font-size:13px">Merma botellas <span style="font-size:10px;color:var(--text3)">${mermaCalc.hasData?`— ${mermaCalc.mermaBotPzas} pzas (ajuste+prod)`:'— sin datos aún'}</span></td>
+              <td style="padding:10px 14px;text-align:center;font-family:'Space Mono',monospace;font-size:12px" id="merma-bot-qty">${mermaCalc.mermaBotPzas}</td>
+              <td style="padding:10px 14px;text-align:center;font-family:'Space Mono',monospace;font-size:12px" id="merma-bot-unit">${(costBot+costTap).toFixed(2)}</td>
+              <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="merma-bot-sub">${mxn(mermaCalc.costoMermaBot)}</td>
+            </tr>
+            <tr id="row-merma-tin" style="border-bottom:1px solid var(--border);background:var(--red-bg)">
+              <td style="padding:10px 14px;font-size:13px">Merma tintas <span style="font-size:10px;color:var(--text3)">${mermaCalc.hasData?'— consumo real (usado − sobrante)':'— sin datos aún'}</span></td>
+              <td style="padding:10px 14px;text-align:center;font-family:'Space Mono',monospace;font-size:12px" id="merma-tin-qty">1</td>
+              <td style="padding:10px 14px;text-align:center;font-family:'Space Mono',monospace;font-size:12px" id="merma-tin-unit">${mermaCalc.costoTintasReal.toFixed(2)}</td>
+              <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="merma-tin-sub">${mxn(mermaCalc.costoTintasReal)}</td>
+            </tr>
             <tr style="border-bottom:1px solid var(--border)">
               <td style="padding:10px 14px;font-size:13px">Mano de obra</td>
               <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-horas" value="${p.mo_horas||0}" min="0" step="0.5" style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()"></td>
@@ -1089,12 +1150,12 @@ async function abrirDetallePedido(id){
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg3);border-radius:10px;margin-bottom:12px">
         <span style="font-size:14px;font-weight:700">Total costo (sin MO)</span>
-        <span id="costo-total-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">${mxn(costoTotal)}</span>
+        <span id="costo-total-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">${mxn(costoTotal+mermaCalc.costoMermaBot+mermaCalc.costoTintasReal)}</span>
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:10px;margin-bottom:10px">
         <span style="font-size:14px;font-weight:700">Total costo (con MO)</span>
-        <span id="costo-total-mo-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--amber)">${mxn(costoTotal+(p.mo_horas||0)*(p.mo_tarifa||70))}</span>
+        <span id="costo-total-mo-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--amber)">${mxn(costoTotal+mermaCalc.costoMermaBot+mermaCalc.costoTintasReal+(p.mo_horas||0)*(p.mo_tarifa||70))}</span>
       </div>
 
       ${(p.costo_merma_real||p.costo_tintas_real) ? `
@@ -2695,6 +2756,31 @@ function recalcCosto(id, val, qty){
   const totMoEl=document.getElementById('costo-total-mo-display');
   if(totMoEl)totMoEl.textContent=mxn(total+mo);
 }
+// Actualizar las filas de Merma botellas y Merma tintas cuando llegan los datos de producción
+function actualizarFilasMermaReal(pipelineId,mermaCalc,costBot,costTap,costoTintasFormula,costoTotal,p){
+  // Solo actualizar si el modal sigue abierto con este pedido
+  if(!window._pedidoActual||window._pedidoActual.id!==pipelineId)return;
+  const setText=(id,txt)=>{const e=document.getElementById(id);if(e)e.textContent=txt;};
+  setText('merma-bot-qty',mermaCalc.mermaBotPzas);
+  setText('merma-bot-unit',(costBot+costTap).toFixed(2));
+  setText('merma-bot-sub',mxn(mermaCalc.costoMermaBot));
+  setText('merma-tin-unit',mermaCalc.costoTintasReal.toFixed(2));
+  setText('merma-tin-sub',mxn(mermaCalc.costoTintasReal));
+  // Actualizar las notas de las filas
+  const rowBot=document.getElementById('row-merma-bot');
+  if(rowBot){
+    const td1=rowBot.querySelector('td:first-child span');
+    if(td1)td1.textContent='— '+mermaCalc.mermaBotPzas+' pzas (ajuste+prod)';
+  }
+  const rowTin=document.getElementById('row-merma-tin');
+  if(rowTin){
+    const td1=rowTin.querySelector('td:first-child span');
+    if(td1)td1.textContent='— consumo real (usado − sobrante)';
+  }
+  // Recalcular totales
+  calcCostoTotal();
+}
+
 function calcCostoTotal(){
   const p=window._pedidoActual;
   let sinMO=0;
@@ -2703,6 +2789,12 @@ function calcCostoTotal(){
     const qty=k==='tintas'?1:(p?(['pant','pos'].includes(k)?p.colores||0:p.piezas||0):0);
     if(inp)sinMO+=(parseFloat(inp.value)||0)*qty;
   });
+  // Sumar merma botellas y merma tintas (calculadas desde producción real)
+  const mermaBotSub=document.getElementById('merma-bot-sub');
+  const mermaTinSub=document.getElementById('merma-tin-sub');
+  const parseMxn=(s)=>parseFloat((s||'').toString().replace(/[^0-9.\-]/g,''))||0;
+  if(mermaBotSub)sinMO+=parseMxn(mermaBotSub.textContent);
+  if(mermaTinSub)sinMO+=parseMxn(mermaTinSub.textContent);
   const horas=parseFloat(document.getElementById('costo-mo-horas')?.value||0);
   const tarifa=parseFloat(document.getElementById('costo-mo-hora')?.value||0);
   const mo=horas*tarifa;
