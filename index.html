@@ -1940,7 +1940,20 @@ function updComp(ti,ci,key,val){
 }
 function addComp(ti){if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};S.tintas[ti].componentes.push({prov:'Rodatec',sku:'',nombre:'',gramos:0,precio:0});renderTintasAjuste();}
 function removeComp(ti,ci){if(S.tintas[ti])S.tintas[ti].componentes.splice(ci,1);renderTintasAjuste();}
-function updAdit(ti,ai,key,val){if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};if(!S.tintas[ti].aditivos[ai])S.tintas[ti].aditivos[ai]={nombre:'',prov:'Rodatec',pct:5,precio:0};S.tintas[ti].aditivos[ai][key]=val;}
+function updAdit(ti,ai,key,val){
+  if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};
+  if(!S.tintas[ti].aditivos[ai])S.tintas[ti].aditivos[ai]={nombre:'',prov:'Rodatec',pct:5,precio:0,precio_kg:0};
+  S.tintas[ti].aditivos[ai][key]=val;
+  // Cuando se elige el nombre del aditivo, jalar también el precio_kg del catálogo
+  if(key==='nombre'&&val){
+    const cat=ADITIVOS.find(x=>x.nombre===val);
+    if(cat){
+      const pk=parseFloat(cat.precio)||0;
+      S.tintas[ti].aditivos[ai].precio_kg=pk;
+      S.tintas[ti].aditivos[ai].precio=pk;
+    }
+  }
+}
 function addAdit(ti){if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};if(!S.tintas[ti].aditivos)S.tintas[ti].aditivos=[];S.tintas[ti].aditivos.push({nombre:'',prov:'Rodatec',pct:5,precio:0});renderTintasAjuste();}
 function removeAdit(ti,ai){if(S.tintas[ti])S.tintas[ti].aditivos.splice(ai,1);renderTintasAjuste();}
 
@@ -2830,7 +2843,12 @@ function generarPDFInterno(){
       const grEst=pct>0?(pct/100*tgEst):(parseFloat(a.gramos)||0);
       const grReal=grEst*factor;
       totalGrAditColor+=grReal;
-      const pk=parseFloat(a.precio_kg||a.precio)||0;
+      // Precio: primero intentar de la fórmula, luego buscar en catálogo ADITIVOS por nombre
+      let pk=parseFloat(a.precio_kg||a.precio)||0;
+      if(!pk&&a.nombre&&Array.isArray(ADITIVOS)){
+        const cat=ADITIVOS.find(x=>x.nombre===a.nombre);
+        if(cat)pk=parseFloat(cat.precio)||0;
+      }
       const sub=(grReal/1000)*pk;
       costoColor+=sub;
       const pctLabel=pct>0?pct+'%':'sin %';
@@ -2885,7 +2903,12 @@ function generarPDFInterno(){
     adit.forEach(a=>{
       const pct=parseFloat(a.pct)||0;
       const gr=pct>0?(pct/100*tgComp):(parseFloat(a.gramos)||0);
-      const pk=parseFloat(a.precio_kg||a.precio)||0;
+      // Precio: primero intentar de la fórmula, luego buscar en catálogo ADITIVOS por nombre
+      let pk=parseFloat(a.precio_kg||a.precio)||0;
+      if(!pk&&a.nombre&&Array.isArray(ADITIVOS)){
+        const cat=ADITIVOS.find(x=>x.nombre===a.nombre);
+        if(cat)pk=parseFloat(cat.precio)||0;
+      }
       totalGr+=gr; totalCosto+=(gr/1000)*pk;
     });
     const precioPorGr=totalGr>0?totalCosto/totalGr:0;
