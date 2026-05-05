@@ -2022,21 +2022,26 @@ function exportarPipelineExcel(){
     try{
       console.log('[ExportExcel] XLSX cargado, generando archivo…');
       const fmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-MX'):'';
-      // Sanitizador: garantiza string seguro o número, nunca objetos/arrays
+      // Sanitizador: SIEMPRE retorna string. Para números usar safeNum aparte.
       const safe=v=>{
         if(v===null||v===undefined)return '';
-        if(typeof v==='string'||typeof v==='number'||typeof v==='boolean')return v;
+        if(typeof v==='string')return v;
+        if(typeof v==='number')return isFinite(v)?String(v):'';
+        if(typeof v==='boolean')return v?'Sí':'No';
         if(Array.isArray(v))return v.map(safe).filter(Boolean).join(', ');
         if(typeof v==='object'){
-          // Objetos comunes: {nombre} | {value} | {label}
-          if(v.nombre)return String(v.nombre);
-          if(v.label)return String(v.label);
-          if(v.value)return String(v.value);
-          try{return JSON.stringify(v);}catch{return String(v);}
+          if(v.nombre&&typeof v.nombre==='string')return v.nombre;
+          if(v.label&&typeof v.label==='string')return v.label;
+          if(v.value&&typeof v.value==='string')return v.value;
+          try{return JSON.stringify(v);}catch{return '';}
         }
-        return String(v);
+        try{return String(v);}catch{return '';}
       };
-      const safeNum=v=>{const n=parseFloat(v);return isFinite(n)?n:0;};
+      const safeNum=v=>{
+        if(typeof v==='number')return isFinite(v)?v:0;
+        const n=parseFloat(v);
+        return isFinite(n)?n:0;
+      };
       // Helper: extraer nombres de tintas de tintas_info o formula_tintas
       const tintasStr=p=>{
         const ti=Array.isArray(p.tintas_info)?p.tintas_info:[];
@@ -2088,8 +2093,27 @@ function exportarPipelineExcel(){
           safe(p.notas)
         ]);
       });
-      console.log('[ExportExcel] filas listas:',rows.length-1,'pedidos');
+      // Debug: validar que cada celda sea string primitivo o número
+      console.log('[ExportExcel] validando celdas, total filas (incl header):',rows.length);
+      let problemas=0;
+      rows.forEach((row,ri)=>{
+        row.forEach((cell,ci)=>{
+          const t=typeof cell;
+          if(t!=='string'&&t!=='number'){
+            console.warn('[ExportExcel] celda problema en fila',ri,'col',ci,':',cell,'(tipo:',t,')');
+            row[ci]=String(cell??'');
+            problemas++;
+          }
+          // Strings con caracteres raros también pueden romper
+          if(t==='string'&&cell.length>32000){
+            console.warn('[ExportExcel] string demasiado largo en fila',ri,'col',ci,'truncando');
+            row[ci]=cell.substring(0,32000);
+          }
+        });
+      });
+      if(problemas>0)console.warn('[ExportExcel] se corrigieron',problemas,'celdas problema');
 
+      console.log('[ExportExcel] llamando aoa_to_sheet…');
       const ws=XLSX.utils.aoa_to_sheet(rows);
       ws['!cols']=[
         {wch:18},{wch:24},{wch:14},{wch:14},
@@ -2099,12 +2123,11 @@ function exportarPipelineExcel(){
         {wch:13},{wch:9},{wch:9},{wch:12},
         {wch:36},{wch:40}
       ];
-      ws['!freeze']={xSplit:0,ySplit:1};
       for(let i=2;i<=rows.length;i++){
         const v=ws[XLSX.utils.encode_cell({r:i-1,c:14})];
-        if(v&&typeof v.v==='number')v.z='$#,##0.00';
+        if(v&&typeof v.v==='number')v.z='"$"#,##0.00';
         const m=ws[XLSX.utils.encode_cell({r:i-1,c:15})];
-        if(m&&typeof m.v==='number')m.z='0.0"%"';
+        if(m&&typeof m.v==='number')m.z='0.0';
       }
 
       const wb=XLSX.utils.book_new();
