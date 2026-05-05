@@ -701,6 +701,7 @@ const PIPE_COL_DEFS=[
   {id:'cliente', label:'Cliente', fr:'3fr', align:'left'},
   {id:'po', label:'PO', fr:'1fr', align:'left'},
   {id:'capacidad', label:'ml', fr:'0.5fr', align:'center'},
+  {id:'color_botella', label:'Color', fr:'0.9fr', align:'center'},
   {id:'piezas', label:'Piezas', fr:'0.7fr', align:'center'},
   {id:'fecha_entrega', label:'F. Entrega', fr:'1fr', align:'center'},
   {id:'venta_total', label:'Venta', fr:'1.1fr', align:'right'},
@@ -712,7 +713,12 @@ const PIPE_COL_DEFS=[
 let _colOrder=null; // null = default order
 let _colDragSrc=null;
 
-function getColOrder(){return _colOrder||PIPE_COL_DEFS.map((_,i)=>i);}
+function getColOrder(){
+  // Sanity check: si _colOrder tiene longitud distinta a las definiciones (porque
+  // agregamos/quitamos columnas), descartarlo y volver al orden por defecto
+  if(_colOrder&&_colOrder.length!==PIPE_COL_DEFS.length)_colOrder=null;
+  return _colOrder||PIPE_COL_DEFS.map((_,i)=>i);
+}
 
 function colDragStart(e,idx){_colDragSrc=idx;e.dataTransfer.effectAllowed='move';}
 function colDragOver(e,idx){e.preventDefault();if(_colDragSrc===null||_colDragSrc===idx)return;document.querySelectorAll('.pipe-col-hdr').forEach(h=>h.style.borderLeft='');e.currentTarget.style.borderLeft='2px solid var(--amber)';}
@@ -740,6 +746,21 @@ function resetPipelineColumns(){
   _colWidths=null;
   renderPipeline();
   toast('Columnas restablecidas','ok');
+}
+
+// Chip visual del color de botella (swatch + nombre)
+function colorBotellaChip(color){
+  const c=(color||'').trim();
+  if(!c)return '<div style="font-size:11px;text-align:center;color:var(--text3)">—</div>';
+  const map={'natural':'#f5f5f5','blanco':'#ffffff','blanca':'#ffffff','white':'#ffffff','negro':'#1a1a1a','negra':'#1a1a1a','black':'#1a1a1a','rojo':'#dc2626','red':'#dc2626','azul':'#2563eb','blue':'#2563eb','azul rey':'#1d4ed8','azul marino':'#1e3a8a','navy':'#1e3a8a','verde':'#16a34a','green':'#16a34a','amarillo':'#facc15','yellow':'#facc15','naranja':'#ea580c','orange':'#ea580c','rosa':'#ec4899','pink':'#ec4899','morado':'#9333ea','violeta':'#9333ea','purple':'#9333ea','gris':'#6b7280','grey':'#6b7280','gray':'#6b7280','café':'#78350f','marron':'#78350f','brown':'#78350f','translucido':'#e5e7eb','transparente':'#e5e7eb','clear':'#e5e7eb'};
+  const cl=c.toLowerCase();
+  let swatch=map[cl];
+  if(!swatch){for(const k in map){if(cl.includes(k)){swatch=map[k];break;}}}
+  const isLight=swatch&&['#ffffff','#f5f5f5','#facc15','#e5e7eb'].includes(swatch);
+  const border=isLight?'border:1px solid var(--border2)':'';
+  return swatch
+    ? `<div style="display:flex;align-items:center;justify-content:center;gap:5px;min-width:0"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${swatch};${border};flex-shrink:0"></span><span style="font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c}</span></div>`
+    : `<div style="font-size:11px;text-align:center;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c}</div>`;
 }
 
 // ── Column resize ─────────────────────────────────────
@@ -867,7 +888,7 @@ function renderPipeline(){
   document.getElementById('st-margen').textContent=mProm>0?mProm.toFixed(1)+'%':'—';
 
   // Header de columnas
-  const PIPE_COLS = '3fr 1fr 0.5fr 0.7fr 1fr 1.1fr 0.8fr 1.1fr 0.8fr 1.3fr';
+  const PIPE_COLS = '3fr 1fr 0.5fr 0.9fr 0.7fr 1fr 1.1fr 0.8fr 1.1fr 0.8fr 1.3fr';
   // Columnas en orden actual
   const cols=getColOrder().map(i=>PIPE_COL_DEFS[i]);
   // Sanity check: si _colWidths quedó desfasado (longitud distinta), descartarlo
@@ -903,6 +924,7 @@ function renderPipeline(){
       cliente:`<div style="min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${p.sub_cliente||p.cliente||'—'}</div><div style="margin-top:2px">${tintas}</div></div>`,
       po:`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text)">${p.po||'—'}</div>`,
       capacidad:`<div style="font-size:12px;text-align:center;color:var(--text)">${p.capacidad||'—'}</div>`,
+      color_botella:colorBotellaChip(p.color_botella),
       piezas:`<div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center;color:var(--text)">${(p.piezas||0).toLocaleString()}</div>`,
       fecha_entrega:`<div style="font-size:11px;text-align:center;color:${isUrgent?'var(--red)':'var(--text)'}">${fEnt}</div>`,
       venta_total:`<div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>`,
@@ -924,6 +946,7 @@ function renderPipeline(){
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">Cliente</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)">PO</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">ml</span>
+    <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Color</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">Piezas</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:center">F. Entrega</span>
     <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);text-align:right">Venta</span>
@@ -945,6 +968,7 @@ function renderPipeline(){
       </div>
       <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text2)">${p.po||'—'}</div>
       <div style="font-size:12px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
+      ${colorBotellaChip(p.color_botella)}
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
       <div style="font-size:11px;text-align:center;color:var(--text2)">${fEnt2}</div>
       <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--green);text-align:right">${p.venta_total?mxn(p.venta_total):'—'}</div>
