@@ -1459,6 +1459,20 @@ async function cargarOrdenExistente(pipelineId){
     S.consumoReal=o.consumo_real_tintas||[];
     // Restaurar reajustes
     S.reajustes=o.reajustes||0;
+    // Restaurar fotos del pedido
+    if(Array.isArray(o.foto_urls)&&o.foto_urls.length){
+      S.fotos=[null,null,null,null];
+      o.foto_urls.forEach((url,i)=>{if(url&&i<4)S.fotos[i]=url;});
+      console.log('[DIAG cargarOrden] fotos restauradas:',S.fotos.filter(Boolean).length,'de 4');
+      // Re-pintar slots después de que el DOM esté listo
+      setTimeout(()=>{
+        S.fotos.forEach((url,i)=>{
+          if(!url)return;
+          const slot=document.getElementById('foto-'+i);
+          if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">';}
+        });
+      },500);
+    }
     // Restaurar parámetros en DOM
     const setInput=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
     const setCheck=(id,val)=>{const el=document.getElementById(id);if(el)el.checked=!!val;};
@@ -2357,13 +2371,14 @@ async function goProduccion(){
   if(window._timerRespuestaIv){clearInterval(window._timerRespuestaIv);window._timerRespuestaIv=null;}
   // Guardar primero para tener S.ordenId
   await guardarOrden('produccion');
-  // Autosave cada 30s durante producción — solo si estamos en pantalla produccion
+  // Autosave cada 10s durante producción — solo si estamos en pantalla produccion
+  // (antes era 30s pero el monitor LIVE refresca cada 8s y se veía congelado)
   if(window._autosaveIv){clearInterval(window._autosaveIv);}
   window._autosaveIv=setInterval(()=>{
     if(document.getElementById('screen-produccion')?.classList.contains('active')){
       guardarOrden('produccion');
     }
-  },30000);
+  },10000);
   // Email de monitor se manda cuando inicia el cronómetro de producción
   // Restaurar tiempo pausado si existe
   if(S.orden&&S.orden.tiempo_pausado&&S.orden.tiempo_pausado>0&&S.timers.prod.s===0){

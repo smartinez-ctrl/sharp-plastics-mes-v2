@@ -147,5 +147,8 @@ export default async function handler(req, res) {
     '</body></html>';
 
   res.setHeader('Content-Type', 'text/html');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.setHeader('CDN-Cache-Control', 'no-store');
+  res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
   return res.status(200).send(html);
 }
