@@ -1059,17 +1059,22 @@ async function abrirDetallePedido(id){
       return {mermaBotPzas,costoMermaBot,costoTintasReal,hasData:true};
     };
     let mermaCalc=calcMerma(cachedOrden);
-    // Fetch async — actualizar cuando llegue
-    if(!cachedOrden){
-      sbGet('ordenes_produccion','pipeline_id=eq.'+p.id+'&order=created_at.desc&limit=1&select=*').then(rows=>{
-        if(rows&&rows[0]){
-          window._ordenCache=window._ordenCache||{};
-          window._ordenCache[p.id]=rows[0];
-          mermaCalc=calcMerma(rows[0]);
-          actualizarFilasMermaReal(p.id,mermaCalc,costBot,costTap,costoTintas,costoTotal,p);
-        }
-      }).catch(e=>console.error('Error cargando orden:',e));
-    }
+    console.log('[DIAG abrirPedido] pipeline_id=',p.id,'cachedOrden?',!!cachedOrden,'mermaInicial=',mermaCalc);
+    // Fetch async siempre — refresca con datos más recientes
+    sbGet('ordenes_produccion','pipeline_id=eq.'+p.id+'&order=created_at.desc&limit=1&select=*').then(rows=>{
+      console.log('[DIAG abrirPedido] fetch ordenes_produccion para pipeline_id=',p.id,'devolvió',rows?.length||0,'rows');
+      if(rows&&rows[0]){
+        const o=rows[0];
+        console.log('[DIAG abrirPedido] orden encontrada id=',o.id,'merma_ajuste=',o.merma_ajuste,'merma_produccion=',o.merma_produccion);
+        window._ordenCache=window._ordenCache||{};
+        window._ordenCache[p.id]=o;
+        const nuevoCalc=calcMerma(o);
+        console.log('[DIAG abrirPedido] mermaCalc post-fetch=',nuevoCalc);
+        actualizarFilasMermaReal(p.id,nuevoCalc,costBot,costTap,costoTintas,costoTotal,p);
+      } else {
+        console.warn('[DIAG abrirPedido] NO se encontró orden_produccion para pipeline_id=',p.id);
+      }
+    }).catch(e=>console.error('[DIAG abrirPedido] Error cargando orden:',e));
     resumen.innerHTML=`
     <div style="display:flex;gap:2px;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content">
       <div id="tab-venta" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;background:var(--bg2);color:var(--green);box-shadow:0 1px 4px rgba(0,0,0,0.3)" onclick="switchDetTab('venta')">💰 Precio de venta</div>
