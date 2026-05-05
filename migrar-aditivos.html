@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Migración: aditivos sin %</title>
+<style>
+body{font-family:Arial,sans-serif;background:#0d0f12;color:#e2e6f0;padding:24px;max-width:900px;margin:0 auto}
+h1{font-size:18px;margin-bottom:12px}
+.btn{background:#f5a623;color:#000;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.log{background:#181c23;border:1px solid #1e232d;border-radius:8px;padding:14px;margin-top:14px;font-family:monospace;font-size:12px;white-space:pre-wrap;max-height:500px;overflow-y:auto}
+.row{margin-bottom:6px}
+.ok{color:#2dd4a0}
+.warn{color:#f5a623}
+.err{color:#f87171}
+</style>
+</head>
+<body>
+<h1>🛠️ Migración — aditivos sin captura de %</h1>
+<p style="font-size:13px;color:#7d8799">Esto busca todos los pedidos cuyas <code>formula_tintas</code> tengan aditivos con <code>pct</code> vacío o nulo, y los reescribe con <code>pct=5</code> (el default que ahora aplica el iPad). Solo aditivos sin capturar — los que ya tienen un % puesto no se tocan.</p>
+
+<button class="btn" id="btn-scan" onclick="escanear()">1. Escanear pedidos afectados</button>
+<button class="btn" id="btn-fix" onclick="aplicar()" disabled>2. Aplicar fix (reescribir)</button>
+
+<div class="log" id="log">Listo para escanear...</div>
+
+<script>
+const SB_URL='https://ozibjgsxyzdbporcarwv.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
+const SB_H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
+const log=document.getElementById('log');
+let afectados=[];
+
+function add(msg,cls){const d=document.createElement('div');d.className='row '+(cls||'');d.textContent=msg;log.appendChild(d);log.scrollTop=log.scrollHeight;}
+
+function aditivoNecesitaFix(a){
+  return (a.pct===''||a.pct===null||a.pct===undefined)&&a.nombre;
+}
+
+async function escanear(){
+  document.getElementById('btn-scan').disabled=true;
+  log.innerHTML='';
+  add('Consultando pipeline_mf...');
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/pipeline_mf?select=id,sub_cliente,cliente,po,formula_tintas',{headers:SB_H});
+    const rows=await r.json();
+    add('Total pedidos: '+rows.length);
+    afectados=[];
+    rows.forEach(p=>{
+      if(!Array.isArray(p.formula_tintas))return;
+      let cuenta=0;
+      p.formula_tintas.forEach(col=>{
+        (col.aditivos||[]).forEach(a=>{if(aditivoNecesitaFix(a))cuenta++;});
+      });
+      if(cuenta>0){
+        afectados.push({id:p.id,nombre:(p.sub_cliente||p.cliente||'?')+' · '+(p.po||p.id.slice(0,8)),cuenta});
+      }
+    });
+    if(!afectados.length){
+      add('✓ Ningún pedido necesita fix.','ok');
+      return;
+    }
+    add('');
+    add('Pedidos afectados ('+afectados.length+'):','warn');
+    afectados.forEach(a=>add('  • '+a.nombre+' — '+a.cuenta+' aditivos sin %'));
+    add('');
+    add('Click en "Aplicar fix" para reescribir.','warn');
+    document.getElementById('btn-fix').disabled=false;
+  }catch(e){add('Error: '+e.message,'err');document.getElementById('btn-scan').disabled=false;}
+}
+
+async function aplicar(){
+  if(!afectados.length)return;
+  if(!confirm('Reescribir '+afectados.length+' pedidos con pct=5 en aditivos sin captura. ¿Continuar?'))return;
+  document.getElementById('btn-fix').disabled=true;
+  add('');
+  add('Aplicando fix...','warn');
+  let ok=0,err=0;
+  for(const a of afectados){
+    try{
+      // Re-fetch para tener formula completa (no solo el id)
+      const r=await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+a.id+'&select=formula_tintas',{headers:SB_H});
+      const rows=await r.json();
+      if(!rows||!rows[0]){add('  ✗ '+a.nombre+' — no encontrado','err');err++;continue;}
+      const formula=rows[0].formula_tintas||[];
+      // Modificar in-place
+      formula.forEach(col=>{
+        (col.aditivos||[]).forEach(ad=>{if(aditivoNecesitaFix(ad))ad.pct=5;});
+      });
+      // PATCH
+      const p=await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+a.id,{
+        method:'PATCH',
+        headers:{...SB_H,'Prefer':'return=minimal'},
+        body:JSON.stringify({formula_tintas:formula})
+      });
+      if(!p.ok){add('  ✗ '+a.nombre+' — HTTP '+p.status,'err');err++;continue;}
+      add('  ✓ '+a.nombre,'ok');ok++;
+    }catch(e){add('  ✗ '+a.nombre+' — '+e.message,'err');err++;}
+  }
+  add('');
+  add('Listo. Éxito: '+ok+', errores: '+err,err?'warn':'ok');
+}
+</script>
+</body>
+</html>

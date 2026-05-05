@@ -2848,25 +2848,17 @@ function generarPDFInterno(){
   // Consumo real — diferencia = preparado - consumido (merma en gramos y %)
   const consumoRows=(S.consumoReal||[]).map((cr,i)=>{
     const col=S.orden.colores[i]||{nombre:'Color '+(i+1)};
-    const t=S.tintas[i]||{componentes:[]};
-    const tgEst=(t.componentes||[]).reduce((s,x)=>s+(parseFloat(x.gramos)||0),0)+
-                (t.aditivos||[]).reduce((s,a)=>{const tg=(t.componentes||[]).reduce((st,x)=>st+(parseFloat(x.gramos)||0),0);return s+(a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0));},0);
     const preparado=parseFloat(cr.gramos_usados)||0;
     const sobrante=parseFloat(cr.gramos_sobrante)||0;
     const consumido=preparado-sobrante;
     const mermaG=preparado>0?sobrante:0;
     const mermaPct=preparado>0?((sobrante/preparado)*100).toFixed(1):0;
-    const diff=consumido-tgEst;
-    const sign=diff>=0?'+':'';
-    const color=Math.abs(diff)<=tgEst*0.15?'#16a34a':Math.abs(diff)<=tgEst*0.3?'#d97706':'#dc2626';
     return `<tr style="border-bottom:1px solid #e5e7eb">
       <td style="padding:5px 10px;font-size:11px;font-weight:600">${col.nombre}${col.pantone?' · '+col.pantone:''}</td>
-      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${tgEst.toFixed(1)}g</td>
       <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${preparado}g</td>
       <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace">${sobrante}g</td>
       <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;font-weight:700">${preparado>0?consumido.toFixed(1)+'g':'—'}</td>
       <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;color:#dc2626">${preparado>0?mermaG.toFixed(1)+'g ('+mermaPct+'%)':'—'}</td>
-      <td style="padding:5px 10px;font-size:11px;text-align:center;font-family:monospace;color:${color}">${preparado>0?sign+diff.toFixed(1)+'g':'—'}</td>
     </tr>`;
   }).join('');
 
@@ -2899,9 +2891,9 @@ function generarPDFInterno(){
     const precioPorGr=totalGr>0?totalCosto/totalGr:0;
     const preparado=parseFloat(cr.gramos_usados)||0;
     const sobrante=parseFloat(cr.gramos_sobrante)||0;
-    totalGrTintaMerma+=preparado;
+    totalGrTintaMerma+=sobrante;  // merma = solo gramos sobrantes (no consumidos)
     totalGrSobrante+=sobrante;
-    costoTintaMerma+=preparado*precioPorGr;
+    costoTintaMerma+=sobrante*precioPorGr;
   });
 
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte interno — ${S.orden.op||'Orden'}</title>
@@ -3034,7 +3026,7 @@ function generarPDFInterno(){
   ${consumoRows?`
   <div class="section">Consumo real de tintas</div>
   <table>
-    <thead><tr><th>Color</th><th style="text-align:center">Estimado</th><th style="text-align:center">Preparado</th><th style="text-align:center">Sobrante</th><th style="text-align:center">Consumido</th><th style="text-align:center">Merma</th><th style="text-align:center">vs Estimado</th></tr></thead>
+    <thead><tr><th>Color</th><th style="text-align:center">Preparado</th><th style="text-align:center">Sobrante</th><th style="text-align:center">Consumido</th><th style="text-align:center">Merma</th></tr></thead>
     <tbody>${consumoRows}</tbody>
   </table>`:''}
 
@@ -3050,9 +3042,8 @@ function generarPDFInterno(){
     <div class="box" style="background:#fef2f2;border-color:#fca5a5;padding:14px 16px;text-align:center">
       <div class="lbl" style="color:#991b1b;font-weight:700">Merma de tinta</div>
       <div style="font-size:22px;font-weight:800;font-family:monospace;color:#111;margin:4px 0 2px">${totalGrTintaMerma.toFixed(1)}g</div>
-      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Gramos preparados (incl. sobrante)</div>
+      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Gramos sobrantes (no consumidos)</div>
       <div style="font-size:24px;font-weight:800;font-family:monospace;color:#dc2626">$${costoTintaMerma.toFixed(2)}</div>
-      <div style="font-size:8px;color:#6b7280">Sobrante: ${totalGrSobrante.toFixed(1)}g</div>
     </div>
   </div>
 
