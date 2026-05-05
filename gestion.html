@@ -2008,6 +2008,7 @@ function exportarCobrosExcel(){
 }
 
 function exportarPipelineExcel(){
+  console.log('[ExportExcel] click recibido, PIPELINE.length=',PIPELINE&&PIPELINE.length);
   if(!PIPELINE||!PIPELINE.length){toast('Pipeline vacío','err');return;}
   // Ordenar por orden_posicion (mismo orden que se ve en el pipe)
   const todos=[...PIPELINE].sort((a,b)=>{
@@ -2015,86 +2016,106 @@ function exportarPipelineExcel(){
     return new Date(a.created_at||0)-new Date(b.created_at||0);
   });
 
+  toast('Generando Excel…','ok');
+
+  const buildAndDownload=function(){
+    try{
+      console.log('[ExportExcel] XLSX cargado, generando archivo…');
+      const fmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-MX'):'';
+      // Helper: extraer nombres de tintas de tintas_info o formula_tintas
+      const tintasStr=p=>{
+        const ti=p.tintas_info||[];
+        if(ti.length){
+          return ti.map(t=>{
+            const n=t.nombre||'';
+            const pa=t.pantone||'';
+            return n&&pa?`${n} (${pa})`:(n||pa||'');
+          }).filter(Boolean).join(' · ');
+        }
+        const ft=p.formula_tintas||[];
+        return ft.map((c,i)=>c.nombre||c.pantone||('Color '+(i+1))).filter(Boolean).join(' · ');
+      };
+
+      const headers=[
+        'Cliente','Sub-cliente','PO','Estado',
+        'Fecha pedido','Fecha entrega','Fecha inicio',
+        'Capacidad (ml)','Piezas','# Colores','Tintas',
+        'Color botella','Color tapa','Color chupón',
+        'Venta total','Margen %','Cobrado','Fecha cobro',
+        'Dirección de envío','Notas / Packaging'
+      ];
+      const rows=[headers];
+      todos.forEach(p=>{
+        rows.push([
+          p.cliente||'',
+          p.sub_cliente||'',
+          p.po||'',
+          p.estado||'',
+          fmt(p.fecha_pedido),
+          fmt(p.fecha_entrega),
+          fmt(p.fecha_inicio),
+          p.capacidad||'',
+          p.piezas||0,
+          p.colores||0,
+          tintasStr(p),
+          p.color_botella||'',
+          p.color_tapa||'',
+          p.color_boquilla||'',
+          p.venta_total||0,
+          p.margen||0,
+          p.cobrado?'Sí':'No',
+          fmt(p.fecha_cobro),
+          p.direccion_envio||'',
+          p.notas||''
+        ]);
+      });
+      console.log('[ExportExcel] filas listas:',rows.length-1,'pedidos');
+
+      const ws=XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols']=[
+        {wch:18},{wch:24},{wch:14},{wch:14},
+        {wch:12},{wch:12},{wch:12},
+        {wch:10},{wch:9},{wch:9},{wch:40},
+        {wch:14},{wch:14},{wch:14},
+        {wch:13},{wch:9},{wch:9},{wch:12},
+        {wch:36},{wch:40}
+      ];
+      ws['!freeze']={xSplit:0,ySplit:1};
+      for(let i=2;i<=rows.length;i++){
+        const v=ws[XLSX.utils.encode_cell({r:i-1,c:14})];
+        if(v&&typeof v.v==='number')v.z='$#,##0.00';
+        const m=ws[XLSX.utils.encode_cell({r:i-1,c:15})];
+        if(m&&typeof m.v==='number')m.z='0.0"%"';
+      }
+
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,'Pipeline',ws);
+      const fecha=new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb,'Sharp-Plastics-Pipeline-'+fecha+'.xlsx');
+      toast('Excel exportado ✓','ok');
+      console.log('[ExportExcel] archivo descargado');
+    }catch(err){
+      console.error('[ExportExcel] error generando archivo:',err);
+      toast('Error al generar Excel: '+(err.message||err),'err');
+    }
+  };
+
+  // Si XLSX ya está cargado, ejecutar directo
+  if(window.XLSX){
+    console.log('[ExportExcel] XLSX ya disponible');
+    buildAndDownload();
+    return;
+  }
+  // Si no, cargarlo
+  console.log('[ExportExcel] cargando SheetJS desde CDN…');
   const script=document.createElement('script');
   script.src='https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
-  script.onload=function(){
-    const fmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-MX'):'';
-    // Helper: extraer nombres de tintas de tintas_info o formula_tintas
-    const tintasStr=p=>{
-      const ti=p.tintas_info||[];
-      if(ti.length){
-        return ti.map(t=>{
-          const n=t.nombre||'';
-          const pa=t.pantone||'';
-          return n&&pa?`${n} (${pa})`:(n||pa||'');
-        }).filter(Boolean).join(' · ');
-      }
-      const ft=p.formula_tintas||[];
-      return ft.map((c,i)=>c.nombre||c.pantone||('Color '+(i+1))).filter(Boolean).join(' · ');
-    };
-
-    const headers=[
-      'Cliente','Sub-cliente','PO','Estado',
-      'Fecha pedido','Fecha entrega','Fecha inicio',
-      'Capacidad (ml)','Piezas','# Colores','Tintas',
-      'Color botella','Color tapa','Color chupón',
-      'Venta total','Margen %','Cobrado','Fecha cobro',
-      'Dirección de envío','Notas / Packaging'
-    ];
-    const rows=[headers];
-    todos.forEach(p=>{
-      rows.push([
-        p.cliente||'',
-        p.sub_cliente||'',
-        p.po||'',
-        p.estado||'',
-        fmt(p.fecha_pedido),
-        fmt(p.fecha_entrega),
-        fmt(p.fecha_inicio),
-        p.capacidad||'',
-        p.piezas||0,
-        p.colores||0,
-        tintasStr(p),
-        p.color_botella||'',
-        p.color_tapa||'',
-        p.color_boquilla||'',
-        p.venta_total||0,
-        p.margen||0,
-        p.cobrado?'Sí':'No',
-        fmt(p.fecha_cobro),
-        p.direccion_envio||'',
-        p.notas||''
-      ]);
-    });
-
-    const ws=XLSX.utils.aoa_to_sheet(rows);
-    // Anchos cómodos por columna
-    ws['!cols']=[
-      {wch:18},{wch:24},{wch:14},{wch:14},
-      {wch:12},{wch:12},{wch:12},
-      {wch:10},{wch:9},{wch:9},{wch:40},
-      {wch:14},{wch:14},{wch:14},
-      {wch:13},{wch:9},{wch:9},{wch:12},
-      {wch:36},{wch:40}
-    ];
-    // Freeze de la fila de headers
-    ws['!freeze']={xSplit:0,ySplit:1};
-    // Formatos: moneda en Venta total (col O = 14), porcentaje en Margen (col P = 15)
-    for(let i=2;i<=rows.length;i++){
-      const v=ws[XLSX.utils.encode_cell({r:i-1,c:14})];
-      if(v&&typeof v.v==='number')v.z='$#,##0.00';
-      const m=ws[XLSX.utils.encode_cell({r:i-1,c:15})];
-      if(m&&typeof m.v==='number')m.z='0.0"%"';
-    }
-
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,'Pipeline',ws);
-    const fecha=new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb,'Sharp-Plastics-Pipeline-'+fecha+'.xlsx');
-    toast('Excel exportado ✓','ok');
+  script.onload=buildAndDownload;
+  script.onerror=function(){
+    console.error('[ExportExcel] no se pudo cargar SheetJS');
+    toast('No se pudo cargar la librería de Excel (¿bloqueado por ad-blocker o firewall?)','err');
   };
-  if(window.XLSX){script.onload();}
-  else document.head.appendChild(script);
+  document.head.appendChild(script);
 }
 
 async function toggleCobro(id, cobrado){
