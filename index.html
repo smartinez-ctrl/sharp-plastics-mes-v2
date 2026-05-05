@@ -2782,10 +2782,14 @@ function generarPDFInterno(){
   ].join('');
 
   // Fórmula de tintas completa
+  // Fórmula de tintas escalada a gramos PREPARADOS reales (consumoReal.gramos_usados)
+  // Default 5% para aditivos que vienen sin pct capturado
   let costoFormulaTotal=0;
   const tintasRows=(S.tintas||[]).map((t,i)=>{
     const col=S.orden.colores[i]||{nombre:'Color '+(i+1)};
-    // Deduplicar por sku+nombre y filtrar gramos=0
+    const cr=(S.consumoReal||[])[i]||{};
+    const preparadoReal=parseFloat(cr.gramos_usados)||0;
+    // Deduplicar y filtrar gramos=0
     const seen=new Set();
     const comps=(t.componentes||[]).filter(x=>{
       const key=(x.sku||x.nombre||'')+'_'+(parseFloat(x.gramos)||0);
@@ -2793,40 +2797,55 @@ function generarPDFInterno(){
       seen.add(key);return true;
     });
     const adits=(t.aditivos||[]);
-    const tg=comps.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
-    const tgAdits=adits.reduce((s,a)=>{const g=a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0);return s+g;},0);
     if(!comps.length&&!adits.length)return '';
-    // Costo del color
+    // Si no hay datos reales para este color, mostrar mensaje y saltar
+    if(!preparadoReal){
+      return `<tr style="background:#f0f4f8"><td colspan="4" style="padding:5px 10px;font-size:11px;font-weight:700">${col.nombre}${col.pantone?' · '+col.pantone:''} — <span style="color:#6b7280;font-style:italic">Sin datos de producción</span></td></tr>`;
+    }
+    // Cálculo del estimado para conocer el factor de escala
+    const tgEst=comps.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
+    const tgEstAdits=adits.reduce((s,a)=>{
+      const pct=(a.pct===''||a.pct===null||a.pct===undefined)?5:(parseFloat(a.pct)||0);
+      const g=pct>0?(pct/100*tgEst):(parseFloat(a.gramos)||0);
+      return s+g;
+    },0);
+    const totalEst=tgEst+tgEstAdits;
+    const factor=totalEst>0?(preparadoReal/totalEst):0;
+    // Recorrer y mostrar gramos REALES escalados
     let costoColor=0;
+    let rowsCol='';
+    let totalGrColor=0,totalGrAditColor=0;
     comps.forEach(x=>{
-      const gr=parseFloat(x.gramos)||0;
+      const grEst=parseFloat(x.gramos)||0;
+      const grReal=grEst*factor;
+      totalGrColor+=grReal;
       const pk=parseFloat(x.precio_kg||x.precio)||0;
-      costoColor+=(gr/1000)*pk;
-    });
-    adits.forEach(a=>{
-      const gr=a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0);
-      const pk=parseFloat(a.precio_kg||a.precio)||0;
-      costoColor+=(gr/1000)*pk;
-    });
-    costoFormulaTotal+=costoColor;
-    let rows=`<tr style="background:#f0f4f8"><td colspan="4" style="padding:5px 10px;font-size:11px;font-weight:700">${col.nombre}${col.pantone?' · '+col.pantone:''} — ${tg}g tintas + ${tgAdits.toFixed(1)}g aditivos · <span style="color:#dc2626">$${costoColor.toFixed(2)}</span></td></tr>`;
-    comps.forEach(x=>{
-      const gr=parseFloat(x.gramos)||0;
-      const pk=parseFloat(x.precio_kg||x.precio)||0;
-      const subC=(gr/1000)*pk;
-      rows+=`<tr><td style="padding:3px 10px 3px 20px;font-size:11px">${x.nombre||x.sku||'—'}</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:center">${x.gramos}g</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:right;color:#dc2626">${pk?'$'+subC.toFixed(2):'—'}</td><td style="padding:3px 10px;font-size:11px;color:#6b7280;text-align:right">${x.prov||''}</td></tr>`;
+      const sub=(grReal/1000)*pk;
+      costoColor+=sub;
+      rowsCol+=`<tr><td style="padding:3px 10px 3px 20px;font-size:11px">${x.nombre||x.sku||'—'}</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:center">${grReal.toFixed(1)}g</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:right;color:#dc2626">${pk?'$'+sub.toFixed(2):'—'}</td><td style="padding:3px 10px;font-size:11px;color:#6b7280;text-align:right">${x.prov||''}</td></tr>`;
     });
     adits.forEach(a=>{
       const nomAdit=a.nombre||'Aditivo';
-      const g=a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0);
+      const pctRaw=a.pct;
+      const pctEsDefault=(pctRaw===''||pctRaw===null||pctRaw===undefined);
+      const pct=pctEsDefault?5:(parseFloat(pctRaw)||0);
+      const grEst=pct>0?(pct/100*tgEst):(parseFloat(a.gramos)||0);
+      const grReal=grEst*factor;
+      totalGrAditColor+=grReal;
       const pk=parseFloat(a.precio_kg||a.precio)||0;
-      const subA=(g/1000)*pk;
-      rows+=`<tr style="color:#6b7280"><td style="padding:3px 10px 3px 20px;font-size:10px">↳ ${nomAdit}${a.pct?' ('+a.pct+'%)':''}</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:center">${g.toFixed(1)}g</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:right;color:#dc2626">${pk?'$'+subA.toFixed(2):'—'}</td><td style="padding:3px 10px;font-size:10px;text-align:right">${a.prov||''}</td></tr>`;
+      const sub=(grReal/1000)*pk;
+      costoColor+=sub;
+      const pctLabel=pct+'%'+(pctEsDefault?' *':'');
+      rowsCol+=`<tr style="color:#6b7280"><td style="padding:3px 10px 3px 20px;font-size:10px">↳ ${nomAdit} (${pctLabel})</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:center">${grReal.toFixed(2).replace(/\.?0+$/,'')}g</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:right;color:#dc2626">${pk?'$'+sub.toFixed(2):'—'}</td><td style="padding:3px 10px;font-size:10px;text-align:right">${a.prov||''}</td></tr>`;
     });
-    return rows;
+    costoFormulaTotal+=costoColor;
+    const sobranteReal=parseFloat(cr.gramos_sobrante)||0;
+    const headerSobr=sobranteReal>0?` · sobrante ${sobranteReal.toFixed(1)}g`:'';
+    const headerRow=`<tr style="background:#f0f4f8"><td colspan="4" style="padding:5px 10px;font-size:11px;font-weight:700">${col.nombre}${col.pantone?' · '+col.pantone:''} — ${totalGrColor.toFixed(1)}g tintas + ${totalGrAditColor.toFixed(1)}g aditivos${headerSobr} · <span style="color:#dc2626">$${costoColor.toFixed(2)}</span></td></tr>`;
+    return headerRow+rowsCol;
   }).join('');
-  // Fila de total al final de fórmula
-  const tintasTotalRow=tintasRows?`<tr style="background:#fef2f2;border-top:2px solid #111"><td style="padding:7px 10px;font-size:12px;font-weight:700">TOTAL fórmula tintas</td><td></td><td style="padding:7px 10px;font-size:12px;font-weight:700;font-family:monospace;text-align:right;color:#dc2626">$${costoFormulaTotal.toFixed(2)}</td><td></td></tr>`:'';
+  // Fila de total al final de fórmula (real preparado)
+  const tintasTotalRow=tintasRows?`<tr style="background:#fef2f2;border-top:2px solid #111"><td style="padding:7px 10px;font-size:12px;font-weight:700">TOTAL fórmula tintas (preparada)</td><td></td><td style="padding:7px 10px;font-size:12px;font-weight:700;font-family:monospace;text-align:right;color:#dc2626">$${costoFormulaTotal.toFixed(2)}</td><td></td></tr>`:'';
 
   // Consumo real — diferencia = preparado - consumido (merma en gramos y %)
   const consumoRows=(S.consumoReal||[]).map((cr,i)=>{
@@ -2859,12 +2878,14 @@ function generarPDFInterno(){
   const capProd=S.orden.capacidad||0;
   const costBotProd=capProd===500?2.96:capProd===700?3.22:capProd===600?2.77:3.22;
   const costoMermaBotProd=totalMerma*costBotProd;
-  // Tinta: gramos preparados (incluye sobrante) × precio promedio por gramo de la fórmula
+  // Tinta: gramos preparados (incluye sobrante) × precio promedio por gramo de la fórmula.
+  // Default 5% para aditivos sin pct capturado (mismo criterio que la tabla de fórmula).
   let totalGrTintaMerma=0,costoTintaMerma=0,totalGrSobrante=0;
   (S.consumoReal||[]).forEach((cr,i)=>{
     const t=S.tintas[i]||{componentes:[],aditivos:[]};
     const comp=t.componentes||[];
     const adit=t.aditivos||[];
+    const tgComp=comp.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
     let totalGr=0,totalCosto=0;
     comp.forEach(x=>{
       const gr=parseFloat(x.gramos)||0;
@@ -2872,7 +2893,8 @@ function generarPDFInterno(){
       totalGr+=gr; totalCosto+=(gr/1000)*pk;
     });
     adit.forEach(a=>{
-      const gr=a.pct?(a.pct/100*comp.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0)):(parseFloat(a.gramos)||0);
+      const pct=(a.pct===''||a.pct===null||a.pct===undefined)?5:(parseFloat(a.pct)||0);
+      const gr=pct>0?(pct/100*tgComp):(parseFloat(a.gramos)||0);
       const pk=parseFloat(a.precio_kg||a.precio)||0;
       totalGr+=gr; totalCosto+=(gr/1000)*pk;
     });

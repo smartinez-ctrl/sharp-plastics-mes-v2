@@ -1038,9 +1038,10 @@ async function abrirDetallePedido(id){
       consumo.forEach((cr,i)=>{
         const usados=parseFloat(cr.gramos_usados)||0;
         const col=formulaOr[i]||{};
-        // Calcular precio promedio por gramo de la fórmula del color
+        // Calcular precio promedio por gramo de la fórmula del color (default 5% si aditivo viene sin pct)
         const comp=col.componentes||[];
         const adit=col.aditivos||[];
+        const tgComp=comp.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
         let totalGr=0,totalCosto=0;
         comp.forEach(x=>{
           const gr=parseFloat(x.gramos)||0;
@@ -1048,7 +1049,8 @@ async function abrirDetallePedido(id){
           totalGr+=gr; totalCosto+=(gr/1000)*pk;
         });
         adit.forEach(a=>{
-          const gr=parseFloat(a.gramos)||(a.pct&&comp.length?(a.pct/100*comp.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0)):0);
+          const pct=(a.pct===''||a.pct===null||a.pct===undefined)?5:(parseFloat(a.pct)||0);
+          const gr=pct>0?(pct/100*tgComp):(parseFloat(a.gramos)||0);
           const pk=parseFloat(a.precio_kg||a.precio)||0;
           totalGr+=gr; totalCosto+=(gr/1000)*pk;
         });
@@ -2545,8 +2547,9 @@ function renderFormulaTintasReal(formula, consumoReal, pedidoId) {
       seen[key]=true;return true;
     });
     var tgEst = compsFilt.reduce(function(s,x){return s+(parseFloat(x.gramos)||0);}, 0);
+    // Default 5% si el aditivo viene sin pct (es la regla típica de Rodatec)
     var tgEstAdits = (col.aditivos||[]).reduce(function(s,a){
-      var pct=parseFloat(a.pct)||0;
+      var pct = (a.pct===''||a.pct===null||a.pct===undefined) ? 5 : (parseFloat(a.pct)||0);
       var gr = pct>0 ? (pct/100*tgEst) : (parseFloat(a.gramos)||0);
       return s+gr;
     }, 0);
@@ -2569,9 +2572,11 @@ function renderFormulaTintasReal(formula, consumoReal, pedidoId) {
         + '</div>';
     }).join('');
 
-    // Aditivos escalados
+    // Aditivos escalados (pct default 5% si viene vacío)
     var aditsHTML = (col.aditivos||[]).map(function(a) {
-      var pct = parseFloat(a.pct)||0;
+      var pctRaw = a.pct;
+      var pctEsDefault = (pctRaw===''||pctRaw===null||pctRaw===undefined);
+      var pct = pctEsDefault ? 5 : (parseFloat(pctRaw)||0);
       var grEst = pct>0 ? (pct/100*tgEst) : (parseFloat(a.gramos)||0);
       var grReal = grEst * factor;
       var apk = a.precio_kg||a.precio||0;
@@ -2586,7 +2591,7 @@ function renderFormulaTintasReal(formula, consumoReal, pedidoId) {
       var sub = grReal&&apk ? (grReal/1000)*apk : 0;
       tcColor += sub;
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">'
-        + '<span style="font-size:10px;color:var(--text3);flex:1">↳ ' + (a.nombre||'Aditivo') + (a.pct!==undefined?' ('+a.pct+'%)':'') + '</span>'
+        + '<span style="font-size:10px;color:var(--text3);flex:1">↳ ' + (a.nombre||'Aditivo') + ' (' + pct + '%' + (pctEsDefault?'<span title="default 5% — sin captura en producción" style="color:var(--amber);margin-left:2px">*</span>':'') + ')</span>'
         + '<span style="font-size:10px;color:var(--text3);margin:0 8px">' + grReal.toFixed(2).replace(/\.?0+$/,'') + 'g</span>'
         + '<span style="font-family:monospace;font-size:10px;color:var(--text3);min-width:48px;text-align:right">' + mxn(sub) + '</span>'
         + '</div>';
