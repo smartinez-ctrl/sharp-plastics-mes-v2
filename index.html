@@ -1940,8 +1940,8 @@ function updComp(ti,ci,key,val){
 }
 function addComp(ti){if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};S.tintas[ti].componentes.push({prov:'Rodatec',sku:'',nombre:'',gramos:0,precio:0});renderTintasAjuste();}
 function removeComp(ti,ci){if(S.tintas[ti])S.tintas[ti].componentes.splice(ci,1);renderTintasAjuste();}
-function updAdit(ti,ai,key,val){if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};if(!S.tintas[ti].aditivos[ai])S.tintas[ti].aditivos[ai]={nombre:'',prov:'Rodatec',pct:'',precio:0};S.tintas[ti].aditivos[ai][key]=val;}
-function addAdit(ti){if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};if(!S.tintas[ti].aditivos)S.tintas[ti].aditivos=[];S.tintas[ti].aditivos.push({nombre:'',prov:'Rodatec',pct:'',precio:0});renderTintasAjuste();}
+function updAdit(ti,ai,key,val){if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};if(!S.tintas[ti].aditivos[ai])S.tintas[ti].aditivos[ai]={nombre:'',prov:'Rodatec',pct:5,precio:0};S.tintas[ti].aditivos[ai][key]=val;}
+function addAdit(ti){if(!S.tintas[ti])S.tintas[ti]={componentes:[],aditivos:[]};if(!S.tintas[ti].aditivos)S.tintas[ti].aditivos=[];S.tintas[ti].aditivos.push({nombre:'',prov:'Rodatec',pct:5,precio:0});renderTintasAjuste();}
 function removeAdit(ti,ai){if(S.tintas[ti])S.tintas[ti].aditivos.splice(ai,1);renderTintasAjuste();}
 
 // ══════════════════════════════════════════════════════
@@ -2805,7 +2805,7 @@ function generarPDFInterno(){
     // Cálculo del estimado para conocer el factor de escala
     const tgEst=comps.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
     const tgEstAdits=adits.reduce((s,a)=>{
-      const pct=(a.pct===''||a.pct===null||a.pct===undefined)?5:(parseFloat(a.pct)||0);
+      const pct=parseFloat(a.pct)||0;
       const g=pct>0?(pct/100*tgEst):(parseFloat(a.gramos)||0);
       return s+g;
     },0);
@@ -2826,16 +2826,14 @@ function generarPDFInterno(){
     });
     adits.forEach(a=>{
       const nomAdit=a.nombre||'Aditivo';
-      const pctRaw=a.pct;
-      const pctEsDefault=(pctRaw===''||pctRaw===null||pctRaw===undefined);
-      const pct=pctEsDefault?5:(parseFloat(pctRaw)||0);
+      const pct=parseFloat(a.pct)||0;
       const grEst=pct>0?(pct/100*tgEst):(parseFloat(a.gramos)||0);
       const grReal=grEst*factor;
       totalGrAditColor+=grReal;
       const pk=parseFloat(a.precio_kg||a.precio)||0;
       const sub=(grReal/1000)*pk;
       costoColor+=sub;
-      const pctLabel=pct+'%'+(pctEsDefault?' *':'');
+      const pctLabel=pct>0?pct+'%':'sin %';
       rowsCol+=`<tr style="color:#6b7280"><td style="padding:3px 10px 3px 20px;font-size:10px">↳ ${nomAdit} (${pctLabel})</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:center">${grReal.toFixed(2).replace(/\.?0+$/,'')}g</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:right;color:#dc2626">${pk?'$'+sub.toFixed(2):'—'}</td><td style="padding:3px 10px;font-size:10px;text-align:right">${a.prov||''}</td></tr>`;
     });
     costoFormulaTotal+=costoColor;
@@ -2893,7 +2891,7 @@ function generarPDFInterno(){
       totalGr+=gr; totalCosto+=(gr/1000)*pk;
     });
     adit.forEach(a=>{
-      const pct=(a.pct===''||a.pct===null||a.pct===undefined)?5:(parseFloat(a.pct)||0);
+      const pct=parseFloat(a.pct)||0;
       const gr=pct>0?(pct/100*tgComp):(parseFloat(a.gramos)||0);
       const pk=parseFloat(a.precio_kg||a.precio)||0;
       totalGr+=gr; totalCosto+=(gr/1000)*pk;
