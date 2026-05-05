@@ -2022,18 +2022,37 @@ function exportarPipelineExcel(){
     try{
       console.log('[ExportExcel] XLSX cargado, generando archivo…');
       const fmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-MX'):'';
+      // Sanitizador: garantiza string seguro o número, nunca objetos/arrays
+      const safe=v=>{
+        if(v===null||v===undefined)return '';
+        if(typeof v==='string'||typeof v==='number'||typeof v==='boolean')return v;
+        if(Array.isArray(v))return v.map(safe).filter(Boolean).join(', ');
+        if(typeof v==='object'){
+          // Objetos comunes: {nombre} | {value} | {label}
+          if(v.nombre)return String(v.nombre);
+          if(v.label)return String(v.label);
+          if(v.value)return String(v.value);
+          try{return JSON.stringify(v);}catch{return String(v);}
+        }
+        return String(v);
+      };
+      const safeNum=v=>{const n=parseFloat(v);return isFinite(n)?n:0;};
       // Helper: extraer nombres de tintas de tintas_info o formula_tintas
       const tintasStr=p=>{
-        const ti=p.tintas_info||[];
+        const ti=Array.isArray(p.tintas_info)?p.tintas_info:[];
         if(ti.length){
           return ti.map(t=>{
-            const n=t.nombre||'';
-            const pa=t.pantone||'';
+            if(!t||typeof t!=='object')return String(t||'');
+            const n=typeof t.nombre==='string'?t.nombre:'';
+            const pa=typeof t.pantone==='string'?t.pantone:'';
             return n&&pa?`${n} (${pa})`:(n||pa||'');
           }).filter(Boolean).join(' · ');
         }
-        const ft=p.formula_tintas||[];
-        return ft.map((c,i)=>c.nombre||c.pantone||('Color '+(i+1))).filter(Boolean).join(' · ');
+        const ft=Array.isArray(p.formula_tintas)?p.formula_tintas:[];
+        return ft.map((c,i)=>{
+          if(!c||typeof c!=='object')return 'Color '+(i+1);
+          return (typeof c.nombre==='string'?c.nombre:'')||(typeof c.pantone==='string'?c.pantone:'')||('Color '+(i+1));
+        }).filter(Boolean).join(' · ');
       };
 
       const headers=[
@@ -2047,26 +2066,26 @@ function exportarPipelineExcel(){
       const rows=[headers];
       todos.forEach(p=>{
         rows.push([
-          p.cliente||'',
-          p.sub_cliente||'',
-          p.po||'',
-          p.estado||'',
+          safe(p.cliente),
+          safe(p.sub_cliente),
+          safe(p.po),
+          safe(p.estado),
           fmt(p.fecha_pedido),
           fmt(p.fecha_entrega),
           fmt(p.fecha_inicio),
-          p.capacidad||'',
-          p.piezas||0,
-          p.colores||0,
-          tintasStr(p),
-          p.color_botella||'',
-          p.color_tapa||'',
-          p.color_boquilla||'',
-          p.venta_total||0,
-          p.margen||0,
+          safe(p.capacidad),
+          safeNum(p.piezas),
+          safeNum(p.colores),
+          safe(tintasStr(p)),
+          safe(p.color_botella),
+          safe(p.color_tapa),
+          safe(p.color_boquilla),
+          safeNum(p.venta_total),
+          safeNum(p.margen),
           p.cobrado?'Sí':'No',
           fmt(p.fecha_cobro),
-          p.direccion_envio||'',
-          p.notas||''
+          safe(p.direccion_envio),
+          safe(p.notas)
         ]);
       });
       console.log('[ExportExcel] filas listas:',rows.length-1,'pedidos');
