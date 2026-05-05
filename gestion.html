@@ -201,7 +201,13 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
     </div>
     <div id="pipeline-ocultos"></div>
   </div>
-  <div class="card"><div class="card-title">Activos</div><div id="pipeline-activos"><div class="loading"><div class="loading-spinner"></div></div></div></div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="card-title" style="margin:0">Activos</div>
+      <button class="btn btn-ghost btn-xs" onclick="resetPipelineColumns()" title="Restablecer ancho y orden de columnas">↺ Restablecer columnas</button>
+    </div>
+    <div id="pipeline-activos"><div class="loading"><div class="loading-spinner"></div></div></div>
+  </div>
   <div class="card"><div class="card-title">Completados recientes</div>
     <div id="pipeline-completados"><div class="loading">Cargando...</div></div>
   </div>
@@ -718,10 +724,23 @@ function colDrop(e,idx){
   const [moved]=order.splice(_colDragSrc,1);
   order.splice(idx,0,moved);
   _colOrder=order;
+  // Reordenar _colWidths en paralelo para mantenerlos alineados con las columnas visuales
+  if(_colWidths&&Array.isArray(_colWidths)){
+    const [movedW]=_colWidths.splice(_colDragSrc,1);
+    _colWidths.splice(idx,0,movedW);
+  }
   _colDragSrc=null;
   renderPipeline();
 }
 function colDragEnd(){document.querySelectorAll('.pipe-col-hdr').forEach(h=>h.style.borderLeft='');_colDragSrc=null;}
+
+// Reset orden y ancho de columnas — útil si algo se desfasó
+function resetPipelineColumns(){
+  _colOrder=null;
+  _colWidths=null;
+  renderPipeline();
+  toast('Columnas restablecidas','ok');
+}
 
 // ── Column resize ─────────────────────────────────────
 let _colWidths=null; // px widths override
@@ -851,6 +870,8 @@ function renderPipeline(){
   const PIPE_COLS = '3fr 1fr 0.5fr 0.7fr 1fr 1.1fr 0.8fr 1.1fr 0.8fr 1.3fr';
   // Columnas en orden actual
   const cols=getColOrder().map(i=>PIPE_COL_DEFS[i]);
+  // Sanity check: si _colWidths quedó desfasado (longitud distinta), descartarlo
+  if(_colWidths&&_colWidths.length!==cols.length){_colWidths=null;}
   const PIPE_COLS_DYN=_colWidths
     ? _colWidths.map(w=>w+'px').join(' ')
     : cols.map(c=>c.fr).join(' ');
