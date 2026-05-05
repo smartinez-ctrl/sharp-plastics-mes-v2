@@ -2782,6 +2782,7 @@ function generarPDFInterno(){
   ].join('');
 
   // Fórmula de tintas completa
+  let costoFormulaTotal=0;
   const tintasRows=(S.tintas||[]).map((t,i)=>{
     const col=S.orden.colores[i]||{nombre:'Color '+(i+1)};
     // Deduplicar por sku+nombre y filtrar gramos=0
@@ -2795,16 +2796,37 @@ function generarPDFInterno(){
     const tg=comps.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
     const tgAdits=adits.reduce((s,a)=>{const g=a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0);return s+g;},0);
     if(!comps.length&&!adits.length)return '';
-    let rows=`<tr style="background:#f0f4f8"><td colspan="3" style="padding:5px 10px;font-size:11px;font-weight:700">${col.nombre}${col.pantone?' · '+col.pantone:''} — ${tg}g tintas + ${tgAdits.toFixed(1)}g aditivos</td></tr>`;
-    comps.forEach(x=>{rows+=`<tr><td style="padding:3px 10px 3px 20px;font-size:11px">${x.nombre||x.sku||'—'}</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:center">${x.gramos}g</td><td style="padding:3px 10px;font-size:11px;color:#6b7280;text-align:right">${x.prov||''}</td></tr>`;});
+    // Costo del color
+    let costoColor=0;
+    comps.forEach(x=>{
+      const gr=parseFloat(x.gramos)||0;
+      const pk=parseFloat(x.precio_kg||x.precio)||0;
+      costoColor+=(gr/1000)*pk;
+    });
     adits.forEach(a=>{
-      // Buscar nombre del aditivo en catálogo si viene vacío
+      const gr=a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0);
+      const pk=parseFloat(a.precio_kg||a.precio)||0;
+      costoColor+=(gr/1000)*pk;
+    });
+    costoFormulaTotal+=costoColor;
+    let rows=`<tr style="background:#f0f4f8"><td colspan="4" style="padding:5px 10px;font-size:11px;font-weight:700">${col.nombre}${col.pantone?' · '+col.pantone:''} — ${tg}g tintas + ${tgAdits.toFixed(1)}g aditivos · <span style="color:#dc2626">$${costoColor.toFixed(2)}</span></td></tr>`;
+    comps.forEach(x=>{
+      const gr=parseFloat(x.gramos)||0;
+      const pk=parseFloat(x.precio_kg||x.precio)||0;
+      const subC=(gr/1000)*pk;
+      rows+=`<tr><td style="padding:3px 10px 3px 20px;font-size:11px">${x.nombre||x.sku||'—'}</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:center">${x.gramos}g</td><td style="padding:3px 10px;font-size:11px;font-family:monospace;text-align:right;color:#dc2626">${pk?'$'+subC.toFixed(2):'—'}</td><td style="padding:3px 10px;font-size:11px;color:#6b7280;text-align:right">${x.prov||''}</td></tr>`;
+    });
+    adits.forEach(a=>{
       const nomAdit=a.nombre||'Aditivo';
-      const g=a.pct?(a.pct/100*tg).toFixed(1):(parseFloat(a.gramos)||0);
-      rows+=`<tr style="color:#6b7280"><td style="padding:3px 10px 3px 20px;font-size:10px">↳ ${nomAdit}${a.pct?' ('+a.pct+'%)':''}</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:center">${g}g</td><td style="padding:3px 10px;font-size:10px;text-align:right">${a.prov||''}</td></tr>`;
+      const g=a.pct?(a.pct/100*tg):(parseFloat(a.gramos)||0);
+      const pk=parseFloat(a.precio_kg||a.precio)||0;
+      const subA=(g/1000)*pk;
+      rows+=`<tr style="color:#6b7280"><td style="padding:3px 10px 3px 20px;font-size:10px">↳ ${nomAdit}${a.pct?' ('+a.pct+'%)':''}</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:center">${g.toFixed(1)}g</td><td style="padding:3px 10px;font-size:10px;font-family:monospace;text-align:right;color:#dc2626">${pk?'$'+subA.toFixed(2):'—'}</td><td style="padding:3px 10px;font-size:10px;text-align:right">${a.prov||''}</td></tr>`;
     });
     return rows;
   }).join('');
+  // Fila de total al final de fórmula
+  const tintasTotalRow=tintasRows?`<tr style="background:#fef2f2;border-top:2px solid #111"><td style="padding:7px 10px;font-size:12px;font-weight:700">TOTAL fórmula tintas</td><td></td><td style="padding:7px 10px;font-size:12px;font-weight:700;font-family:monospace;text-align:right;color:#dc2626">$${costoFormulaTotal.toFixed(2)}</td><td></td></tr>`:'';
 
   // Consumo real — diferencia = preparado - consumido (merma en gramos y %)
   const consumoRows=(S.consumoReal||[]).map((cr,i)=>{
@@ -2832,6 +2854,35 @@ function generarPDFInterno(){
   }).join('');
 
   const rendColor=parseFloat(pct)>=95?'#16a34a':parseFloat(pct)>=85?'#d97706':'#dc2626';
+
+  // Cálculos para cuadros resumen de merma con costo
+  const capProd=S.orden.capacidad||0;
+  const costBotProd=capProd===500?2.96:capProd===700?3.22:capProd===600?2.77:3.22;
+  const costoMermaBotProd=totalMerma*costBotProd;
+  // Tinta: gramos preparados (incluye sobrante) × precio promedio por gramo de la fórmula
+  let totalGrTintaMerma=0,costoTintaMerma=0,totalGrSobrante=0;
+  (S.consumoReal||[]).forEach((cr,i)=>{
+    const t=S.tintas[i]||{componentes:[],aditivos:[]};
+    const comp=t.componentes||[];
+    const adit=t.aditivos||[];
+    let totalGr=0,totalCosto=0;
+    comp.forEach(x=>{
+      const gr=parseFloat(x.gramos)||0;
+      const pk=parseFloat(x.precio_kg||x.precio)||0;
+      totalGr+=gr; totalCosto+=(gr/1000)*pk;
+    });
+    adit.forEach(a=>{
+      const gr=a.pct?(a.pct/100*comp.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0)):(parseFloat(a.gramos)||0);
+      const pk=parseFloat(a.precio_kg||a.precio)||0;
+      totalGr+=gr; totalCosto+=(gr/1000)*pk;
+    });
+    const precioPorGr=totalGr>0?totalCosto/totalGr:0;
+    const preparado=parseFloat(cr.gramos_usados)||0;
+    const sobrante=parseFloat(cr.gramos_sobrante)||0;
+    totalGrTintaMerma+=preparado;
+    totalGrSobrante+=sobrante;
+    costoTintaMerma+=preparado*precioPorGr;
+  });
 
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte interno — ${S.orden.op||'Orden'}</title>
   <style>
@@ -2955,8 +3006,8 @@ function generarPDFInterno(){
   ${tintasRows?`
   <div class="section">Fórmula de tintas (igualación)</div>
   <table>
-    <thead><tr><th>Componente</th><th style="text-align:center">Gramos</th><th style="text-align:right">Proveedor</th></tr></thead>
-    <tbody>${tintasRows}</tbody>
+    <thead><tr><th>Componente</th><th style="text-align:center">Gramos</th><th style="text-align:right">Costo</th><th style="text-align:right">Proveedor</th></tr></thead>
+    <tbody>${tintasRows}${tintasTotalRow}</tbody>
   </table>`:''}
 
   <!-- CONSUMO REAL -->
@@ -2967,6 +3018,24 @@ function generarPDFInterno(){
     <tbody>${consumoRows}</tbody>
   </table>`:''}
 
+  <!-- CUADROS RESUMEN DE COSTO DE MERMA -->
+  <div class="grid2" style="margin-top:8px;page-break-inside:avoid;break-inside:avoid">
+    <div class="box" style="background:#fef2f2;border-color:#fca5a5;padding:14px 16px;text-align:center">
+      <div class="lbl" style="color:#991b1b;font-weight:700">Merma de botellas</div>
+      <div style="font-size:22px;font-weight:800;font-family:monospace;color:#111;margin:4px 0 2px">${totalMerma}</div>
+      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Botellas (ajuste + producción)</div>
+      <div style="font-size:24px;font-weight:800;font-family:monospace;color:#dc2626">$${costoMermaBotProd.toFixed(2)}</div>
+      <div style="font-size:8px;color:#6b7280">${totalMerma} × $${costBotProd.toFixed(2)} c/u</div>
+    </div>
+    <div class="box" style="background:#fef2f2;border-color:#fca5a5;padding:14px 16px;text-align:center">
+      <div class="lbl" style="color:#991b1b;font-weight:700">Merma de tinta</div>
+      <div style="font-size:22px;font-weight:800;font-family:monospace;color:#111;margin:4px 0 2px">${totalGrTintaMerma.toFixed(1)}g</div>
+      <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Gramos preparados (incl. sobrante)</div>
+      <div style="font-size:24px;font-weight:800;font-family:monospace;color:#dc2626">$${costoTintaMerma.toFixed(2)}</div>
+      <div style="font-size:8px;color:#6b7280">Sobrante: ${totalGrSobrante.toFixed(1)}g</div>
+    </div>
+  </div>
+
   <!-- FOTOS -->
   ${(()=>{
     if(!S.fotos||!S.fotos.some(f=>f))return '';
@@ -2976,16 +3045,18 @@ function generarPDFInterno(){
       const a=S.fotos[i],b=S.fotos[i+1];
       const labA=labels[i]||'',labB=labels[i+1]||'';
       rows+=`<tr style="page-break-inside:avoid;break-inside:avoid">
-        <td style="width:50%;padding:6px 8px 12px 0;vertical-align:top;border:none">
-          ${a?`<img src="${a}" style="width:100%;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;text-align:center;margin-top:3px">${labA}</div>`:''}
+        <td style="width:50%;padding:4px 6px 10px 0;vertical-align:top;border:none">
+          ${a?`<img src="${a}" style="width:100%;max-height:115mm;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;text-align:center;margin-top:3px">${labA}</div>`:''}
         </td>
-        <td style="width:50%;padding:6px 0 12px 8px;vertical-align:top;border:none">
-          ${b?`<img src="${b}" style="width:100%;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;text-align:center;margin-top:3px">${labB}</div>`:''}
+        <td style="width:50%;padding:4px 0 10px 6px;vertical-align:top;border:none">
+          ${b?`<img src="${b}" style="width:100%;max-height:115mm;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;text-align:center;margin-top:3px">${labB}</div>`:''}
         </td>
       </tr>`;
     }
-    return `<div class="section" style="page-break-after:avoid;break-after:avoid">Fotos de producción</div>
-      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12px"><tbody>${rows}</tbody></table>`;
+    return `<div style="page-break-before:always;break-before:page">
+      <div class="section" style="margin-top:0;page-break-after:avoid;break-after:avoid">Fotos de producción</div>
+      <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:12px;table-layout:fixed"><tbody>${rows}</tbody></table>
+    </div>`;
   })()}
 
   <!-- QA -->
@@ -3157,16 +3228,18 @@ function generarPDF(){
       const a=S.fotos[i],b=S.fotos[i+1];
       const labA=labels[i]||'',labB=labels[i+1]||'';
       rows+=`<tr style="page-break-inside:avoid;break-inside:avoid">
-        <td style="width:50%;padding:6px 8px 12px 0;vertical-align:top">
-          ${a?`<img src="${a}" style="width:100%;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:4px">${labA}</div>`:''}
+        <td style="width:50%;padding:4px 6px 10px 0;vertical-align:top">
+          ${a?`<img src="${a}" style="width:100%;max-height:115mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:3px">${labA}</div>`:''}
         </td>
-        <td style="width:50%;padding:6px 0 12px 8px;vertical-align:top">
-          ${b?`<img src="${b}" style="width:100%;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:4px">${labB}</div>`:''}
+        <td style="width:50%;padding:4px 0 10px 6px;vertical-align:top">
+          ${b?`<img src="${b}" style="width:100%;max-height:115mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:3px">${labB}</div>`:''}
         </td>
       </tr>`;
     }
-    return `<div class="section-title" style="page-break-after:avoid;break-after:avoid">Approval Photos</div>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:16px"><tbody>${rows}</tbody></table>`;
+    return `<div style="page-break-before:always;break-before:page">
+      <div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Approval Photos</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed"><tbody>${rows}</tbody></table>
+    </div>`;
   })()}
 
   <!-- observaciones no van en PDF cliente -->
