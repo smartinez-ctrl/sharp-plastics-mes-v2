@@ -4,24 +4,30 @@
 <meta charset="UTF-8">
 <title>Recuperar fotos — Trek 696534484</title>
 <style>
-body{font-family:Arial,sans-serif;background:#0d0f12;color:#e2e6f0;padding:24px;max-width:900px;margin:0 auto}
+body{font-family:Arial,sans-serif;background:#0d0f12;color:#e2e6f0;padding:24px;max-width:1100px;margin:0 auto}
 h1{font-size:18px;margin-bottom:12px}
-.btn{background:#f5a623;color:#000;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:12px}
+.btn{background:#f5a623;color:#000;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:12px;margin-right:8px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.log{background:#181c23;border:1px solid #1e232d;border-radius:8px;padding:14px;margin-top:14px;font-family:monospace;font-size:12px;white-space:pre-wrap;max-height:600px;overflow-y:auto}
+.btn-secondary{background:#3b82f6;color:#fff}
+.log{background:#181c23;border:1px solid #1e232d;border-radius:8px;padding:14px;margin-top:14px;font-family:monospace;font-size:12px;white-space:pre-wrap;max-height:700px;overflow-y:auto}
 .row{margin-bottom:6px}
 .ok{color:#2dd4a0}
 .warn{color:#f5a623}
 .err{color:#f87171}
-.thumb{width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #2d3340;margin:4px;cursor:pointer}
+.info{color:#60a5fa}
+.thumb{width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #2d3340;margin:4px;cursor:pointer;display:inline-block;vertical-align:top}
+.orden-card{background:#1e232d;border:1px solid #2d3340;border-radius:8px;padding:12px;margin:8px 0}
+.orden-card.active{border-color:#2dd4a0}
+.orden-card.target{border-color:#3b82f6;background:#1e2940}
+.orden-id{font-family:monospace;font-size:10px;color:#7d8799}
 </style>
 </head>
 <body>
 <h1>🔧 Recuperar fotos — Trek (PO 696534484)</h1>
-<p style="font-size:13px;color:#7d8799">Esto busca el pedido Trek con PO 696534484, encuentra las fotos asociadas en Supabase Storage, y las re-asocia al registro de la orden para que vuelvan a aparecer en el iPad.</p>
+<p style="font-size:13px;color:#7d8799">Busca todas las órdenes de producción del Trek, encuentra fotos en Storage para cada una, y migra a la orden activa.</p>
 
-<button class="btn" id="btn-scan" onclick="escanear()">1. Escanear fotos en Storage</button>
-<button class="btn" id="btn-fix" onclick="aplicar()" disabled>2. Re-asociar fotos a la orden</button>
+<button class="btn" id="btn-scan" onclick="escanear()">1. Escanear todas las órdenes y fotos</button>
+<button class="btn btn-secondary" id="btn-fix" onclick="aplicar()" disabled>2. Migrar fotos a la orden activa</button>
 
 <div class="log" id="log">Listo para escanear...</div>
 
@@ -31,99 +37,127 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const SB_H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
 const PO_OBJETIVO='696534484';
 const log=document.getElementById('log');
-let datos={pipeline:null,orden:null,fotos:[]};
+let datos={pipeline:null,ordenes:[],ordenActiva:null,fotosFinales:[null,null,null,null]};
 
-function add(msg,cls){const d=document.createElement('div');d.className='row '+(cls||'');d.innerHTML=msg;log.appendChild(d);log.scrollTop=log.scrollHeight;}
+function add(html,cls){const d=document.createElement('div');d.className='row '+(cls||'');d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;return d;}
+
+async function listarFotosOrden(ordenId){
+  const r=await fetch(SB_URL+'/storage/v1/object/list/fotos-aprobacion',{
+    method:'POST',headers:SB_H,
+    body:JSON.stringify({prefix:ordenId+'/',limit:50,sortBy:{column:'name',order:'asc'}})
+  });
+  if(!r.ok)return [];
+  const files=await r.json();
+  if(!Array.isArray(files))return [];
+  // Reconstruir slots 0-3 con la foto más reciente por slot
+  files.sort((a,b)=>b.name.localeCompare(a.name));
+  const fotos=[null,null,null,null];
+  files.forEach(f=>{
+    const m=f.name.match(/foto-(\d)-/);
+    if(m){
+      const pos=parseInt(m[1]);
+      if(pos>=0&&pos<=3&&!fotos[pos])
+        fotos[pos]=SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+ordenId+'/'+f.name;
+    }
+  });
+  return fotos;
+}
 
 async function escanear(){
   document.getElementById('btn-scan').disabled=true;
   log.innerHTML='';
   try{
     add('Buscando pedido con PO '+PO_OBJETIVO+'...');
-    const rPipe=await fetch(SB_URL+'/rest/v1/pipeline_mf?po=eq.'+PO_OBJETIVO+'&select=id,sub_cliente,cliente,po,estado,pdf_diseno_url',{headers:SB_H});
+    const rPipe=await fetch(SB_URL+'/rest/v1/pipeline_mf?po=eq.'+PO_OBJETIVO+'&select=id,sub_cliente,cliente,po,estado',{headers:SB_H});
     const pipes=await rPipe.json();
-    if(!pipes||!pipes.length){add('✗ No se encontró pedido con esa PO','err');return;}
-    if(pipes.length>1)add('⚠ Hay '+pipes.length+' pedidos con esa PO, usando el primero','warn');
+    if(!pipes||!pipes.length){add('✗ No se encontró pedido','err');return;}
     datos.pipeline=pipes[0];
-    add('✓ Pedido encontrado: '+(datos.pipeline.sub_cliente||datos.pipeline.cliente)+' · estado '+datos.pipeline.estado,'ok');
-    add('  pipeline_id: '+datos.pipeline.id);
+    add('✓ Pedido: <strong>'+(datos.pipeline.sub_cliente||datos.pipeline.cliente)+'</strong> · estado <em>'+datos.pipeline.estado+'</em>','ok');
+    add('  pipeline_id: <span class="orden-id">'+datos.pipeline.id+'</span>','info');
     add('');
 
-    add('Buscando orden de producción...');
-    const rOrd=await fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+datos.pipeline.id+'&order=created_at.desc&limit=1&select=*',{headers:SB_H});
+    add('Buscando TODAS las órdenes de producción para este pipeline...');
+    const rOrd=await fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+datos.pipeline.id+'&order=created_at.desc&select=id,created_at,foto_urls,piezas_buenas,tiempo_ajuste_seg,tiempo_produccion_seg,estado',{headers:SB_H});
     const ords=await rOrd.json();
-    if(!ords||!ords.length){add('✗ No hay registro de orden_produccion para este pedido','err');return;}
-    datos.orden=ords[0];
-    const fActuales=Array.isArray(datos.orden.foto_urls)?datos.orden.foto_urls.filter(Boolean).length:0;
-    add('✓ Orden encontrada: id '+datos.orden.id,'ok');
-    add('  fotos actualmente registradas en orden: '+fActuales);
+    if(!ords||!ords.length){add('✗ No hay órdenes para este pipeline','err');return;}
+    datos.ordenes=ords;
+    datos.ordenActiva=ords[0]; // la más reciente es la activa
+    add('✓ Encontradas <strong>'+ords.length+'</strong> órdenes para este pipeline','ok');
     add('');
 
-    add('Listando archivos en Storage para orden '+datos.orden.id+'...');
-    const rF=await fetch(SB_URL+'/storage/v1/object/list/fotos-aprobacion',{
-      method:'POST',
-      headers:SB_H,
-      body:JSON.stringify({prefix:datos.orden.id+'/',limit:50,sortBy:{column:'name',order:'asc'}})
-    });
-    const files=await rF.json();
-    if(!Array.isArray(files)||!files.length){
-      add('✗ No hay fotos en Storage para esta orden','err');
-      add('  ¿Estás seguro que se subieron correctamente? Revisa Supabase → Storage → fotos-aprobacion','warn');
+    // Para cada orden, listar archivos en Storage
+    add('Buscando fotos en Storage para cada orden...');
+    add('');
+    let mejorOrden=null;
+    let mejorCount=0;
+    for(let i=0;i<ords.length;i++){
+      const o=ords[i];
+      const fotos=await listarFotosOrden(o.id);
+      o._fotos=fotos;
+      const cnt=fotos.filter(Boolean).length;
+      const esActiva=i===0;
+      const fechaStr=new Date(o.created_at).toLocaleString('es-MX');
+      const card=document.createElement('div');
+      card.className='orden-card '+(esActiva?'target':'');
+      card.innerHTML='<div><strong>'+(esActiva?'🎯 ORDEN ACTIVA':'Orden #'+(i+1))+'</strong> · creada '+fechaStr+'</div>'+
+        '<div class="orden-id">'+o.id+'</div>'+
+        '<div style="margin-top:6px;font-size:11px">'+
+          'fotos en orden.foto_urls: <strong>'+(Array.isArray(o.foto_urls)?o.foto_urls.filter(Boolean).length:0)+'</strong> · '+
+          'archivos en Storage: <strong style="color:'+(cnt>0?'#2dd4a0':'#7d8799')+'">'+cnt+'</strong>'+
+          (o.piezas_buenas?' · '+o.piezas_buenas+' pzas buenas':'')+
+        '</div>';
+      if(cnt>0){
+        const thumbs=document.createElement('div');
+        thumbs.style.marginTop='8px';
+        fotos.forEach((url,idx)=>{
+          if(url){
+            const labels=['Frente','Reverso','Izq','Der'];
+            thumbs.innerHTML+='<a href="'+url+'" target="_blank" title="'+labels[idx]+'"><img src="'+url+'" class="thumb"></a>';
+          }
+        });
+        card.appendChild(thumbs);
+      }
+      log.appendChild(card);
+      if(cnt>mejorCount){mejorCount=cnt;mejorOrden=o;}
+    }
+
+    add('');
+    if(!mejorOrden||mejorCount===0){
+      add('✗ Ninguna orden tiene fotos en Storage','err');
       return;
     }
-    add('✓ Archivos encontrados: '+files.length,'ok');
 
-    // Reconstruir 4 slots tomando la foto más reciente por posición (0-3)
-    const fotos=[null,null,null,null];
-    files.sort((a,b)=>b.name.localeCompare(a.name)); // más recientes primero (timestamp en nombre)
-    files.forEach(f=>{
-      const m=f.name.match(/foto-(\d)-/);
-      if(m){
-        const pos=parseInt(m[1]);
-        if(pos>=0&&pos<=3&&!fotos[pos]){
-          fotos[pos]=SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+datos.orden.id+'/'+f.name;
-        }
-      }
-    });
-    datos.fotos=fotos;
-
-    const fotosOk=fotos.filter(Boolean).length;
-    add('  fotos asignadas a slots (0-3): '+fotosOk+' de 4');
-    if(fotosOk===0){add('✗ Ningún archivo siguió el patrón foto-N-... — abortar','err');return;}
-
-    // Mostrar thumbnails
+    // Construir las fotos finales: tomar de la orden con más fotos (probablemente la del PDF)
+    datos.fotosFinales=mejorOrden._fotos;
+    add('✓ Mejor orden con fotos: '+mejorOrden.id.substring(0,8)+'... ('+mejorCount+' fotos)','ok');
     add('');
-    add('<strong>Vista previa:</strong>');
-    let thumbsRow=document.createElement('div');
-    thumbsRow.className='row';
-    thumbsRow.innerHTML='';
-    fotos.forEach((url,i)=>{
-      if(url){
-        thumbsRow.innerHTML+='<a href="'+url+'" target="_blank"><img src="'+url+'" class="thumb" title="Slot '+i+'"></a>';
-      }else{
-        thumbsRow.innerHTML+='<span class="thumb" style="display:inline-flex;align-items:center;justify-content:center;color:#666">slot '+i+'<br>vacío</span>';
-      }
-    });
-    log.appendChild(thumbsRow);
-
+    if(mejorOrden.id===datos.ordenActiva.id){
+      add('ℹ Las fotos están en la orden activa, solo falta re-asociarlas en foto_urls.','info');
+    }else{
+      add('⚠ Las fotos están en una orden DIFERENTE a la activa.','warn');
+      add('  Fotos en orden: '+mejorOrden.id,'warn');
+      add('  Orden activa:   '+datos.ordenActiva.id,'warn');
+      add('  La acción va a copiar los URLs de Storage a la orden activa para que el iPad las cargue.','warn');
+    }
     add('');
-    add('Click en "Re-asociar fotos a la orden" para guardar estos URLs en orden_produccion.foto_urls','warn');
+    add('Click en "Migrar fotos a la orden activa" para aplicar.','info');
     document.getElementById('btn-fix').disabled=false;
   }catch(e){
     add('Error: '+e.message,'err');
+    console.error(e);
     document.getElementById('btn-scan').disabled=false;
   }
 }
 
 async function aplicar(){
-  if(!datos.orden||!datos.fotos.length){add('Primero escanea','err');return;}
-  if(!confirm('Esto va a reescribir foto_urls de la orden con las URLs encontradas. ¿Continuar?'))return;
+  if(!datos.ordenActiva||!datos.fotosFinales.filter(Boolean).length){add('Primero escanea','err');return;}
+  if(!confirm('Reescribir foto_urls de la orden activa con las fotos encontradas. ¿Continuar?'))return;
   document.getElementById('btn-fix').disabled=true;
   add('');
-  add('Aplicando PATCH a ordenes_produccion...');
   try{
-    const fotosFiltered=datos.fotos.filter(u=>u&&typeof u==='string'&&u.startsWith('http'));
-    const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+datos.orden.id,{
+    const fotosFiltered=datos.fotosFinales.filter(u=>u&&typeof u==='string'&&u.startsWith('http'));
+    add('Aplicando PATCH a orden activa <span class="orden-id">'+datos.ordenActiva.id+'</span> con '+fotosFiltered.length+' URLs...');
+    const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+datos.ordenActiva.id,{
       method:'PATCH',
       headers:{...SB_H,'Prefer':'return=minimal'},
       body:JSON.stringify({foto_urls:fotosFiltered})
@@ -133,9 +167,9 @@ async function aplicar(){
       add('✗ HTTP '+r.status+': '+txt.substring(0,200),'err');
       return;
     }
-    add('✓ Fotos re-asociadas correctamente — '+fotosFiltered.length+' URLs guardadas','ok');
+    add('✓ Fotos re-asociadas — '+fotosFiltered.length+' URLs guardadas en orden activa','ok');
     add('');
-    add('Ahora hard refresh en el iPad y entra al pedido Trek — las fotos deben aparecer en sus slots.','ok');
+    add('Hard refresh en iPad y entra al pedido Trek. Las fotos van a aparecer cargadas.','ok');
   }catch(e){
     add('Error: '+e.message,'err');
   }
