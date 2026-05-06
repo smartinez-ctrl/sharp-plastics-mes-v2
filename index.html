@@ -1707,6 +1707,7 @@ function resetOrden(){
   if(window._aprobacionPollInterval){clearInterval(window._aprobacionPollInterval);window._aprobacionPollInterval=null;}
   if(window._autosaveIv){clearInterval(window._autosaveIv);window._autosaveIv=null;}
   window._monitorEmailEnviado=false;
+  window._ajusteIniciado=false;
   window._cierreInicializado=false;
   S.ordenId=null;
   S.pipelineId=null;
@@ -1976,6 +1977,28 @@ function goAjuste(){
   renderTMGrid('ajuste');
   renderTintasAjuste();
   updateOrderStrip();
+  // Marcar pedido como "En ajuste" en cuanto el usuario entra a la pantalla
+  // (no esperar al primer play del timer). Así si cierra la pestaña,
+  // al volver el código carga la orden existente desde Supabase.
+  if(S.pipelineId&&!window._ajusteIniciado){
+    window._ajusteIniciado=true;
+    sbPatch('pipeline_mf',{estado:'En ajuste'},'id=eq.'+S.pipelineId)
+      .then(()=>{
+        console.log('[DIAG goAjuste] pedido marcado En ajuste:',S.pipelineId);
+        // Crear registro inicial en ordenes_produccion para tener S.ordenId
+        return guardarOrden('ajuste');
+      })
+      .then(()=>{
+        console.log('[DIAG goAjuste] orden guardada, S.ordenId=',S.ordenId);
+        // Iniciar autosave global desde ahora
+        iniciarAutosaveGlobal();
+      })
+      .catch(e=>{
+        console.error('[DIAG goAjuste] Error marcando En ajuste:',e);
+        window._ajusteIniciado=false; // permitir reintento
+        toast('No se pudo guardar estado del pedido','err');
+      });
+  }
 }
 
 function renderResumen(){
@@ -2105,16 +2128,15 @@ function timerPlay(name){
   document.getElementById('btn-'+name+'-pause').style.display='flex';
   document.getElementById('btn-'+name+'-stop').style.display='flex';
   startGlobalTimer();
-  // Marcar pedido como "En ajuste" al primer play del timer de ajuste — así si el usuario
-  // se sale, al volver a entrar el código carga los datos guardados desde Supabase
+  // Si por alguna razón no se inició el autosave en goAjuste (entrada por otra ruta),
+  // marcarlo y crear registro en este momento como fallback.
   if(esPrimerAjuste){
     window._ajusteIniciado=true;
-    if(S.pipelineId){
+    if(S.pipelineId&&!S.ordenId){
       sbPatch('pipeline_mf',{estado:'En ajuste'},'id=eq.'+S.pipelineId)
-        .catch(e=>console.error('Error actualizando estado a En ajuste:',e));
+        .catch(e=>console.error('Error actualizando estado a En ajuste (timerPlay):',e));
+      guardarOrden('ajuste').catch(e=>console.error('Error guardando ajuste inicial (timerPlay):',e));
     }
-    guardarOrden('ajuste').catch(e=>console.error('Error guardando ajuste inicial:',e));
-    // Iniciar autosave global (también durante ajuste, no solo producción)
     iniciarAutosaveGlobal();
   }
   // Mandar email de monitor solo al primer inicio del cronómetro de producción
