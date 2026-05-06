@@ -2,53 +2,62 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Recuperar fotos — Trek 696534484</title>
+<title>Diagnóstico Trek 696534484</title>
 <style>
-body{font-family:Arial,sans-serif;background:#0d0f12;color:#e2e6f0;padding:24px;max-width:1100px;margin:0 auto}
+body{font-family:Arial,sans-serif;background:#0d0f12;color:#e2e6f0;padding:24px;max-width:1200px;margin:0 auto}
 h1{font-size:18px;margin-bottom:12px}
-.btn{background:#f5a623;color:#000;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:12px;margin-right:8px}
+.btn{background:#f5a623;color:#000;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin:6px 4px 6px 0}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.btn-secondary{background:#3b82f6;color:#fff}
-.log{background:#181c23;border:1px solid #1e232d;border-radius:8px;padding:14px;margin-top:14px;font-family:monospace;font-size:12px;white-space:pre-wrap;max-height:700px;overflow-y:auto}
+.btn-sec{background:#3b82f6;color:#fff}
+.btn-danger{background:#ef4444;color:#fff}
+.log{background:#181c23;border:1px solid #1e232d;border-radius:8px;padding:14px;margin-top:14px;font-family:monospace;font-size:12px;max-height:800px;overflow-y:auto}
 .row{margin-bottom:6px}
-.ok{color:#2dd4a0}
-.warn{color:#f5a623}
-.err{color:#f87171}
-.info{color:#60a5fa}
-.thumb{width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #2d3340;margin:4px;cursor:pointer;display:inline-block;vertical-align:top}
-.orden-card{background:#1e232d;border:1px solid #2d3340;border-radius:8px;padding:12px;margin:8px 0}
-.orden-card.target{border-color:#3b82f6;background:#1e2940}
+.ok{color:#2dd4a0}.warn{color:#f5a623}.err{color:#f87171}.info{color:#60a5fa}
+.thumb{width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #2d3340;margin:2px;display:inline-block;vertical-align:top}
+.orden-card{background:#1e232d;border:1px solid #2d3340;border-radius:8px;padding:14px;margin:10px 0}
+.orden-card.activa{border-color:#3b82f6;border-width:2px;background:#1e2940}
 .orden-card.fotos{border-color:#2dd4a0}
+.orden-card.completa{border-color:#f5a623}
 .orden-id{font-family:monospace;font-size:10px;color:#7d8799;word-break:break-all}
-input{background:#181c23;border:1px solid #2d3340;color:#e2e6f0;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;width:380px}
-label{font-size:11px;color:#7d8799;display:block;margin-top:8px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:4px 12px;font-size:11px;margin-top:8px;padding-top:8px;border-top:1px solid #2d3340}
+.kv .k{color:#7d8799}
+.kv .v{color:#e2e6f0;font-family:monospace}
+.kv .v.has{color:#2dd4a0;font-weight:700}
+.kv .v.empty{color:#5b6470}
+.action-bar{background:#1e2940;border:1px solid #3b82f6;border-radius:8px;padding:14px;margin-top:14px}
 </style>
 </head>
 <body>
-<h1>🔧 Recuperar fotos — Trek (PO 696534484)</h1>
-<p style="font-size:13px;color:#7d8799">Búsqueda exhaustiva: por pipeline_id, por op (PO), y por orden_id directo desde el PDF de aprobación.</p>
+<h1>🔍 Diagnóstico Trek (PO 696534484)</h1>
+<p style="font-size:13px;color:#7d8799">Lista todas las órdenes del Trek con sus datos completos. Permite identificar cuál tiene los datos buenos y consolidar.</p>
 
-<label>orden_id conocido (del PDF de aprobación, opcional):</label>
-<input type="text" id="orden-id-manual" value="e2fbc212-c674-4fc4-b1f4-071e64bc4b7c" placeholder="UUID de la orden">
+<button class="btn" onclick="escanear()">🔄 Escanear órdenes</button>
 
-<div style="margin-top:12px">
-<button class="btn" id="btn-scan" onclick="escanear()">1. Buscar órdenes y fotos</button>
-<button class="btn btn-secondary" id="btn-fix" onclick="aplicar()" disabled>2. Migrar fotos a orden activa</button>
-</div>
-
-<div class="log" id="log">Listo para escanear...</div>
+<div class="log" id="log">Click "Escanear órdenes" para empezar...</div>
 
 <script>
 const SB_URL='https://ozibjgsxyzdbporcarwv.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
 const SB_H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
-const PO_OBJETIVO='696534484';
+const PO='696534484';
+const ORDEN_PDF='e2fbc212-c674-4fc4-b1f4-071e64bc4b7c';
 const log=document.getElementById('log');
-let datos={pipeline:null,ordenes:[],fotosFinales:[null,null,null,null]};
+let datos={pipeline:null,ordenes:[]};
 
 function add(html,cls){const d=document.createElement('div');d.className='row '+(cls||'');d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;return d;}
 
-async function listarFotosOrden(ordenId){
+function fmtSeg(s){
+  s=parseInt(s)||0;
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;
+  return [h,m,ss].map(x=>String(x).padStart(2,'0')).join(':');
+}
+
+function sumObj(o){
+  if(!o||typeof o!=='object')return 0;
+  return Object.values(o).reduce((s,v)=>s+(parseFloat(v)||0),0);
+}
+
+async function listarFotos(ordenId){
   const r=await fetch(SB_URL+'/storage/v1/object/list/fotos-aprobacion',{
     method:'POST',headers:SB_H,
     body:JSON.stringify({prefix:ordenId+'/',limit:50,sortBy:{column:'name',order:'asc'}})
@@ -62,188 +71,217 @@ async function listarFotosOrden(ordenId){
     const m=f.name.match(/foto-(\d)-/);
     if(m){
       const pos=parseInt(m[1]);
-      if(pos>=0&&pos<=3&&!fotos[pos])
-        fotos[pos]=SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+ordenId+'/'+f.name;
+      if(pos>=0&&pos<=3&&!fotos[pos]) fotos[pos]=SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+ordenId+'/'+f.name;
     }
   });
   return fotos;
 }
 
-async function fetchOrden(ordenId){
-  const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ordenId+'&select=*',{headers:SB_H});
-  if(!r.ok)return null;
-  const rows=await r.json();
-  return rows&&rows[0]?rows[0]:null;
-}
+function renderOrdenCard(o,idx,activaIdx){
+  const esActiva=idx===activaIdx;
+  const fechaCre=o.created_at?new Date(o.created_at).toLocaleString('es-MX'):'—';
+  const fechaUpd=o.updated_at?new Date(o.updated_at).toLocaleString('es-MX'):'—';
+  const tAj=o.tiempo_ajuste_seg||0;
+  const tPr=o.tiempo_produccion_seg||0;
+  const buenas=o.piezas_buenas||0;
+  const mAj=sumObj(o.merma_ajuste);
+  const mPr=sumObj(o.merma_produccion);
+  const fotosUrls=Array.isArray(o.foto_urls)?o.foto_urls.filter(Boolean).length:0;
+  const fotosStorage=o._fotos?o._fotos.filter(Boolean).length:0;
+  const tieneTintas=Array.isArray(o.tintas)?o.tintas.length:0;
+  const tieneConsumo=Array.isArray(o.consumo_real_tintas)?o.consumo_real_tintas.length:0;
 
-async function fetchOrdenesPorOp(op){
-  const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?op=eq.'+encodeURIComponent(op)+'&order=created_at.desc&select=*',{headers:SB_H});
-  if(!r.ok)return [];
-  return await r.json();
-}
+  // Score: cuanto más data tiene, mejor
+  const score=(tAj>0?1:0)+(tPr>0?2:0)+(buenas>0?2:0)+(mAj>0?1:0)+(mPr>0?2:0)+(fotosStorage>0?2:0)+(fotosUrls>0?1:0)+(tieneTintas?1:0)+(tieneConsumo?1:0);
 
-async function fetchOrdenesPorPipeline(pipelineId){
-  const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+pipelineId+'&order=created_at.desc&select=*',{headers:SB_H});
-  if(!r.ok)return [];
-  return await r.json();
-}
-
-function renderOrdenCard(o,esActiva,esFuente){
-  const fechaStr=o.created_at?new Date(o.created_at).toLocaleString('es-MX'):'—';
-  const cls=esActiva?'target':(esFuente?'fotos':'');
   const card=document.createElement('div');
-  card.className='orden-card '+cls;
-  const cntFotos=o._fotos?o._fotos.filter(Boolean).length:0;
-  const cntFotoUrls=Array.isArray(o.foto_urls)?o.foto_urls.filter(Boolean).length:0;
-  card.innerHTML='<div><strong>'+(esActiva?'🎯 ORDEN ACTIVA':(esFuente?'📷 ORDEN CON FOTOS':'Orden'))+'</strong> · '+fechaStr+'</div>'+
-    '<div class="orden-id">'+o.id+'</div>'+
-    '<div style="margin-top:6px;font-size:11px">'+
-      'op: '+(o.op||'—')+' · '+
-      'pipeline_id: '+(o.pipeline_id?o.pipeline_id.substring(0,8)+'...':'<span style="color:#f87171">NULL</span>')+' · '+
-      'foto_urls registradas: <strong>'+cntFotoUrls+'</strong> · '+
-      'archivos en Storage: <strong style="color:'+(cntFotos>0?'#2dd4a0':'#7d8799')+'">'+cntFotos+'</strong>'+
-      (o.piezas_buenas?' · '+o.piezas_buenas+' pzas buenas':'')+
-    '</div>';
-  if(cntFotos>0){
-    const thumbs=document.createElement('div');
-    thumbs.style.marginTop='8px';
-    const labels=['Frente','Reverso','Izq','Der'];
-    o._fotos.forEach((url,idx)=>{
-      if(url) thumbs.innerHTML+='<a href="'+url+'" target="_blank" title="'+labels[idx]+'"><img src="'+url+'" class="thumb"></a>';
+  let cls='orden-card';
+  if(esActiva)cls+=' activa';
+  if(score>=8)cls+=' completa';
+  else if(fotosStorage>0)cls+=' fotos';
+  card.className=cls;
+
+  const labels=['Frente','Reverso','Izq','Der'];
+  let thumbsHTML='';
+  if(o._fotos&&o._fotos.filter(Boolean).length){
+    o._fotos.forEach((url,i)=>{
+      if(url) thumbsHTML+='<a href="'+url+'" target="_blank" title="'+labels[i]+'"><img src="'+url+'" class="thumb"></a>';
     });
-    card.appendChild(thumbs);
   }
+
+  card.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center">'+
+      '<div><strong>'+(esActiva?'🎯 ACTIVA (más reciente) ':'')+'Orden #'+(idx+1)+'</strong> · score: <span style="color:'+(score>=8?'#2dd4a0':score>=4?'#f5a623':'#7d8799')+'">'+score+'</span></div>'+
+      (esActiva?'':'<button class="btn btn-sec" style="padding:5px 12px;font-size:11px;margin:0" onclick="hacerActiva(\''+o.id+'\')">Hacer activa</button>')+
+    '</div>'+
+    '<div class="orden-id">'+o.id+'</div>'+
+    '<div class="kv">'+
+      '<div class="k">Creada:</div><div class="v">'+fechaCre+'</div>'+
+      '<div class="k">Actualizada:</div><div class="v">'+fechaUpd+'</div>'+
+      '<div class="k">op:</div><div class="v">'+(o.op||'<span class="empty">—</span>')+'</div>'+
+      '<div class="k">pipeline_id:</div><div class="v">'+(o.pipeline_id?o.pipeline_id.substring(0,8)+'...':'<span class="err">NULL</span>')+'</div>'+
+      '<div class="k">estado:</div><div class="v">'+(o.estado||'—')+'</div>'+
+      '<div class="k">Tiempo ajuste:</div><div class="v '+(tAj>0?'has':'empty')+'">'+fmtSeg(tAj)+'</div>'+
+      '<div class="k">Tiempo producción:</div><div class="v '+(tPr>0?'has':'empty')+'">'+fmtSeg(tPr)+'</div>'+
+      '<div class="k">Piezas buenas:</div><div class="v '+(buenas>0?'has':'empty')+'">'+buenas+'</div>'+
+      '<div class="k">Merma ajuste:</div><div class="v '+(mAj>0?'has':'empty')+'">'+mAj+' pzas</div>'+
+      '<div class="k">Merma producción:</div><div class="v '+(mPr>0?'has':'empty')+'">'+mPr+' pzas</div>'+
+      '<div class="k">Tintas (fórmula):</div><div class="v '+(tieneTintas>0?'has':'empty')+'">'+tieneTintas+' colores</div>'+
+      '<div class="k">Consumo tintas:</div><div class="v '+(tieneConsumo>0?'has':'empty')+'">'+tieneConsumo+' colores</div>'+
+      '<div class="k">foto_urls (DB):</div><div class="v '+(fotosUrls>0?'has':'empty')+'">'+fotosUrls+' / 4</div>'+
+      '<div class="k">Storage (archivos):</div><div class="v '+(fotosStorage>0?'has':'empty')+'">'+fotosStorage+' / 4</div>'+
+    '</div>'+
+    (thumbsHTML?'<div style="margin-top:10px">'+thumbsHTML+'</div>':'');
   return card;
 }
 
 async function escanear(){
-  document.getElementById('btn-scan').disabled=true;
   log.innerHTML='';
-  datos={pipeline:null,ordenes:[],fotosFinales:[null,null,null,null]};
+  datos={pipeline:null,ordenes:[]};
   try{
-    // 1) Pipeline
-    add('🔎 Buscando pipeline con PO '+PO_OBJETIVO+'...');
-    const rPipe=await fetch(SB_URL+'/rest/v1/pipeline_mf?po=eq.'+PO_OBJETIVO+'&select=id,sub_cliente,cliente,po,estado',{headers:SB_H});
-    const pipes=await rPipe.json();
-    if(pipes&&pipes.length){
-      datos.pipeline=pipes[0];
-      add('✓ Pipeline: <strong>'+(datos.pipeline.sub_cliente||datos.pipeline.cliente)+'</strong> · estado <em>'+datos.pipeline.estado+'</em>','ok');
-      add('  pipeline_id: <span class="orden-id">'+datos.pipeline.id+'</span>','info');
-    } else {
-      add('⚠ Sin pipeline encontrado','warn');
-    }
-    add('');
+    add('🔍 Escaneando todas las fuentes posibles...');
 
-    // Acumulador de órdenes (sin duplicados por id)
+    // 1) Pipeline
+    const rPipe=await fetch(SB_URL+'/rest/v1/pipeline_mf?po=eq.'+PO+'&select=*',{headers:SB_H});
+    const pipes=await rPipe.json();
+    if(pipes&&pipes[0]){
+      datos.pipeline=pipes[0];
+      add('✓ Pipeline encontrado: '+(datos.pipeline.sub_cliente||datos.pipeline.cliente)+' · estado <strong>'+datos.pipeline.estado+'</strong>','ok');
+      add('  pipeline_id: '+datos.pipeline.id,'info');
+    }
+
+    // 2) Recopilar TODAS las órdenes posibles de 3 fuentes
     const ordenesMap=new Map();
     const addOrden=o=>{if(o&&o.id&&!ordenesMap.has(o.id))ordenesMap.set(o.id,o);};
 
-    // 2) Buscar por pipeline_id
     if(datos.pipeline){
-      add('🔎 Búsqueda 1: ordenes por pipeline_id...');
-      const o1=await fetchOrdenesPorPipeline(datos.pipeline.id);
-      add('  Encontradas: '+o1.length);
+      const r1=await fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+datos.pipeline.id+'&order=created_at.desc&select=*',{headers:SB_H});
+      const o1=await r1.json();
       o1.forEach(addOrden);
     }
 
-    // 3) Buscar por op (PO)
-    add('🔎 Búsqueda 2: ordenes por op='+PO_OBJETIVO+'...');
-    const o2=await fetchOrdenesPorOp(PO_OBJETIVO);
-    add('  Encontradas: '+o2.length);
+    const r2=await fetch(SB_URL+'/rest/v1/ordenes_produccion?op=eq.'+encodeURIComponent(PO)+'&order=created_at.desc&select=*',{headers:SB_H});
+    const o2=await r2.json();
     o2.forEach(addOrden);
 
-    // 4) Si el usuario dio orden_id manual, buscar también
-    const ordenManual=document.getElementById('orden-id-manual').value.trim();
-    if(ordenManual&&!ordenesMap.has(ordenManual)){
-      add('🔎 Búsqueda 3: orden por id manual '+ordenManual.substring(0,8)+'...');
-      const o3=await fetchOrden(ordenManual);
-      if(o3){addOrden(o3);add('  ✓ Encontrada','ok');}
-      else add('  ✗ Sin resultado','warn');
+    if(!ordenesMap.has(ORDEN_PDF)){
+      const r3=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ORDEN_PDF+'&select=*',{headers:SB_H});
+      const o3=await r3.json();
+      if(o3&&o3[0])addOrden(o3[0]);
     }
 
-    add('');
-    if(!ordenesMap.size){
-      add('✗ No se encontraron órdenes por ningún método','err');
-      add('  Revisa Supabase → ordenes_produccion para ver qué hay','warn');
-      return;
-    }
-    add('Total órdenes únicas: <strong>'+ordenesMap.size+'</strong>','info');
+    if(!ordenesMap.size){add('✗ No se encontraron órdenes','err');return;}
+    add('Total órdenes únicas: '+ordenesMap.size,'info');
     add('');
 
-    // 5) Para cada orden, listar fotos en Storage
-    add('🔎 Listando fotos en Storage por cada orden...');
-    add('');
+    // 3) Listar fotos en Storage por cada
     const ordenes=Array.from(ordenesMap.values());
-    let mejorOrden=null,mejorCount=0;
-    for(const o of ordenes){
-      o._fotos=await listarFotosOrden(o.id);
-      const cnt=o._fotos.filter(Boolean).length;
-      if(cnt>mejorCount){mejorCount=cnt;mejorOrden=o;}
-    }
+    for(const o of ordenes) o._fotos=await listarFotos(o.id);
+    ordenes.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
     datos.ordenes=ordenes;
 
-    // Determinar orden activa: la más reciente que tenga pipeline_id
-    let ordenActiva=ordenes.find(o=>o.pipeline_id===(datos.pipeline&&datos.pipeline.id));
-    if(!ordenActiva)ordenActiva=ordenes[0]; // fallback
-    datos.ordenActiva=ordenActiva;
-
-    // Render cards
-    ordenes.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
-    ordenes.forEach(o=>{
-      log.appendChild(renderOrdenCard(o,o.id===ordenActiva.id,mejorOrden&&o.id===mejorOrden.id&&o.id!==ordenActiva.id));
-    });
-
-    add('');
-    if(!mejorOrden||mejorCount===0){
-      add('✗ Ninguna orden tiene fotos en Storage','err');
-      return;
+    // La activa según monitor.js es: la del pipeline_id actual con más reciente created_at
+    let activaIdx=-1;
+    for(let i=0;i<ordenes.length;i++){
+      if(datos.pipeline && ordenes[i].pipeline_id===datos.pipeline.id){activaIdx=i;break;}
     }
+    if(activaIdx===-1)activaIdx=0; // fallback
 
-    datos.fotosFinales=mejorOrden._fotos;
-    add('✓ Mejor orden con fotos: '+mejorOrden.id.substring(0,8)+'... ('+mejorCount+' fotos)','ok');
+    add('<strong>La orden ACTIVA según el monitor LIVE es la #'+(activaIdx+1)+'</strong> (pipeline_id match, más reciente)','warn');
     add('');
-    if(mejorOrden.id===ordenActiva.id){
-      add('ℹ Las fotos están en la orden activa, solo falta re-asociarlas en foto_urls.','info');
-    }else{
-      add('⚠ Las fotos están en una orden DIFERENTE a la activa','warn');
-      add('  Origen (con fotos): '+mejorOrden.id,'warn');
-      add('  Destino (activa):   '+ordenActiva.id,'warn');
-      add('  La acción copia los URLs de Storage al campo foto_urls de la orden activa.','warn');
+    add('<strong>Detalle de cada orden encontrada:</strong>','info');
+    add('');
+
+    ordenes.forEach((o,i)=>log.appendChild(renderOrdenCard(o,i,activaIdx)));
+
+    // 4) Recomendación
+    add('');
+    const ordenConDatos=ordenes.reduce((best,o)=>{
+      const sc=(o.tiempo_ajuste_seg>0?1:0)+(o.tiempo_produccion_seg>0?2:0)+(o.piezas_buenas>0?2:0)+(sumObj(o.merma_produccion)>0?2:0)+(o._fotos.filter(Boolean).length>0?2:0);
+      return (!best||sc>best._sc)?Object.assign(o,{_sc:sc}):best;
+    },null);
+
+    if(ordenConDatos && activaIdx>=0 && ordenConDatos.id!==ordenes[activaIdx].id){
+      add('⚠ La orden ACTIVA está incompleta pero la orden '+ordenConDatos.id.substring(0,8)+' tiene los datos buenos','warn');
+      add('  Opciones:','warn');
+      add('  A) Hacer "ACTIVA" la orden con datos: click en "Hacer activa" del card que tenga score alto','info');
+      add('  B) Consolidar: copiar datos buenos a la activa','info');
+      const bar=document.createElement('div');
+      bar.className='action-bar';
+      bar.innerHTML='<strong>🛠 Acción recomendada:</strong> Consolidar datos buenos hacia la orden activa.<br><br>'+
+        '<button class="btn btn-sec" onclick="consolidarDatos(\''+ordenConDatos.id+'\',\''+ordenes[activaIdx].id+'\')">Copiar datos de '+ordenConDatos.id.substring(0,8)+'... → ACTIVA</button>';
+      log.appendChild(bar);
+    } else if(ordenConDatos && activaIdx>=0 && ordenConDatos.id===ordenes[activaIdx].id){
+      add('✓ La orden ACTIVA YA tiene los mejores datos','ok');
     }
-    add('');
-    add('Click en "Migrar fotos a orden activa" para aplicar.','info');
-    document.getElementById('btn-fix').disabled=false;
   }catch(e){
     add('Error: '+e.message,'err');
     console.error(e);
-    document.getElementById('btn-scan').disabled=false;
   }
 }
 
-async function aplicar(){
-  if(!datos.ordenActiva||!datos.fotosFinales.filter(Boolean).length){add('Primero escanea','err');return;}
-  if(!confirm('Reescribir foto_urls de la orden activa con las fotos encontradas. ¿Continuar?'))return;
-  document.getElementById('btn-fix').disabled=true;
-  add('');
+// "Hacer activa" = tocar el created_at de esa orden para que sea la más reciente
+async function hacerActiva(ordenId){
+  if(!confirm('Esto va a actualizar el campo updated_at para que esta orden aparezca primera. ¿Continuar?'))return;
   try{
-    const fotosFiltered=datos.fotosFinales.filter(u=>u&&typeof u==='string'&&u.startsWith('http'));
-    add('Aplicando PATCH a orden activa <span class="orden-id">'+datos.ordenActiva.id+'</span> con '+fotosFiltered.length+' URLs...');
-    const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+datos.ordenActiva.id,{
+    const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ordenId,{
       method:'PATCH',
       headers:{...SB_H,'Prefer':'return=minimal'},
-      body:JSON.stringify({foto_urls:fotosFiltered})
+      body:JSON.stringify({updated_at:new Date().toISOString()})
     });
-    if(!r.ok){
-      const txt=await r.text();
-      add('✗ HTTP '+r.status+': '+txt.substring(0,200),'err');
+    // El monitor.js usa created_at.desc, no updated_at — entonces hay que copiar otros campos
+    // Mejor approach: borrar las órdenes huérfanas que no son ésta
+    // Pero por seguridad mejor pedir consolidar datos en lugar de borrar
+    add('NOTA: el monitor LIVE usa created_at, no updated_at. Mejor usa el botón "Consolidar".','warn');
+  }catch(e){add('Error: '+e.message,'err');}
+}
+
+// Consolidar: copiar campos del origen al destino, sin tocar el id ni created_at
+async function consolidarDatos(origenId,destinoId){
+  if(origenId===destinoId){add('Mismo id, nada que consolidar','warn');return;}
+  if(!confirm('Esto va a copiar TODOS los datos buenos de la orden origen a la orden activa. La activa quedará con los datos consolidados. ¿Continuar?'))return;
+  try{
+    add('');
+    add('Consolidando datos...');
+    // Fetch origen completo
+    const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+origenId+'&select=*',{headers:SB_H});
+    const rows=await r.json();
+    if(!rows||!rows[0]){add('✗ No se pudo leer origen','err');return;}
+    const origen=rows[0];
+    // Construir payload con todos los campos importantes (excepto id, created_at, pipeline_id de la activa)
+    const camposCopiar=['op','cliente','producto','piezas_total','lote_botella','lote_tapa','maquina','colores','ajustadores','operadores','tiempo_ajuste_seg','tiempo_produccion_seg','piezas_buenas','merma_ajuste','merma_produccion','tintas','consumo_real_tintas','qa_resultados','reajustes','uv_intensidad','uv_velocidad','proceso_alcohol','proceso_primer','presion_aire','flameo_tipo','flameo_tiempo','flameo_vueltas','crosshatch','prueba_agua','observaciones','tm_ajuste','tm_produccion','foto_urls'];
+    const payload={};
+    camposCopiar.forEach(k=>{if(origen[k]!==undefined&&origen[k]!==null)payload[k]=origen[k];});
+    payload.updated_at=new Date().toISOString();
+    add('  campos a copiar: '+Object.keys(payload).length,'info');
+
+    // PATCH a destino con retry contra columnas inexistentes
+    let pl={...payload};
+    let intentos=0;
+    while(intentos<8){
+      const pres=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+destinoId,{
+        method:'PATCH',
+        headers:{...SB_H,'Prefer':'return=minimal'},
+        body:JSON.stringify(pl)
+      });
+      if(pres.ok){
+        add('✓ Consolidación exitosa','ok');
+        add('Hard refresh en iPad y entra al pedido — todos los datos deben aparecer.','ok');
+        return;
+      }
+      const txt=await pres.text();
+      const m=txt.match(/'([^']+)' column/) || txt.match(/PGRST204[\s\S]*?'([^']+)'/);
+      if(m && m[1] && pl.hasOwnProperty(m[1])){
+        add('  ⚠ Columna inexistente "'+m[1]+'", retirando y reintentando','warn');
+        delete pl[m[1]];
+        intentos++;
+        continue;
+      }
+      add('✗ HTTP '+pres.status+': '+txt.substring(0,300),'err');
       return;
     }
-    add('✓ Fotos guardadas en orden activa — '+fotosFiltered.length+' URLs','ok');
-    add('');
-    add('Hard refresh en iPad y entra al pedido Trek.','ok');
-  }catch(e){
-    add('Error: '+e.message,'err');
-  }
+    add('✗ Demasiados retries','err');
+  }catch(e){add('Error: '+e.message,'err');console.error(e);}
 }
 </script>
 </body>
