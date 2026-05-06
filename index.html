@@ -162,6 +162,56 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .user-chip{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:3px 9px 3px 3px;font-size:11px;color:var(--text2)}
 .user-chip-av{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+
+/* === iPhone SE / pantallas pequeñas (≤480px) === */
+@media (max-width:480px){
+  /* Reducir paddings/gaps generales para aprovechar el ancho */
+  .topbar{padding:8px 10px;gap:6px;min-height:44px}
+  .topbar-right{gap:4px}
+  .logo{font-size:12px}
+  .scroll-narrow{padding:0 4px}
+  /* Strip de tiempos: pasar a layout más compacto y permitir wrap */
+  .tbar{padding:5px 10px;gap:8px;font-size:10px}
+  .tbar-val{font-size:11px}
+  .tbar-label{font-size:8px}
+  .tbar-sep{display:none} /* el flex-wrap genera el corte natural */
+  /* Cards de pedido en dashboard */
+  .card{padding:12px}
+  /* Botones más compactos */
+  .btn-primary{padding:12px 16px;font-size:14px}
+  .btn-secondary{padding:10px 12px;font-size:13px}
+  .btn-sm{padding:5px 9px;font-size:10px}
+  /* Step counter compacto */
+  .steps{display:none} /* los steps no caben, ocultar en mobile */
+  /* Field row pasa a 1 columna */
+  .field-row{grid-template-columns:1fr;gap:8px}
+  /* Stats grid de 4 a 2 columnas */
+  .stats-grid{grid-template-columns:1fr 1fr;gap:5px}
+  /* Quick btns de 3 a 1 columna apilada */
+  .quick-btns{grid-template-columns:1fr;gap:6px}
+  /* Component/aditivo rows en tintas: pasar a 2 columnas wrapped */
+  .comp-row{grid-template-columns:1fr 1fr;gap:6px;padding:6px}
+  .comp-row>*{min-width:0}
+  .aditivo-row{grid-template-columns:1fr 1fr;gap:6px;padding:6px}
+  .aditivo-row>*{min-width:0}
+  .aditivo-row .field,.comp-row .field{min-width:0}
+  .aditivo-row input,.comp-row input,.aditivo-row select,.comp-row select{min-width:0;width:100%}
+  /* Timer display un poco más chico */
+  .timer-display{font-size:36px;margin-bottom:10px}
+  /* Modal más compacto */
+  .modal{padding:18px 14px;width:94%}
+  /* Inputs y selects */
+  input,select,textarea{font-size:14px}
+  /* Pin grid sigue centrado pero más compacto */
+  .pin-grid{max-width:240px;gap:6px}
+  /* Foto slots: evitar bordes muy delgados */
+  .foto-slot .foto-icon{font-size:24px}
+  .foto-slot .foto-label{font-size:10px}
+  /* Badge un poco más compacto */
+  .badge{padding:2px 6px;font-size:9px}
+  /* Topbar logo: separador // ocultar en mobile */
+  .logo span{display:none}
+}
 </style>
 </head>
 <body>
