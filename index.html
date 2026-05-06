@@ -296,7 +296,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       <div class="logo">MES <span>//</span> Ajuste</div>
       <div class="steps" id="steps-ajuste"></div>
     </div>
-    <div class="topbar-right"><div class="badge badge-amber"><span class="dot pulse"></span>Ajuste</div></div>
+    <div class="topbar-right" style="display:flex;align-items:center;gap:8px">
+      <button onclick="abrirPdfDiseno()" title="Ver PDF de diseño" style="background:#0d0f12;color:#fff;border:1px solid var(--border2);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation">🎨 Diseño</button>
+      <div class="badge badge-amber"><span class="dot pulse"></span>Ajuste</div>
+    </div>
   </div>
   <div class="tbar">
     <div class="tbar-item"><span class="tbar-label">Total</span><span class="tbar-val" id="t-global" style="color:var(--green)">00:00:00</span></div>
@@ -378,7 +381,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       <div class="logo">MES <span>//</span> Aprobación</div>
       <div class="steps" id="steps-fotos"></div>
     </div>
-    <div class="topbar-right"><div class="badge badge-amber">4 fotos</div></div>
+    <div class="topbar-right" style="display:flex;align-items:center;gap:8px">
+      <button onclick="abrirPdfDiseno()" title="Ver PDF de diseño" style="background:#0d0f12;color:#fff;border:1px solid var(--border2);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation">🎨 Diseño</button>
+      <div class="badge badge-amber">4 fotos</div>
+    </div>
   </div>
   <div class="tbar">
     <div class="tbar-item"><span class="tbar-label">Total</span><span class="tbar-val" id="t-global-fotos" style="color:var(--green)">00:00:00</span></div>
@@ -434,7 +440,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       <div class="logo">MES <span>//</span> Producción</div>
       <div class="steps" id="steps-prod"></div>
     </div>
-    <div class="topbar-right"><div class="badge badge-green"><span class="dot pulse"></span>Producción</div></div>
+    <div class="topbar-right" style="display:flex;align-items:center;gap:8px">
+      <button onclick="abrirPdfDiseno()" title="Ver PDF de diseño" style="background:#0d0f12;color:#fff;border:1px solid var(--border2);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation">🎨 Diseño</button>
+      <div class="badge badge-green"><span class="dot pulse"></span>Producción</div>
+    </div>
   </div>
   <div class="tbar">
     <div class="tbar-item"><span class="tbar-label">Total</span><span class="tbar-val" id="t-global-prod" style="color:var(--green)">00:00:00</span></div>
@@ -671,7 +680,7 @@ const TINTAS={
   ]
 };
 let ADITIVOS=[];
-const MERMA_TIPOS=['Shadow','Descuadre','Falta tinta','Mal flameo','Perforada/deforme','Soleo','Otro 1','Otro 2'];
+const MERMA_TIPOS=['Shadow','Descuadre','Falta tinta','Mal flameo','Perforada/deforme','Soleo','Mala adherencia','Otro 2'];
 const TM_TIPOS=[
   {k:'comida',icon:'🍽',label:'Salida a comer'},
   {k:'tintas',icon:'🎨',label:'Prep. tintas'},
@@ -721,6 +730,17 @@ function fmt(s){s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 function chex(n){const m={azul:'#4a9eff',verde:'#34d399',negro:'#555',rojo:'#f87171',amarillo:'#fbbf24',blanco:'#e8eaf0',naranja:'#fb923c',morado:'#a78bfa',rosa:'#f472b6'};return m[(n||'').toLowerCase()]||'#8890a4';}
 function mxn(n){return'$'+(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+// Abre el PDF de diseño del pedido actual en una pestaña nueva.
+// Si no hay PDF cargado, muestra toast de aviso.
+function abrirPdfDiseno(){
+  const pid=S.pipelineId;
+  if(!pid){toast('No hay pedido activo','err');return;}
+  const pipe=(window._dashRows||[]).find(p=>p.id===pid);
+  const url=pipe&&pipe.pdf_diseno_url;
+  if(!url){toast('Este pedido no tiene PDF de diseño cargado','err');return;}
+  window.open(url,'_blank');
+}
+
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='dashboard')renderDashboard();}
 function dismissKeyboard(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();}
 function renderSteps(elId,current){const el=document.getElementById(elId);if(!el)return;const cur=STEPS.indexOf(current);el.innerHTML=STEPS.map((s,i)=>`<div class="step-dot ${i<cur?'done':i===cur?'active':''}"></div>`).join('');}
@@ -1056,7 +1076,7 @@ async function abrirEditarCompletado(pipelineId){
     </div>`;
 
     // Merma rows
-    const MERMA_TIPOS=['Shadow','Descuadre','Falta tinta','Mal flameo','Perforada/deforme','Soleo','Otro 1','Otro 2'];
+    const MERMA_TIPOS=['Shadow','Descuadre','Falta tinta','Mal flameo','Perforada/deforme','Soleo','Mala adherencia','Otro 2'];
     const mAj=o.merma_ajuste||{};
     const mPr=o.merma_produccion||{};
     const mermaHTML=
