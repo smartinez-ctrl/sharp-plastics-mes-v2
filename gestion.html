@@ -206,7 +206,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="card-title" style="margin:0">Activos</div>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-secondary btn-xs" onclick="exportarPipelineExcel()" title="Exportar pipeline completo a Excel">📊 Exportar Excel</button>
+        <button class="btn btn-secondary btn-xs" onclick="exportarPipelineExcel()" title="Exportar pipeline a CSV (se abre en Excel)">📊 Exportar a Excel</button>
         <button class="btn btn-ghost btn-xs" onclick="resetPipelineColumns()" title="Restablecer ancho y orden de columnas">↺ Restablecer columnas</button>
       </div>
     </div>
@@ -2015,149 +2015,107 @@ function exportarPipelineExcel(){
     if(a.orden_posicion!==b.orden_posicion)return (a.orden_posicion||999)-(b.orden_posicion||999);
     return new Date(a.created_at||0)-new Date(b.created_at||0);
   });
-
-  toast('Generando Excel…','ok');
-
-  const buildAndDownload=function(){
-    try{
-      console.log('[ExportExcel] XLSX cargado, generando archivo…');
-      const fmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-MX'):'';
-      // Sanitizador: SIEMPRE retorna string. Para números usar safeNum aparte.
-      const safe=v=>{
-        if(v===null||v===undefined)return '';
-        if(typeof v==='string')return v;
-        if(typeof v==='number')return isFinite(v)?String(v):'';
-        if(typeof v==='boolean')return v?'Sí':'No';
-        if(Array.isArray(v))return v.map(safe).filter(Boolean).join(', ');
-        if(typeof v==='object'){
-          if(v.nombre&&typeof v.nombre==='string')return v.nombre;
-          if(v.label&&typeof v.label==='string')return v.label;
-          if(v.value&&typeof v.value==='string')return v.value;
-          try{return JSON.stringify(v);}catch{return '';}
-        }
-        try{return String(v);}catch{return '';}
-      };
-      const safeNum=v=>{
-        if(typeof v==='number')return isFinite(v)?v:0;
-        const n=parseFloat(v);
-        return isFinite(n)?n:0;
-      };
-      // Helper: extraer nombres de tintas de tintas_info o formula_tintas
-      const tintasStr=p=>{
-        const ti=Array.isArray(p.tintas_info)?p.tintas_info:[];
-        if(ti.length){
-          return ti.map(t=>{
-            if(!t||typeof t!=='object')return String(t||'');
-            const n=typeof t.nombre==='string'?t.nombre:'';
-            const pa=typeof t.pantone==='string'?t.pantone:'';
-            return n&&pa?`${n} (${pa})`:(n||pa||'');
-          }).filter(Boolean).join(' · ');
-        }
-        const ft=Array.isArray(p.formula_tintas)?p.formula_tintas:[];
-        return ft.map((c,i)=>{
-          if(!c||typeof c!=='object')return 'Color '+(i+1);
-          return (typeof c.nombre==='string'?c.nombre:'')||(typeof c.pantone==='string'?c.pantone:'')||('Color '+(i+1));
-        }).filter(Boolean).join(' · ');
-      };
-
-      const headers=[
-        'Cliente','Sub-cliente','PO','Estado',
-        'Fecha pedido','Fecha entrega','Fecha inicio',
-        'Capacidad (ml)','Piezas','# Colores','Tintas',
-        'Color botella','Color tapa','Color chupón',
-        'Venta total','Margen %','Cobrado','Fecha cobro',
-        'Dirección de envío','Notas / Packaging'
-      ];
-      const rows=[headers];
-      todos.forEach(p=>{
-        rows.push([
-          safe(p.cliente),
-          safe(p.sub_cliente),
-          safe(p.po),
-          safe(p.estado),
-          fmt(p.fecha_pedido),
-          fmt(p.fecha_entrega),
-          fmt(p.fecha_inicio),
-          safe(p.capacidad),
-          safeNum(p.piezas),
-          safeNum(p.colores),
-          safe(tintasStr(p)),
-          safe(p.color_botella),
-          safe(p.color_tapa),
-          safe(p.color_boquilla),
-          safeNum(p.venta_total),
-          safeNum(p.margen),
-          p.cobrado?'Sí':'No',
-          fmt(p.fecha_cobro),
-          safe(p.direccion_envio),
-          safe(p.notas)
-        ]);
-      });
-      // Debug: validar que cada celda sea string primitivo o número
-      console.log('[ExportExcel] validando celdas, total filas (incl header):',rows.length);
-      let problemas=0;
-      rows.forEach((row,ri)=>{
-        row.forEach((cell,ci)=>{
-          const t=typeof cell;
-          if(t!=='string'&&t!=='number'){
-            console.warn('[ExportExcel] celda problema en fila',ri,'col',ci,':',cell,'(tipo:',t,')');
-            row[ci]=String(cell??'');
-            problemas++;
-          }
-          // Strings con caracteres raros también pueden romper
-          if(t==='string'&&cell.length>32000){
-            console.warn('[ExportExcel] string demasiado largo en fila',ri,'col',ci,'truncando');
-            row[ci]=cell.substring(0,32000);
-          }
-        });
-      });
-      if(problemas>0)console.warn('[ExportExcel] se corrigieron',problemas,'celdas problema');
-
-      console.log('[ExportExcel] llamando aoa_to_sheet…');
-      const ws=XLSX.utils.aoa_to_sheet(rows);
-      ws['!cols']=[
-        {wch:18},{wch:24},{wch:14},{wch:14},
-        {wch:12},{wch:12},{wch:12},
-        {wch:10},{wch:9},{wch:9},{wch:40},
-        {wch:14},{wch:14},{wch:14},
-        {wch:13},{wch:9},{wch:9},{wch:12},
-        {wch:36},{wch:40}
-      ];
-      for(let i=2;i<=rows.length;i++){
-        const v=ws[XLSX.utils.encode_cell({r:i-1,c:14})];
-        if(v&&typeof v.v==='number')v.z='"$"#,##0.00';
-        const m=ws[XLSX.utils.encode_cell({r:i-1,c:15})];
-        if(m&&typeof m.v==='number')m.z='0.0';
+  try{
+    const fmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-MX'):'';
+    // Sanitizador robusto a string
+    const safe=v=>{
+      if(v===null||v===undefined)return '';
+      if(typeof v==='string')return v;
+      if(typeof v==='number')return isFinite(v)?String(v):'';
+      if(typeof v==='boolean')return v?'Sí':'No';
+      if(Array.isArray(v))return v.map(safe).filter(Boolean).join(', ');
+      if(typeof v==='object'){
+        if(v.nombre&&typeof v.nombre==='string')return v.nombre;
+        if(v.label&&typeof v.label==='string')return v.label;
+        if(v.value&&typeof v.value==='string')return v.value;
+        try{return JSON.stringify(v);}catch{return '';}
       }
+      try{return String(v);}catch{return '';}
+    };
+    const safeNum=v=>{
+      if(typeof v==='number')return isFinite(v)?v:0;
+      const n=parseFloat(v);
+      return isFinite(n)?n:0;
+    };
+    const tintasStr=p=>{
+      const ti=Array.isArray(p.tintas_info)?p.tintas_info:[];
+      if(ti.length){
+        return ti.map(t=>{
+          if(!t||typeof t!=='object')return String(t||'');
+          const n=typeof t.nombre==='string'?t.nombre:'';
+          const pa=typeof t.pantone==='string'?t.pantone:'';
+          return n&&pa?n+' ('+pa+')':(n||pa||'');
+        }).filter(Boolean).join(' / ');
+      }
+      const ft=Array.isArray(p.formula_tintas)?p.formula_tintas:[];
+      return ft.map((c,i)=>{
+        if(!c||typeof c!=='object')return 'Color '+(i+1);
+        return (typeof c.nombre==='string'?c.nombre:'')||(typeof c.pantone==='string'?c.pantone:'')||('Color '+(i+1));
+      }).filter(Boolean).join(' / ');
+    };
 
-      const wb=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb,'Pipeline',ws);
-      const fecha=new Date().toISOString().split('T')[0];
-      XLSX.writeFile(wb,'Sharp-Plastics-Pipeline-'+fecha+'.xlsx');
-      toast('Excel exportado ✓','ok');
-      console.log('[ExportExcel] archivo descargado');
-    }catch(err){
-      console.error('[ExportExcel] error generando archivo:',err);
-      toast('Error al generar Excel: '+(err.message||err),'err');
-    }
-  };
+    const headers=[
+      'Cliente','Sub-cliente','PO','Estado',
+      'Fecha pedido','Fecha entrega','Fecha inicio',
+      'Capacidad (ml)','Piezas','# Colores','Tintas',
+      'Color botella','Color tapa','Color chupón',
+      'Venta total','Margen %','Cobrado','Fecha cobro',
+      'Dirección de envío','Notas / Packaging'
+    ];
+    // Construir filas como arrays de strings/números primitivos
+    const rows=[headers];
+    todos.forEach(p=>{
+      rows.push([
+        safe(p.cliente),
+        safe(p.sub_cliente),
+        safe(p.po),
+        safe(p.estado),
+        fmt(p.fecha_pedido),
+        fmt(p.fecha_entrega),
+        fmt(p.fecha_inicio),
+        safe(p.capacidad),
+        safeNum(p.piezas),
+        safeNum(p.colores),
+        safe(tintasStr(p)),
+        safe(p.color_botella),
+        safe(p.color_tapa),
+        safe(p.color_boquilla),
+        safeNum(p.venta_total),
+        safeNum(p.margen),
+        p.cobrado?'Sí':'No',
+        fmt(p.fecha_cobro),
+        safe(p.direccion_envio),
+        safe(p.notas)
+      ]);
+    });
 
-  // Si XLSX ya está cargado, ejecutar directo
-  if(window.XLSX){
-    console.log('[ExportExcel] XLSX ya disponible');
-    buildAndDownload();
-    return;
+    // Convertir a CSV (Excel abre CSV nativamente — más simple y robusto que xlsx)
+    // BOM UTF-8 al inicio para que Excel reconozca acentos en Mac/Windows
+    const escapeCSV=v=>{
+      const s=String(v==null?'':v);
+      // Si contiene coma, comilla, salto de línea o punto y coma → envolver en comillas
+      if(/[,;"\n\r]/.test(s))return '"'+s.replace(/"/g,'""')+'"';
+      return s;
+    };
+    const csv='\uFEFF'+rows.map(row=>row.map(escapeCSV).join(',')).join('\r\n');
+    console.log('[ExportExcel] CSV generado, bytes:',csv.length,'filas:',rows.length-1);
+
+    // Descargar via Blob
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    const fecha=new Date().toISOString().split('T')[0];
+    a.download='Sharp-Plastics-Pipeline-'+fecha+'.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},100);
+    toast('Archivo descargado ✓ ('+(rows.length-1)+' pedidos)','ok');
+    console.log('[ExportExcel] descarga disparada');
+  }catch(err){
+    console.error('[ExportExcel] error:',err);
+    toast('Error al generar archivo: '+(err.message||err),'err');
   }
-  // Si no, cargarlo
-  console.log('[ExportExcel] cargando SheetJS desde CDN…');
-  const script=document.createElement('script');
-  script.src='https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
-  script.onload=buildAndDownload;
-  script.onerror=function(){
-    console.error('[ExportExcel] no se pudo cargar SheetJS');
-    toast('No se pudo cargar la librería de Excel (¿bloqueado por ad-blocker o firewall?)','err');
-  };
-  document.head.appendChild(script);
 }
 
 async function toggleCobro(id, cobrado){
