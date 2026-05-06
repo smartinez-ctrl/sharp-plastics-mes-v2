@@ -1520,12 +1520,19 @@ function goNuevaOrden(idx){
       if(p.color_tapa&&p.color_tapa.toLowerCase()!=='see mock up'&&p.color_tapa!==p.color_botella)cols.push({nombre:'Tapa: '+p.color_tapa,pantone:p.color_tapa});
       if(cols.length)S.orden.colores=cols;
     }
-    // Si el pedido ya tiene progreso guardado (ajuste o producción), cargarlo
+    // Defensa anti-duplicados: SIEMPRE intentar cargar orden existente al entrar
+    // al pedido, sin importar el estado del pipeline. Si existe una orden vacía
+    // o con datos, la reusamos en lugar de crear una nueva.
     if(p.estado==='En producción'||p.estado==='En produccion'||p.estado==='En ajuste'){
       toast('Cargando orden en proceso...','ok');
       cargarOrdenExistente(p.id);
     } else {
-      setTimeout(()=>enviarEmailInicioOrden(p), 500);
+      // Pipeline en Pendiente: revisar si por alguna razón ya hay orden creada.
+      // Si sí (caso raro: orden creada por error previo), reusar su id para
+      // evitar crear duplicado. Si no, mandar email de inicio normal.
+      cargarOrdenSiExiste(p.id).then(existe=>{
+        if(!existe) setTimeout(()=>enviarEmailInicioOrden(p), 500);
+      });
     }
   }
   showScreen('orden');
@@ -1533,6 +1540,28 @@ function goNuevaOrden(idx){
   renderChips();
   renderColores();
   setTimeout(prefillOrden,50);
+}
+
+// Variante ligera de cargarOrdenExistente: solo setea S.ordenId si ya hay orden
+// para este pipeline. NO restaura state ni navega a otra pantalla. Sirve para
+// evitar crear duplicados al entrar a un pedido en estado Pendiente que ya tenía
+// alguna orden creada por error previo. Devuelve true si encontró orden.
+async function cargarOrdenSiExiste(pipelineId){
+  try{
+    const rows=await sbGet('ordenes_produccion','pipeline_id=eq.'+pipelineId+'&order=created_at.desc&limit=1&select=id,tiempo_ajuste_seg,tiempo_produccion_seg,piezas_buenas');
+    if(rows&&rows[0]&&rows[0].id){
+      S.ordenId=rows[0].id;
+      console.log('[cargarOrdenSiExiste] reusando orden:',S.ordenId);
+      // Si la orden tenía progreso, advertir al usuario
+      const tieneProgreso=(rows[0].tiempo_ajuste_seg||0)>0||(rows[0].tiempo_produccion_seg||0)>0||(rows[0].piezas_buenas||0)>0;
+      if(tieneProgreso) toast('⚠ Esta orden ya tenía progreso guardado','warn');
+      return true;
+    }
+    return false;
+  }catch(e){
+    console.warn('[cargarOrdenSiExiste] falló:',e);
+    return false;
+  }
 }
 
 async function cargarOrdenExistente(pipelineId){
@@ -2715,7 +2744,26 @@ window.addEventListener('beforeunload', function(){
   }catch(e){console.warn('beforeunload save fail:',e);}
 });
 
+// Mutex global para guardarOrden — garantiza que solo UNA llamada esté en
+// vuelo a la vez. Cualquier llamada subsecuente espera a que termine la
+// anterior. Esto elimina la race condition donde 2 autosaves casi-simultáneos
+// pasaban ambos el check de duplicado y ambos hacían POST.
+window._guardarOrdenLock=Promise.resolve();
 async function guardarOrden(estado){
+  // Encadenar al lock anterior — la siguiente llamada solo arranca cuando
+  // la actual termine. Si una falla, el lock se resetea para no bloquear todo.
+  const prev=window._guardarOrdenLock;
+  let resolveActual;
+  window._guardarOrdenLock=new Promise(r=>{resolveActual=r;});
+  try{
+    await prev.catch(()=>{}); // no propagar errores del anterior
+    return await _guardarOrdenInterno(estado);
+  } finally {
+    resolveActual();
+  }
+}
+
+async function _guardarOrdenInterno(estado){
   const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
   const data={
     op:S.orden.op||('OP-'+Date.now()),
@@ -2757,10 +2805,10 @@ async function guardarOrden(estado){
   };
   try{
     let rows;
-    // Defensa contra órdenes duplicadas:
+    // Defensa anti-duplicados con SENTINEL atómico:
     // Si no tenemos S.ordenId pero SÍ hay un pipeline_id, verificar en la base
-    // si ya existe una orden para ese pipeline. Si sí, reutilizar su id (PATCH).
-    // Solo crear nueva si verdaderamente no hay ninguna.
+    // y reservar el id ANTES de hacer cualquier mutación. Esto + el mutex global
+    // garantiza que jamás se cree una orden duplicada para el mismo pipeline_id.
     if(!S.ordenId && S.pipelineId){
       try{
         const existentes=await sbGet('ordenes_produccion','pipeline_id=eq.'+S.pipelineId+'&order=created_at.desc&limit=1&select=id');
