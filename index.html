@@ -932,7 +932,7 @@ async function renderDashboard(){
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)"><div style="font-size:20px;margin-bottom:8px">⏳</div>Cargando...</div>';
   try{
     const rows=await sbGet('pipeline_mf','order=orden_posicion.asc,created_at.asc');
-    const activos=rows.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
+    const activos=rows.filter(p=>p.estado==='Pendiente'||p.estado==='En ajuste'||p.estado==='En producción');
     const completados=rows.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&!p.oculto);
     window._dashRows=activos;
     const esOperador=S.user&&S.user.role==='operador';
