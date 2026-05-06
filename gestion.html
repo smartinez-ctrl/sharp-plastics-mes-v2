@@ -764,7 +764,14 @@ async function enviarReporteCompleto(pipelineId, btn){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({pipeline_id:pipelineId})
     });
-    const data=await r.json();
+    // Leer como texto primero — si Vercel devolvió HTML de error, evitar parsear como JSON
+    const txt=await r.text();
+    let data=null;
+    try{data=JSON.parse(txt);}catch(e){
+      console.error('Respuesta no-JSON del endpoint:',txt.substring(0,300));
+      toast('Error '+r.status+': el server respondió HTML. Revisa logs en Vercel.','err');
+      return;
+    }
     if(!r.ok){
       console.error('send-cierre-completo error:',data);
       toast('Error: '+(data.error||r.status),'err');
@@ -1013,6 +1020,7 @@ function renderPipeline(){
         <button class="btn btn-ghost btn-xs" title="PDF cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
         <button class="btn btn-ghost btn-xs" title="PDF interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
         <button class="btn btn-ghost btn-xs" title="Ver producción" onclick="verReportesProduccion('${p.id}')">🔍</button>
+        <button class="btn btn-ghost btn-xs" title="Enviar reporte completo por email" onclick="enviarReporteCompleto('${p.id}',this)">📧</button>
         <button class="btn btn-ghost btn-xs" title="Ocultar pedido" onclick="ocultarPedido('${p.id}',true)" style="opacity:0.6">🙈</button>
         ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
       </div>

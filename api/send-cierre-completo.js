@@ -8,7 +8,7 @@ import {
   pdfInternoCotizador,
   pdfClienteCierre,
   pdfInternoCierre,
-} from './_lib/pdf-generadores.js';
+} from './lib/pdf-generadores.js';
 
 const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
 const SB_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
@@ -17,10 +17,14 @@ const SB_H = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY };
 const DESTINATARIOS = ['smartinez@sharpplastics.com', 'compras@sharpplastics.com'];
 
 // Descarga un archivo desde una URL pública y lo devuelve como base64
-async function descargarComoBase64(url, maxBytes = 15 * 1024 * 1024) {
-  if (!url) return null;
+// Timeout de 5s por archivo para no exceder el límite de Vercel (10s total)
+async function descargarComoBase64(url, maxBytes = 15 * 1024 * 1024, timeoutMs = 5000) {
+  if (!url || typeof url !== 'string') return null;
   try {
-    const r = await fetch(url);
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), timeoutMs);
+    const r = await fetch(url, { signal: controller.signal });
+    clearTimeout(tid);
     if (!r.ok) {
       console.warn('descargarComoBase64: HTTP', r.status, 'para', url);
       return null;
@@ -38,12 +42,16 @@ async function descargarComoBase64(url, maxBytes = 15 * 1024 * 1024) {
 }
 
 function inferFilename(url, fallback) {
-  if (!url) return fallback;
+  if (!url || typeof url !== 'string') return fallback;
   try {
     const u = new URL(url);
     const last = (u.pathname.split('/').pop() || '').split('?')[0];
-    if (last && /\.(pdf|jpg|jpeg|png)$/i.test(last)) return decodeURIComponent(last);
-  } catch (e) {}
+    if (last && /\.(pdf|jpg|jpeg|png)$/i.test(last)) {
+      try { return decodeURIComponent(last); } catch (e) { return last; }
+    }
+  } catch (e) {
+    // URL malformada, usar fallback
+  }
   return fallback;
 }
 
