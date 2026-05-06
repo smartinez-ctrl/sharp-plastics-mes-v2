@@ -290,7 +290,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 <div class="screen" id="screen-orden">
   <div class="topbar">
     <div class="topbar-left">
-      <button class="back-btn" onclick="showScreen('dashboard');renderDashboard()">←</button>
+      <button class="back-btn" onclick="salirGuardando()">←</button>
       <div class="logo">MES <span>//</span> Nueva orden</div>
       <div class="steps" id="steps-orden"></div>
     </div>
@@ -1557,6 +1557,14 @@ async function cargarOrdenExistente(pipelineId){
     S.qa=o.qa_resultados||{};
     // Restaurar consumo real tintas
     S.consumoReal=o.consumo_real_tintas||[];
+    // Restaurar fórmula de tintas con todos los cambios capturados (precios, %, etc.)
+    if(Array.isArray(o.tintas)&&o.tintas.length){
+      S.tintas=o.tintas;
+      console.log('[DIAG cargarOrden] tintas restauradas:',o.tintas.length,'colores');
+    }
+    // Restaurar ajustadores/operadores
+    if(Array.isArray(o.ajustadores))S.orden.ajustadores=o.ajustadores;
+    if(Array.isArray(o.operadores))S.orden.operadores=o.operadores;
     // Restaurar reajustes
     S.reajustes=o.reajustes||0;
     // Restaurar fotos del pedido
@@ -2592,30 +2600,34 @@ function goReajuste(){S.reajustes++;toast('Desajuste registrado #'+S.reajustes);
 // ══════════════════════════════════════════════════════
 // CIERRE
 // ══════════════════════════════════════════════════════
-function pausarYSalir(){
+async function pausarYSalir(){
   // Pausar todos los timers activos
   ['prod','ajuste','global'].forEach(function(name){
     const t=S.timers[name];
     if(t.running){
       t.s=Math.floor((Date.now()-t.startTs)/1000);
+      t.total=t.s;
       t.running=false;
       clearInterval(t.iv);
     }
   });
-  // Guardar estado pausado en Supabase
-  if(S.ordenId){
-    const tiempoSegundos=S.timers.prod.s||0;
-    const body={
-      estado:'En producción',
-      tiempo_pausado:tiempoSegundos,
-      pausado_por:S.user?.nombre||null,
-      pausado_at:new Date().toISOString()
-    };
-    fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.ordenId,{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
-      body:JSON.stringify(body)
-    }).catch(function(e){console.error('Error guardando pausa:',e);});
+  // Guardar TODO el estado actual (no solo 4 campos como antes)
+  // — incluye merma capturada, fórmula, fotos, parámetros DOM, etc. —
+  if(S.pipelineId){
+    try{
+      // Determinar estado: si ya hay tiempo de producción, sigue 'En producción'
+      const estadoFlow=(S.timers.prod.total||S.timers.prod.s)>0?'produccion':'ajuste';
+      await guardarOrden(estadoFlow);
+      // Y luego marcar info de pausa
+      if(S.ordenId){
+        const tiempoSegundos=S.timers.prod.s||0;
+        await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.ordenId,{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
+          body:JSON.stringify({tiempo_pausado:tiempoSegundos,pausado_por:S.user?.nombre||null,pausado_at:new Date().toISOString()})
+        });
+      }
+    }catch(e){console.error('Error guardando pausa:',e);}
   }
   toast('Producción pausada — tiempo guardado');
   setTimeout(function(){
@@ -2623,6 +2635,28 @@ function pausarYSalir(){
     showScreen('dashboard');
     renderDashboard();
   },1000);
+}
+
+// Salir del flow guardando antes — usar en lugar de showScreen('dashboard') directo
+async function salirGuardando(){
+  // Si estamos en un pedido activo, guardar antes de salir
+  if(S.pipelineId&&S.ordenId){
+    try{
+      // Capturar tiempo actual de timers running antes de pausar
+      ['prod','ajuste'].forEach(function(name){
+        const t=S.timers[name];
+        if(t.running){
+          t.s=Math.floor((Date.now()-t.startTs)/1000);
+          t.total=t.s;
+        }
+      });
+      const estadoFlow=(S.timers.prod.total||S.timers.prod.s)>0?'produccion':'ajuste';
+      await guardarOrden(estadoFlow);
+      console.log('[salirGuardando] estado guardado antes de salir');
+    }catch(e){console.warn('[salirGuardando] error guardando:',e);}
+  }
+  showScreen('dashboard');
+  renderDashboard();
 }
 
 // Autosave global — guarda cada 10s mientras el usuario esté en cualquier pantalla
@@ -2643,6 +2677,43 @@ function iniciarAutosaveGlobal(){
     if(S.pipelineId){guardarOrden(estado).catch(e=>console.warn('Autosave falló:',e));}
   },10000);
 }
+
+// Red de seguridad final: guardar usando sendBeacon antes de cerrar pestaña/navegador.
+// Es la única forma de mandar datos a la API durante el cierre — un fetch normal
+// puede ser cancelado, sendBeacon garantiza envío fire-and-forget.
+window.addEventListener('beforeunload', function(){
+  if(!S.pipelineId||!S.ordenId)return;
+  try{
+    // Capturar tiempo actual de timers running
+    ['prod','ajuste'].forEach(function(name){
+      const t=S.timers[name];
+      if(t.running)t.total=Math.floor((Date.now()-t.startTs)/1000);
+    });
+    // Construir payload mínimo crítico (timers + merma + tintas + fotos + parámetros DOM)
+    const payload={
+      tiempo_ajuste_seg:S.timers.ajuste.total||S.timers.ajuste.s||0,
+      tiempo_produccion_seg:S.timers.prod.total||S.timers.prod.s||0,
+      piezas_buenas:parseInt(document.getElementById('buenas-input')?.value)||0,
+      merma_ajuste:S.merma.ajuste||{},
+      merma_produccion:S.merma.prod||{},
+      tintas:S.tintas||[],
+      consumo_real_tintas:S.consumoReal||[],
+      qa_resultados:S.qa||{},
+      reajustes:S.reajustes||0,
+      tm_ajuste:S.tm.ajuste||{},
+      tm_produccion:S.tm.prod||{},
+      ajustadores:S.orden.ajustadores||[],
+      operadores:S.orden.operadores||[],
+      foto_urls:(S.fotos||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
+    };
+    const url=SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.ordenId;
+    const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+    // sendBeacon no soporta headers custom, así que añadimos query params para auth
+    // Como Supabase requiere apikey en headers, usamos fetch con keepalive como fallback
+    const headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'};
+    fetch(url,{method:'PATCH',headers:headers,body:JSON.stringify(payload),keepalive:true}).catch(()=>{});
+  }catch(e){console.warn('beforeunload save fail:',e);}
+});
 
 async function guardarOrden(estado){
   const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
@@ -2686,12 +2757,26 @@ async function guardarOrden(estado){
   };
   try{
     let rows;
+    // Defensa contra órdenes duplicadas:
+    // Si no tenemos S.ordenId pero SÍ hay un pipeline_id, verificar en la base
+    // si ya existe una orden para ese pipeline. Si sí, reutilizar su id (PATCH).
+    // Solo crear nueva si verdaderamente no hay ninguna.
+    if(!S.ordenId && S.pipelineId){
+      try{
+        const existentes=await sbGet('ordenes_produccion','pipeline_id=eq.'+S.pipelineId+'&order=created_at.desc&limit=1&select=id');
+        if(existentes&&existentes[0]&&existentes[0].id){
+          S.ordenId=existentes[0].id;
+          console.log('[guardarOrden] Reusando orden existente para pipeline:',S.ordenId);
+        }
+      }catch(e){console.warn('[guardarOrden] check duplicado falló:',e);}
+    }
     if(S.ordenId){
       await sbPatch('ordenes_produccion',data,'id=eq.'+S.ordenId);
       rows=[{id:S.ordenId}];
     } else {
       rows=await sbPost('ordenes_produccion',data);
       if(rows&&rows[0]&&rows[0].id)S.ordenId=rows[0].id;
+      console.log('[guardarOrden] Nueva orden creada:',S.ordenId);
     }
     toast('Guardado ✓');
   }catch(e){
