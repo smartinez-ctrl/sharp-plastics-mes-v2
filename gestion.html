@@ -206,7 +206,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="card-title" style="margin:0">Activos</div>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-secondary btn-xs" onclick="exportarPipelineExcel()" title="Exportar pipeline a CSV (se abre en Excel)">📊 Exportar a Excel</button>
+        <button class="btn btn-secondary btn-xs" onclick="exportarPipelineExcel()" title="Exportar pipeline a Excel (.xls)">📊 Exportar a Excel</button>
         <button class="btn btn-ghost btn-xs" onclick="resetPipelineColumns()" title="Restablecer ancho y orden de columnas">↺ Restablecer columnas</button>
       </div>
     </div>
@@ -2010,14 +2010,12 @@ function exportarCobrosExcel(){
 function exportarPipelineExcel(){
   console.log('[ExportExcel] click recibido, PIPELINE.length=',PIPELINE&&PIPELINE.length);
   if(!PIPELINE||!PIPELINE.length){toast('Pipeline vacío','err');return;}
-  // Ordenar por orden_posicion (mismo orden que se ve en el pipe)
   const todos=[...PIPELINE].sort((a,b)=>{
     if(a.orden_posicion!==b.orden_posicion)return (a.orden_posicion||999)-(b.orden_posicion||999);
     return new Date(a.created_at||0)-new Date(b.created_at||0);
   });
   try{
     const fmt=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-MX'):'';
-    // Sanitizador robusto a string
     const safe=v=>{
       if(v===null||v===undefined)return '';
       if(typeof v==='string')return v;
@@ -2062,51 +2060,82 @@ function exportarPipelineExcel(){
       'Venta total','Margen %','Cobrado','Fecha cobro',
       'Dirección de envío','Notas / Packaging'
     ];
-    // Construir filas como arrays de strings/números primitivos
-    const rows=[headers];
+
+    // Construir filas como [valor, tipo] para SpreadsheetML
+    // tipo: 'String' para texto, 'Number' para números
+    const rows=[];
+    rows.push(headers.map(h=>[h,'String']));
     todos.forEach(p=>{
       rows.push([
-        safe(p.cliente),
-        safe(p.sub_cliente),
-        safe(p.po),
-        safe(p.estado),
-        fmt(p.fecha_pedido),
-        fmt(p.fecha_entrega),
-        fmt(p.fecha_inicio),
-        safe(p.capacidad),
-        safeNum(p.piezas),
-        safeNum(p.colores),
-        safe(tintasStr(p)),
-        safe(p.color_botella),
-        safe(p.color_tapa),
-        safe(p.color_boquilla),
-        safeNum(p.venta_total),
-        safeNum(p.margen),
-        p.cobrado?'Sí':'No',
-        fmt(p.fecha_cobro),
-        safe(p.direccion_envio),
-        safe(p.notas)
+        [safe(p.cliente),'String'],
+        [safe(p.sub_cliente),'String'],
+        [safe(p.po),'String'],
+        [safe(p.estado),'String'],
+        [fmt(p.fecha_pedido),'String'],
+        [fmt(p.fecha_entrega),'String'],
+        [fmt(p.fecha_inicio),'String'],
+        [safe(p.capacidad),'String'],
+        [safeNum(p.piezas),'Number'],
+        [safeNum(p.colores),'Number'],
+        [safe(tintasStr(p)),'String'],
+        [safe(p.color_botella),'String'],
+        [safe(p.color_tapa),'String'],
+        [safe(p.color_boquilla),'String'],
+        [safeNum(p.venta_total),'Number'],
+        [safeNum(p.margen),'Number'],
+        [p.cobrado?'Sí':'No','String'],
+        [fmt(p.fecha_cobro),'String'],
+        [safe(p.direccion_envio),'String'],
+        [safe(p.notas),'String']
       ]);
     });
 
-    // Convertir a CSV (Excel abre CSV nativamente — más simple y robusto que xlsx)
-    // BOM UTF-8 al inicio para que Excel reconozca acentos en Mac/Windows
-    const escapeCSV=v=>{
-      const s=String(v==null?'':v);
-      // Si contiene coma, comilla, salto de línea o punto y coma → envolver en comillas
-      if(/[,;"\n\r]/.test(s))return '"'+s.replace(/"/g,'""')+'"';
-      return s;
-    };
-    const csv='\uFEFF'+rows.map(row=>row.map(escapeCSV).join(',')).join('\r\n');
-    console.log('[ExportExcel] CSV generado, bytes:',csv.length,'filas:',rows.length-1);
+    // Escapar XML
+    const xmlEsc=s=>String(s==null?'':s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&apos;');
 
-    // Descargar via Blob
-    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    // Anchos de columna (en puntos, ~7px = 1pt)
+    const colWidths=[110,160,90,90,75,75,75,65,55,55,250,90,90,90,85,55,55,75,220,250];
+    const colsXml=colWidths.map(w=>`<Column ss:Width="${w}"/>`).join('');
+
+    // Cells: el header en bold, números con formato
+    const rowsXml=rows.map((row,ri)=>{
+      const cells=row.map(([val,tipo])=>{
+        const styleId=ri===0?' ss:StyleID="header"':(tipo==='Number'?' ss:StyleID="num"':'');
+        return `<Cell${styleId}><Data ss:Type="${tipo}">${xmlEsc(val)}</Data></Cell>`;
+      }).join('');
+      return `<Row>${cells}</Row>`;
+    }).join('\n');
+
+    const xml='<?xml version="1.0" encoding="UTF-8"?>\n'+
+      '<?mso-application progid="Excel.Sheet"?>\n'+
+      '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" '+
+      'xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n'+
+      '<Styles>\n'+
+      ' <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#FFE082" ss:Pattern="Solid"/><Alignment ss:Vertical="Center"/></Style>\n'+
+      ' <Style ss:ID="num"><NumberFormat ss:Format="#,##0.00"/></Style>\n'+
+      '</Styles>\n'+
+      '<Worksheet ss:Name="Pipeline">\n'+
+      ` <Table>${colsXml}\n${rowsXml}\n </Table>\n`+
+      ' <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n'+
+      '  <FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal>\n'+
+      '  <TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane>\n'+
+      ' </WorksheetOptions>\n'+
+      '</Worksheet>\n'+
+      '</Workbook>';
+
+    console.log('[ExportExcel] XML generado, bytes:',xml.length,'filas:',rows.length-1);
+
+    const blob=new Blob([xml],{type:'application/vnd.ms-excel;charset=utf-8;'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url;
     const fecha=new Date().toISOString().split('T')[0];
-    a.download='Sharp-Plastics-Pipeline-'+fecha+'.csv';
+    a.download='Sharp-Plastics-Pipeline-'+fecha+'.xls';
     document.body.appendChild(a);
     a.click();
     setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},100);
