@@ -2770,19 +2770,50 @@ async function guardarOrden(estado){
         }
       }catch(e){console.warn('[guardarOrden] check duplicado falló:',e);}
     }
+
+    // Helper: intenta el PATCH/POST; si falla por PGRST204 (columna inexistente),
+    // identifica la columna del mensaje, la retira del payload y reintenta hasta 5 veces.
+    async function intentarConRetry(metodo, payload){
+      let intentos=0;
+      let pl={...payload};
+      while(intentos<6){
+        try{
+          if(metodo==='PATCH'){
+            await sbPatch('ordenes_produccion',pl,'id=eq.'+S.ordenId);
+            return [{id:S.ordenId}];
+          }else{
+            return await sbPost('ordenes_produccion',pl);
+          }
+        }catch(e){
+          const txt=(e&&e.message)||'';
+          // PGRST204: 'Could not find the X column of Y in the schema cache'
+          // Capturamos el nombre de columna entre comillas simples
+          const m=txt.match(/PGRST204[\s\S]*?'([^']+)'/) || txt.match(/Could not find the '([^']+)' column/);
+          if(m && m[1] && pl.hasOwnProperty(m[1])){
+            console.warn('[guardarOrden] columna inexistente, retirando:',m[1]);
+            delete pl[m[1]];
+            intentos++;
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw new Error('Demasiados retries de guardarOrden');
+    }
+
     if(S.ordenId){
-      await sbPatch('ordenes_produccion',data,'id=eq.'+S.ordenId);
-      rows=[{id:S.ordenId}];
+      rows=await intentarConRetry('PATCH',data);
     } else {
-      rows=await sbPost('ordenes_produccion',data);
+      rows=await intentarConRetry('POST',data);
       if(rows&&rows[0]&&rows[0].id)S.ordenId=rows[0].id;
       console.log('[guardarOrden] Nueva orden creada:',S.ordenId);
     }
     toast('Guardado ✓');
   }catch(e){
-    console.error('Save error:',e);
-    const msg=e.message||'';
-    toast('Error al guardar: '+msg.slice(0,50));
+    console.error('[guardarOrden] Save error completo:',e);
+    const msg=(e&&e.message)||String(e);
+    // Mostrar más caracteres del error para diagnóstico
+    toast('Error al guardar: '+msg.slice(0,180),'err');
   }
 }
 
