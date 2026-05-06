@@ -18,6 +18,9 @@
     "api/send-cierre.js": {
       "maxDuration": 15
     },
+    "api/send-cierre-completo.js": {
+      "maxDuration": 60
+    },
     "api/monitor.js": {
       "maxDuration": 10
     },

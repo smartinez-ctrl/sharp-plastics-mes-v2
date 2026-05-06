@@ -505,23 +505,30 @@ export default async function handler(req, res) {
   const { pipeline_id } = req.body || {};
   if (!pipeline_id) return res.status(400).json({ error: 'Falta pipeline_id' });
 
+  // Tracker de pasos — si algo truena, devuelve dónde estaba
+  const debug = { step: 'inicio', pipeline_id };
+
   try {
-    // 1) Cargar pedido
+    debug.step = '1-fetch-pipeline';
     const pipeRes = await fetch(`${SB_URL}/rest/v1/pipeline_mf?id=eq.${pipeline_id}&select=*`, { headers: SB_H });
     if (!pipeRes.ok) throw new Error('Error consultando pipeline_mf: ' + pipeRes.status);
     const piperows = await pipeRes.json();
     if (!piperows || !piperows[0]) return res.status(404).json({ error: 'Pedido no encontrado' });
     const pedido = piperows[0];
+    debug.cliente = pedido.cliente;
+    debug.po = pedido.po;
 
     // 2) Cargar orden de producción más reciente (si existe)
+    debug.step = '2-fetch-orden';
     let orden = null;
     const ordRes = await fetch(`${SB_URL}/rest/v1/ordenes_produccion?pipeline_id=eq.${pipeline_id}&order=created_at.desc&limit=1&select=*`, { headers: SB_H });
     if (ordRes.ok) {
       const rows = await ordRes.json();
       orden = rows && rows[0] ? rows[0] : null;
     }
+    debug.tieneOrden = !!orden;
 
-    // 3) Cargar tarifas para PDF interno cotizador
+    debug.step = '3-fetch-tarifas';
     let tarifas = {};
     const tfRes = await fetch(`${SB_URL}/rest/v1/tarifas_fijas?select=*`, { headers: SB_H });
     if (tfRes.ok) {
@@ -529,14 +536,22 @@ export default async function handler(req, res) {
       tfRows.forEach(t => { tarifas[t.clave] = parseFloat(t.valor) || 0; });
     }
 
-    // 4) Generar los 4 PDFs (server-side)
-    console.log('[send-cierre-completo] generando PDFs para', pipeline_id);
+    debug.step = '4a-pdf-cliente-cotizador';
+    console.log('[send-cierre-completo] generando PDF 1...');
     const pdf1 = pdfClienteCotizador(pedido);
+    debug.step = '4b-pdf-interno-cotizador';
+    console.log('[send-cierre-completo] generando PDF 2...');
     const pdf2 = pdfInternoCotizador(pedido, tarifas);
+    debug.step = '4c-pdf-cliente-cierre';
+    console.log('[send-cierre-completo] generando PDF 3...');
     const pdf3 = pdfClienteCierre(pedido, orden);
+    debug.step = '4d-pdf-interno-cierre';
+    console.log('[send-cierre-completo] generando PDF 4...');
     const pdf4 = pdfInternoCierre(pedido, orden);
-    console.log('[send-cierre-completo] PDFs OK');
+    debug.step = '4-pdfs-ok';
+    console.log('[send-cierre-completo] 4 PDFs OK');
 
+    debug.step = '5-descargar-archivos-cliente';
     // 5) Descargar PO y diseño si existen
     const baseFilename = (pedido.po || pedido.id.slice(0, 8)).replace(/[^a-zA-Z0-9_-]/g, '_');
     const adjuntos = [
@@ -633,6 +648,7 @@ export default async function handler(req, res) {
 </div>
 </body></html>`;
 
+    debug.step = '7-enviar-resend';
     // 7) Mandar email
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -655,7 +671,13 @@ export default async function handler(req, res) {
     console.log('[send-cierre-completo] OK enviado a', DESTINATARIOS.join(', '));
     return res.status(200).json({ ok: true, attachments: adjuntos.length, links: linksRespaldo.length });
   } catch (e) {
-    console.error('[send-cierre-completo] error:', e);
-    return res.status(500).json({ error: e.message || String(e) });
+    console.error('[send-cierre-completo] error en step', debug.step, ':', e);
+    console.error('[send-cierre-completo] stack:', e && e.stack);
+    return res.status(500).json({
+      error: e.message || String(e),
+      step: debug.step,
+      debug,
+      stack: e && e.stack ? e.stack.split('\n').slice(0, 5).join(' | ') : null,
+    });
   }
 }

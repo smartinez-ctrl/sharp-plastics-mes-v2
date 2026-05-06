@@ -774,7 +774,8 @@ async function enviarReporteCompleto(pipelineId, btn){
     }
     if(!r.ok){
       console.error('send-cierre-completo error:',data);
-      toast('Error: '+(data.error||r.status),'err');
+      const msg=data.step?`Error en ${data.step}: ${data.error}`:('Error: '+(data.error||r.status));
+      toast(msg,'err');
     }else{
       toast(`Reporte enviado ✓ (${data.attachments} adjuntos)`,'ok');
     }
