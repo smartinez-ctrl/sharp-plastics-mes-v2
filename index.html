@@ -791,7 +791,28 @@ function abrirPdfDiseno(){
   window.open(url,'_blank');
 }
 
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='dashboard')renderDashboard();}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='dashboard')renderDashboard();if(id==='fotos')pintarFotosEnSlots();}
+
+// Re-pinta los slots de la pantalla de fotos a partir de S.fotos.
+// Se llama desde cargarOrdenExistente Y desde showScreen('fotos').
+// Es importante porque al regresar a la pantalla de fotos desde producción,
+// los slots tienen el HTML estático vacío y necesitan re-poblarse.
+function pintarFotosEnSlots(){
+  if(!Array.isArray(S.fotos))return;
+  S.fotos.forEach((url,i)=>{
+    const slot=document.getElementById('foto-'+i);
+    if(!slot)return;
+    if(url){
+      slot.className='foto-slot taken';
+      slot.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">';
+    } else {
+      // Si no hay URL, restaurar el HTML estático (icono cámara + label)
+      const labels=['Frente','Reverso','Lado izquierdo','Lado derecho'];
+      slot.className='foto-slot';
+      slot.innerHTML='<div class="foto-icon">📷</div><div class="foto-label">'+(labels[i]||'')+'</div>';
+    }
+  });
+}
 function dismissKeyboard(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();}
 function renderSteps(elId,current){const el=document.getElementById(elId);if(!el)return;const cur=STEPS.indexOf(current);el.innerHTML=STEPS.map((s,i)=>`<div class="step-dot ${i<cur?'done':i===cur?'active':''}"></div>`).join('');}
 function updateOrderStrip(){const el=document.getElementById('strip-nombre-ajuste');if(el)el.textContent=(S.orden.cliente?S.orden.cliente+' · ':'')+S.orden.op+' · '+(S.orden.pzas||0).toLocaleString()+' pzas';}
@@ -1601,14 +1622,10 @@ async function cargarOrdenExistente(pipelineId){
       S.fotos=[null,null,null,null];
       o.foto_urls.forEach((url,i)=>{if(url&&i<4)S.fotos[i]=url;});
       console.log('[DIAG cargarOrden] fotos restauradas:',S.fotos.filter(Boolean).length,'de 4');
-      // Re-pintar slots después de que el DOM esté listo
-      setTimeout(()=>{
-        S.fotos.forEach((url,i)=>{
-          if(!url)return;
-          const slot=document.getElementById('foto-'+i);
-          if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">';}
-        });
-      },500);
+      // Re-pintar slots después de que el DOM esté listo (por si la pantalla
+      // de fotos ya está activa). Si no está activa, showScreen('fotos') las
+      // re-pintará cuando el operador navegue ahí.
+      setTimeout(pintarFotosEnSlots,500);
     }
     // Restaurar parámetros en DOM
     const setInput=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
