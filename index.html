@@ -1982,21 +1982,24 @@ function goAjuste(){
   // al volver el código carga la orden existente desde Supabase.
   if(S.pipelineId&&!window._ajusteIniciado){
     window._ajusteIniciado=true;
+    // Hacer las dos cosas independientemente — si una falla, la otra sigue.
+    // Patch del estado del pedido en pipeline_mf
     sbPatch('pipeline_mf',{estado:'En ajuste'},'id=eq.'+S.pipelineId)
-      .then(()=>{
-        console.log('[DIAG goAjuste] pedido marcado En ajuste:',S.pipelineId);
-        // Crear registro inicial en ordenes_produccion para tener S.ordenId
-        return guardarOrden('ajuste');
-      })
+      .then(()=>console.log('[DIAG goAjuste] pedido marcado En ajuste:',S.pipelineId))
+      .catch(e=>{
+        console.error('[DIAG goAjuste] sbPatch estado FALLÓ:',e&&e.message?e.message:e);
+        toast('Error al marcar estado: '+(e.message||e).toString().substring(0,80),'err');
+      });
+    // Crear registro inicial en ordenes_produccion (independiente del patch anterior)
+    guardarOrden('ajuste')
       .then(()=>{
         console.log('[DIAG goAjuste] orden guardada, S.ordenId=',S.ordenId);
-        // Iniciar autosave global desde ahora
         iniciarAutosaveGlobal();
       })
       .catch(e=>{
-        console.error('[DIAG goAjuste] Error marcando En ajuste:',e);
-        window._ajusteIniciado=false; // permitir reintento
-        toast('No se pudo guardar estado del pedido','err');
+        console.error('[DIAG goAjuste] guardarOrden FALLÓ:',e&&e.message?e.message:e);
+        toast('Error al guardar orden: '+(e.message||e).toString().substring(0,80),'err');
+        window._ajusteIniciado=false;
       });
   }
 }
