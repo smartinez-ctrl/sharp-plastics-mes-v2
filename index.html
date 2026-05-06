@@ -2707,6 +2707,17 @@ async function finalizarYCerrar(){
     },'id=eq.'+S.pipelineId);
   }
   await enviarEmailCierre();
+  // Adicional: mandar reporte completo con los 4 PDFs + PO + diseño adjuntos
+  if(S.pipelineId){
+    fetch('/api/send-cierre-completo',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pipeline_id:S.pipelineId})
+    }).then(r=>r.json()).then(d=>{
+      if(d&&d.ok)console.log('[cierre] reporte completo enviado:',d.attachments,'adjuntos');
+      else console.warn('[cierre] reporte completo falló:',d);
+    }).catch(e=>console.warn('[cierre] reporte completo error:',e));
+  }
   if(btn){btn.disabled=false;btn.textContent='✅ Guardado';}
   toast('Orden finalizada ✓','ok');
   setTimeout(()=>{showScreen('dashboard');renderDashboard();},1500);
