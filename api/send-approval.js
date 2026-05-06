@@ -11,12 +11,17 @@ export default async function handler(req, res) {
 
   console.log('send-approval: orden_id=', orden_id, 'foto_urls:', foto_urls.length, foto_urls.map(u => u ? 'OK' : 'null'));
 
-  // Token de aprobación
+  // Token de aprobación + guardar foto_urls en la orden para que se conserven al recargar
   const token = Buffer.from(`${orden_id}:${Date.now()}:approve`).toString('base64url');
   await fetch(`${SB_URL}/rest/v1/ordenes_produccion?id=eq.${orden_id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` },
-    body: JSON.stringify({ aprobacion_token: token, aprobacion_estado: 'pendiente', aprobacion_enviada_at: new Date().toISOString() }),
+    body: JSON.stringify({
+      aprobacion_token: token,
+      aprobacion_estado: 'pendiente',
+      aprobacion_enviada_at: new Date().toISOString(),
+      foto_urls: foto_urls.filter(u => u && typeof u === 'string' && u.startsWith('http')), // solo URLs válidas (no dataURLs base64)
+    }),
   });
 
   const approveUrl = `${BASE_URL}/api/approve-order?token=${token}&id=${orden_id}`;

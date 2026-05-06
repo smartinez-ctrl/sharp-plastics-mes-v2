@@ -1602,6 +1602,11 @@ async function cargarOrdenExistente(pipelineId){
       window._ajusteIniciado=true;
       window._monitorEmailEnviado=true; // no re-enviar email
       iniciarAutosaveGlobal();
+      // CRÍTICO: si el pipeline aún está como 'En ajuste' o 'Pendiente', moverlo
+      // a 'En producción' para que aparezca el botón LIVE en el dashboard y gestión
+      sbPatch('pipeline_mf',{estado:'En producción'},'id=eq.'+pipelineId)
+        .then(()=>console.log('[DIAG cargarOrden] pipeline marcado En producción'))
+        .catch(e=>console.warn('[DIAG cargarOrden] no se pudo actualizar estado:',e));
       setTimeout(()=>{
         S.timers.prod.s = o.tiempo_produccion_seg||0;
         S.timers.prod.total = o.tiempo_produccion_seg||0;
@@ -2427,7 +2432,13 @@ async function enviarAprobacion(){
         headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true'},
         body: blob,
       });
-      if(upRes.ok) fotoUrls[i] = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
+      if(upRes.ok) {
+        fotoUrls[i] = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
+        // CRÍTICO: actualizar S.fotos con la URL de Storage (antes era dataURL base64).
+        // Así si el operador cierra la pestaña, al volver el cargarOrdenExistente
+        // encuentra URLs válidas en o.foto_urls y las restaura correctamente.
+        S.fotos[i] = fotoUrls[i];
+      }
     }
     const pct = Math.round(((i+1)/4)*80);
     if(uploadBar) uploadBar.style.width=pct+'%';
@@ -2670,6 +2681,8 @@ async function guardarOrden(estado){
     pipeline_id:S.pipelineId||null,
     tm_ajuste:S.tm.ajuste||{},
     tm_produccion:S.tm.prod||{},
+    // Solo persistir URLs HTTP de Storage (no dataURLs base64 que ocuparían MB en DB)
+    foto_urls:(S.fotos||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
   };
   try{
     let rows;
