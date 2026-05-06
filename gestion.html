@@ -453,7 +453,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
           <button class="btn btn-ghost btn-sm" id="btn-ver-po" type="button" style="display:none" onclick="window.open(document.getElementById('mp-pdf-po').value,'_blank')">👁 Ver</button>
         </div>
       </div>
-      <div class="field"><label>Estado</label><select id="mp-estado"><option value="Pendiente">Pendiente</option><option value="En producción">En producción</option><option value="Completado">Completado</option><option value="Entregado">Entregado</option><option value="Cancelado">Cancelado</option></select></div>
+      <div class="field"><label>Estado</label><select id="mp-estado"><option value="Pendiente">Pendiente</option><option value="En ajuste">En ajuste</option><option value="En producción">En producción</option><option value="Completado">Completado</option><option value="Entregado">Entregado</option><option value="Cancelado">Cancelado</option></select></div>
     </div>
     <div id="mp-cotizacion-resumen" style="display:none;margin-bottom:14px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
@@ -556,7 +556,7 @@ function switchCatTab(id,el){
   loadCatalogTab(id);
 }
 
-const BADGE_MAP={'Pendiente':'badge-amber','En producción':'badge-blue','Completado':'badge-green','Entregado':'badge-green','Cancelado':'badge-red'};
+const BADGE_MAP={'Pendiente':'badge-amber','En ajuste':'badge-amber','En producción':'badge-blue','Completado':'badge-green','Entregado':'badge-green','Cancelado':'badge-red'};
 let CAT={tintas:[],aditivos:[],clientes:[],tarifas_mdo:[],precios_venta:[],tarifas_fijas:{}};
 let PIPELINE=[];
 let COT_COLORES=[];
@@ -639,7 +639,7 @@ function initPipelineDrag(){
       });
       const tgtId=card.dataset.id;
       if(!_dragSrcId||tgtId===_dragSrcId){_dragSrcId=null;return;}
-      const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
+      const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En ajuste'||p.estado==='En producción');
       const srcIdx=activos.findIndex(p=>p.id===_dragSrcId);
       const tgtIdx=activos.findIndex(p=>p.id===tgtId);
       if(srcIdx<0||tgtIdx<0){_dragSrcId=null;return;}
@@ -652,7 +652,7 @@ function initPipelineDrag(){
       });
       _dragSrcId=null;
       // Reconstruir PIPELINE con el nuevo orden de activos
-      const noActivos=PIPELINE.filter(p=>p.estado!=='Pendiente'&&p.estado!=='En producción');
+      const noActivos=PIPELINE.filter(p=>p.estado!=='Pendiente'&&p.estado!=='En ajuste'&&p.estado!=='En producción');
       PIPELINE.length=0;
       activos.forEach(p=>PIPELINE.push(p));
       noActivos.forEach(p=>PIPELINE.push(p));
@@ -877,7 +877,7 @@ function renderPipeline(){
     const bv=col==='cliente'?(b.sub_cliente||b.cliente||''):(b[col]||'');
     const res=typeof av==='number'?av-bv:String(av).localeCompare(String(bv));
     return asc?res:-res;
-  };  let activos=PIPELINE.filter(p=>(p.estado==='Pendiente'||p.estado==='En producción')&&matchQ(p));
+  };  let activos=PIPELINE.filter(p=>(p.estado==='Pendiente'||p.estado==='En ajuste'||p.estado==='En producción')&&matchQ(p));
   if(window._pipeSort)activos=[...activos].sort(sortFn);
   let completados=PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado')&&matchQ(p)&&!p.oculto);
   if(window._pipeSort)completados=[...completados].sort(sortFn);
@@ -1539,7 +1539,7 @@ async function importarAPipeline(){
         return;
       }
     }
-    const maxPos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción').length;
+    const maxPos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En ajuste'||p.estado==='En producción').length;
     const data={
       orden_posicion:maxPos,
       cliente:'MountainFlow',
@@ -2174,7 +2174,7 @@ async function toggleCobro(id, cobrado){
 }
 
 function renderProyeccion(){
-  const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
+  const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En ajuste'||p.estado==='En producción');
   if(!activos.length){document.getElementById('timeline-container').innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Sin pedidos activos</div>';document.getElementById('proyeccion-barras').innerHTML='';return;}
   const conFecha=activos.filter(p=>p.fecha_inicio);
   const sinFecha=activos.filter(p=>!p.fecha_inicio);
@@ -2698,7 +2698,7 @@ async function guardarFotosEmpaque(){
 
 function poblarSelectPipeline(){
   const sel=document.getElementById('cot-pipeline-select');if(!sel)return;
-  const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En producción');
+  const activos=PIPELINE.filter(p=>p.estado==='Pendiente'||p.estado==='En ajuste'||p.estado==='En producción');
   sel.innerHTML='<option value="">— Nuevo / manual —</option>'+activos.map(p=>`<option value="${p.id}">${p.sub_cliente||p.cliente||'—'} — ${p.po||'—'} (${p.capacidad?p.capacidad+'ml':'—'})</option>`).join('');
 }
 

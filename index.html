@@ -860,9 +860,10 @@ async function renderDashboard(){
         const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}):'Sin fecha';
         const diasRestantes=p.fecha_entrega?Math.ceil((new Date(p.fecha_entrega+'T12:00:00')-new Date())/(1000*60*60*24)):null;
         const urgente=diasRestantes!==null&&diasRestantes<=7;
+        const enProgreso=p.estado==='En producción'||p.estado==='En ajuste';
         const btn=esOperador
           ?`<div style="background:var(--bg4);color:var(--text3);border-radius:8px;padding:10px;text-align:center;font-size:12px">Solo lectura</div>`
-          :p.estado==='En producción'
+          :enProgreso
             ?`<div style="background:#3b82f6;color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${i})">▶ Continuar orden</div>`
             :`<div style="background:var(--green);color:#0d0f12;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${i})">▶ Iniciar</div>`;
         return `<div class="card" style="margin-bottom:10px${urgente?';border-left:3px solid var(--red)':''}">
@@ -870,7 +871,7 @@ async function renderDashboard(){
             <div style="font-size:15px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
             <div style="display:flex;align-items:center;gap:6px">
               ${p.estado==='En producción'?`<a href="https://sharp-plastics-mes-v2.vercel.app/api/monitor?id=${p.id}" target="_blank" style="font-size:10px;background:#ef4444;color:#fff;padding:2px 8px;border-radius:20px;font-weight:700;animation:pulse-red 1.5s infinite;text-decoration:none;cursor:pointer;touch-action:manipulation">🔴 EN VIVO</a>`:''}
-              <div class="badge ${p.estado==='En producción'?'badge-blue':'badge-amber'}" style="font-size:9px">${p.estado}</div>
+              <div class="badge ${enProgreso?'badge-blue':'badge-amber'}" style="font-size:9px">${p.estado}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -1420,8 +1421,8 @@ function goNuevaOrden(idx){
       if(p.color_tapa&&p.color_tapa.toLowerCase()!=='see mock up'&&p.color_tapa!==p.color_botella)cols.push({nombre:'Tapa: '+p.color_tapa,pantone:p.color_tapa});
       if(cols.length)S.orden.colores=cols;
     }
-    // Si el pedido está En producción, cargar datos guardados
-    if(p.estado==='En producción'||p.estado==='En produccion'){
+    // Si el pedido ya tiene progreso guardado (ajuste o producción), cargarlo
+    if(p.estado==='En producción'||p.estado==='En produccion'||p.estado==='En ajuste'){
       toast('Cargando orden en proceso...','ok');
       cargarOrdenExistente(p.id);
     } else {
@@ -1494,34 +1495,56 @@ async function cargarOrdenExistente(pipelineId){
       updateProdStats();
     },300);
     // parámetros se restauran en el setTimeout de abajo
-    toast('✅ Orden restaurada — '+fmt(o.tiempo_produccion_seg||0)+' producción','ok');
-    // Ir directo a pantalla de producción y arrancar cronómetro
-    setTimeout(()=>{
-      S.timers.prod.s = o.tiempo_produccion_seg||0;
-      S.timers.prod.total = o.tiempo_produccion_seg||0;
-      S.timers.ajuste.s = o.tiempo_ajuste_seg||0;
-      S.timers.ajuste.total = o.tiempo_ajuste_seg||0;
+    // Decidir a qué pantalla ir según estado de la orden
+    const estadoOrden=o.estado||'';
+    const enProduccion=estadoOrden==='produccion'||estadoOrden==='completado'||(o.tiempo_produccion_seg||0)>0;
+    if(enProduccion){
+      toast('✅ Orden restaurada — '+fmt(o.tiempo_produccion_seg||0)+' producción','ok');
+      window._ajusteIniciado=true;
       window._monitorEmailEnviado=true; // no re-enviar email
-      // Ir a pantalla de producción
-      showScreen('produccion');
-      renderSteps('steps-prod','produccion');
+      iniciarAutosaveGlobal();
       setTimeout(()=>{
-        // Sanity check: si algo entre los setTimeouts modificó S.timers.prod.s, restaurarlo
-        if(S.timers.prod.s !== (o.tiempo_produccion_seg||0)){
-          console.warn('[DIAG cargarOrden] S.timers.prod.s fue modificado entre setTimeouts:',S.timers.prod.s,'→ restaurando a',o.tiempo_produccion_seg||0);
-          S.timers.prod.s = o.tiempo_produccion_seg||0;
-          S.timers.prod.total = o.tiempo_produccion_seg||0;
-        }
-        console.log('[DIAG cargarOrden] antes de timerPlay: S.timers.prod.s=',S.timers.prod.s,'S.timers.prod.total=',S.timers.prod.total,'S.timers.prod.running=',S.timers.prod.running);
-        const tPrEl=document.getElementById('timer-prod');
-        if(tPrEl)tPrEl.textContent=fmt(S.timers.prod.s);
-        const biEl=document.getElementById('buenas-input');
-        if(biEl){biEl.value=o.piezas_buenas||0;onBuenasInput(biEl.value);}
-        updateProdStats();
-        syncTimerBars&&syncTimerBars();
-        timerPlay('prod');
-      },200);
-    },400);
+        S.timers.prod.s = o.tiempo_produccion_seg||0;
+        S.timers.prod.total = o.tiempo_produccion_seg||0;
+        S.timers.ajuste.s = o.tiempo_ajuste_seg||0;
+        S.timers.ajuste.total = o.tiempo_ajuste_seg||0;
+        // Ir a pantalla de producción
+        showScreen('produccion');
+        renderSteps('steps-prod','produccion');
+        setTimeout(()=>{
+          // Sanity check: si algo entre los setTimeouts modificó S.timers.prod.s, restaurarlo
+          if(S.timers.prod.s !== (o.tiempo_produccion_seg||0)){
+            console.warn('[DIAG cargarOrden] S.timers.prod.s fue modificado entre setTimeouts:',S.timers.prod.s,'→ restaurando a',o.tiempo_produccion_seg||0);
+            S.timers.prod.s = o.tiempo_produccion_seg||0;
+            S.timers.prod.total = o.tiempo_produccion_seg||0;
+          }
+          console.log('[DIAG cargarOrden] antes de timerPlay: S.timers.prod.s=',S.timers.prod.s,'S.timers.prod.total=',S.timers.prod.total,'S.timers.prod.running=',S.timers.prod.running);
+          const tPrEl=document.getElementById('timer-prod');
+          if(tPrEl)tPrEl.textContent=fmt(S.timers.prod.s);
+          const biEl=document.getElementById('buenas-input');
+          if(biEl){biEl.value=o.piezas_buenas||0;onBuenasInput(biEl.value);}
+          updateProdStats();
+          syncTimerBars&&syncTimerBars();
+          timerPlay('prod');
+        },200);
+      },400);
+    } else {
+      // Orden en ajuste — ir a pantalla de ajuste
+      toast('✅ Orden restaurada — '+fmt(o.tiempo_ajuste_seg||0)+' ajuste','ok');
+      window._ajusteIniciado=true;
+      iniciarAutosaveGlobal();
+      setTimeout(()=>{
+        S.timers.ajuste.s = o.tiempo_ajuste_seg||0;
+        S.timers.ajuste.total = o.tiempo_ajuste_seg||0;
+        showScreen('ajuste');
+        renderSteps('steps-ajuste','ajuste');
+        setTimeout(()=>{
+          const tAjEl=document.getElementById('timer-ajuste');
+          if(tAjEl)tAjEl.textContent=fmt(S.timers.ajuste.s);
+          syncTimerBars&&syncTimerBars();
+        },200);
+      },400);
+    }
   }catch(e){toast('Error al cargar orden: '+e.message,'err');}
 }
 
@@ -1964,6 +1987,7 @@ function timerPlay(name){
   const t=S.timers[name];if(t.running)return;
   console.log('[DIAG timerPlay]',name,'al entrar: t.s=',t.s,'t.total=',t.total,'_monitorEmailEnviado=',window._monitorEmailEnviado);
   const esPrimerInicio=name==='prod'&&t.s===0&&!window._monitorEmailEnviado;
+  const esPrimerAjuste=name==='ajuste'&&t.s===0&&!window._ajusteIniciado;
   t.running=true;
   t.startTs=Date.now()-(t.s*1000); // reanudar desde donde quedó
   // Actualizar display INMEDIATAMENTE — no esperar al primer tick del setInterval (500ms)
@@ -1982,6 +2006,18 @@ function timerPlay(name){
   document.getElementById('btn-'+name+'-pause').style.display='flex';
   document.getElementById('btn-'+name+'-stop').style.display='flex';
   startGlobalTimer();
+  // Marcar pedido como "En ajuste" al primer play del timer de ajuste — así si el usuario
+  // se sale, al volver a entrar el código carga los datos guardados desde Supabase
+  if(esPrimerAjuste){
+    window._ajusteIniciado=true;
+    if(S.pipelineId){
+      sbPatch('pipeline_mf',{estado:'En ajuste'},'id=eq.'+S.pipelineId)
+        .catch(e=>console.error('Error actualizando estado a En ajuste:',e));
+    }
+    guardarOrden('ajuste').catch(e=>console.error('Error guardando ajuste inicial:',e));
+    // Iniciar autosave global (también durante ajuste, no solo producción)
+    iniciarAutosaveGlobal();
+  }
   // Mandar email de monitor solo al primer inicio del cronómetro de producción
   if(esPrimerInicio){
     window._monitorEmailEnviado=true;
@@ -2385,13 +2421,8 @@ async function goProduccion(){
   // Guardar primero para tener S.ordenId
   await guardarOrden('produccion');
   // Autosave cada 10s durante producción — solo si estamos en pantalla produccion
-  // (antes era 30s pero el monitor LIVE refresca cada 8s y se veía congelado)
-  if(window._autosaveIv){clearInterval(window._autosaveIv);}
-  window._autosaveIv=setInterval(()=>{
-    if(document.getElementById('screen-produccion')?.classList.contains('active')){
-      guardarOrden('produccion');
-    }
-  },10000);
+  // Autosave global cada 10s en cualquier pantalla del flujo (ajuste, fotos, producción, qa, cierre)
+  iniciarAutosaveGlobal();
   // Email de monitor se manda cuando inicia el cronómetro de producción
   // Restaurar tiempo pausado si existe
   if(S.orden&&S.orden.tiempo_pausado&&S.orden.tiempo_pausado>0&&S.timers.prod.s===0){
@@ -2457,6 +2488,25 @@ function pausarYSalir(){
     showScreen('dashboard');
     renderDashboard();
   },1000);
+}
+
+// Autosave global — guarda cada 10s mientras el usuario esté en cualquier pantalla
+// del flujo de producción (ajuste, fotos, producción, qa, cierre). Detecta el estado
+// según qué screen está activa.
+function iniciarAutosaveGlobal(){
+  if(window._autosaveIv){clearInterval(window._autosaveIv);}
+  window._autosaveIv=setInterval(()=>{
+    // Determinar el estado según la screen activa
+    const pantallasFlow=['ajuste','fotos','produccion','qa','cierre'];
+    let estadoActual=null;
+    for(const p of pantallasFlow){
+      if(document.getElementById('screen-'+p)?.classList.contains('active')){estadoActual=p;break;}
+    }
+    if(!estadoActual)return; // No estamos en flujo, no guardar
+    // Mapeo: ajuste y fotos guardan como 'ajuste', producción/qa/cierre como 'produccion'
+    const estado=(estadoActual==='ajuste'||estadoActual==='fotos')?'ajuste':'produccion';
+    if(S.pipelineId){guardarOrden(estado).catch(e=>console.warn('Autosave falló:',e));}
+  },10000);
 }
 
 async function guardarOrden(estado){
