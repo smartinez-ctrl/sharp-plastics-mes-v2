@@ -809,7 +809,29 @@ function abrirPdfDiseno(){
   window.open(url,'_blank');
 }
 
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const el=document.getElementById('screen-'+id);if(el)el.classList.add('active');if(id==='dashboard')renderDashboard();if(id==='fotos')pintarFotosEnSlots();}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById('screen-'+id);
+  if(el)el.classList.add('active');
+  if(id==='dashboard'){
+    renderDashboard();
+    // Auto-refresh cada 15s mientras el dashboard esté visible. Esto mantiene
+    // los badges de "✏️ Editándose ahora" actualizados sin que el operador
+    // tenga que pulsar refresh manualmente. Se cancela al salir del dashboard.
+    if(window._dashRefreshIv){clearInterval(window._dashRefreshIv);}
+    window._dashRefreshIv=setInterval(()=>{
+      if(document.getElementById('screen-dashboard')?.classList.contains('active')){
+        renderDashboard();
+      } else {
+        clearInterval(window._dashRefreshIv);
+        window._dashRefreshIv=null;
+      }
+    },15000);
+  } else {
+    if(window._dashRefreshIv){clearInterval(window._dashRefreshIv);window._dashRefreshIv=null;}
+  }
+  if(id==='fotos')pintarFotosEnSlots();
+}
 
 // Re-pinta los slots de la pantalla de fotos a partir de S.fotos.
 // Se llama desde cargarOrdenExistente Y desde showScreen('fotos').
@@ -1010,6 +1032,31 @@ async function renderDashboard(){
     const activos=rows.filter(p=>p.estado==='Pendiente'||p.estado==='En ajuste'||p.estado==='En producción');
     const completados=rows.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&!p.oculto);
     window._dashRows=activos;
+
+    // Detección de edición concurrente: traer updated_at de las órdenes
+    // activas y armar un mapa pipeline_id → ms_desde_ultimo_update.
+    // Si una orden se actualizó hace <30s, alguien la está editando ahora.
+    const edicionPorPipeline={};
+    try{
+      const pipelineIdsActivos=activos
+        .filter(p=>p.estado==='En ajuste'||p.estado==='En producción')
+        .map(p=>p.id);
+      if(pipelineIdsActivos.length){
+        const idsCsv=pipelineIdsActivos.map(id=>'"'+id+'"').join(',');
+        const ordenesActivas=await sbGet('ordenes_produccion','pipeline_id=in.('+idsCsv+')&select=pipeline_id,updated_at');
+        const ahora=Date.now();
+        ordenesActivas.forEach(o=>{
+          if(!o.updated_at||!o.pipeline_id)return;
+          const ms=ahora-new Date(o.updated_at).getTime();
+          // Solo guardar el más reciente por pipeline (debería ser solo uno
+          // con el constraint UNIQUE pero defensivo por si acaso)
+          if(!edicionPorPipeline[o.pipeline_id]||edicionPorPipeline[o.pipeline_id]>ms){
+            edicionPorPipeline[o.pipeline_id]=ms;
+          }
+        });
+      }
+    }catch(e){console.warn('[dashboard] no se pudo cargar edición concurrente:',e);}
+    window._edicionPorPipeline=edicionPorPipeline;
     const esOperador=S.user&&S.user.role==='operador';
     let html='';
     if(!activos.length&&!completados.length){
@@ -1025,12 +1072,21 @@ async function renderDashboard(){
         const diasRestantes=p.fecha_entrega?Math.ceil((new Date(p.fecha_entrega+'T12:00:00')-new Date())/(1000*60*60*24)):null;
         const urgente=diasRestantes!==null&&diasRestantes<=7;
         const enProgreso=p.estado==='En producción'||p.estado==='En ajuste';
+        // Detectar edición concurrente: si la orden tiene autosave hace <30s,
+        // alguien está activamente editando ahora mismo en otro dispositivo.
+        const msDesdeUpdate=window._edicionPorPipeline?.[p.id];
+        const editandoAhora=enProgreso && msDesdeUpdate!=null && msDesdeUpdate<30000;
+        const segDesdeUpdate=msDesdeUpdate!=null?Math.floor(msDesdeUpdate/1000):null;
+        const editandoBadge=editandoAhora
+          ?`<div style="background:#f59e0b22;border:1px solid #f59e0b66;color:#f59e0b;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px">✏️ Editándose ahora · hace ${segDesdeUpdate}s</div>`
+          :'';
         const btn=esOperador
           ?`<div style="background:var(--bg4);color:var(--text3);border-radius:8px;padding:10px;text-align:center;font-size:12px">Solo lectura</div>`
           :enProgreso
-            ?`<div style="background:#3b82f6;color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${idx})">▶ Continuar orden</div>`
+            ?`<div style="background:#3b82f6;color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${idx},${editandoAhora})">▶ Continuar orden</div>`
             :`<div style="background:var(--green);color:#0d0f12;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${idx})">▶ Iniciar</div>`;
         return `<div class="card" style="margin-bottom:10px${urgente?';border-left:3px solid var(--red)':''}">
+          ${editandoBadge}
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div style="font-size:15px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
             <div style="display:flex;align-items:center;gap:6px">
@@ -1572,7 +1628,20 @@ async function verPDFCompletado(pipelineId, tipo){
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
-async function goNuevaOrden(idx){
+async function goNuevaOrden(idx, editandoAhora){
+  // Si se detectó que otro dispositivo está editando ahora mismo, advertir
+  // antes de entrar. No bloqueamos — permitimos al operador decidir, porque
+  // el otro dispositivo podría tener una pestaña olvidada o el operador
+  // anterior ya terminó pero aún no salió.
+  if(editandoAhora){
+    const ok=confirm(
+      '⚠ Este pedido se está editando AHORA en otro dispositivo.\n\n'+
+      'Si entras y haces cambios, el último que guarde sobrescribe los cambios del otro.\n\n'+
+      'Recomendado: confirma con la otra persona antes de continuar.\n\n'+
+      '¿Quieres entrar de todas formas?'
+    );
+    if(!ok)return;
+  }
   resetOrden();
   if(idx!==null&&window._dashRows&&window._dashRows[idx]){
     const p=window._dashRows[idx];
