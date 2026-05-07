@@ -1723,6 +1723,13 @@ async function cargarOrdenExistente(pipelineId){
           if(biEl){biEl.value=o.piezas_buenas||0;onBuenasInput(biEl.value);}
           updateProdStats();
           syncTimerBars&&syncTimerBars();
+          // Re-renderizar los grids de la pantalla — sin esto los chips de
+          // merma/TM/tintas se ven vacíos aunque S.merma/S.tm/S.tintas estén
+          // poblados, porque el HTML estático no se rellena solo.
+          try{renderMermaGrid('ajuste');renderMermaGrid('prod');}catch(e){console.warn('renderMermaGrid:',e);}
+          try{renderTMGrid('ajuste');renderTMGrid('prod');}catch(e){console.warn('renderTMGrid:',e);}
+          try{renderTintasAjuste();}catch(e){console.warn('renderTintasAjuste:',e);}
+          try{renderColores();}catch(e){console.warn('renderColores:',e);}
           timerPlay('prod');
         },200);
       },400);
@@ -1740,6 +1747,12 @@ async function cargarOrdenExistente(pipelineId){
           const tAjEl=document.getElementById('timer-ajuste');
           if(tAjEl)tAjEl.textContent=fmt(S.timers.ajuste.s);
           syncTimerBars&&syncTimerBars();
+          // Re-renderizar grids — sin esto, al regresar a un ajuste en proceso
+          // los chips de merma/TM/tintas se ven vacíos aunque el state esté lleno.
+          try{renderMermaGrid('ajuste');}catch(e){console.warn('renderMermaGrid:',e);}
+          try{renderTMGrid('ajuste');}catch(e){console.warn('renderTMGrid:',e);}
+          try{renderTintasAjuste();}catch(e){console.warn('renderTintasAjuste:',e);}
+          try{renderColores();}catch(e){console.warn('renderColores:',e);}
         },200);
       },400);
     }
@@ -2849,6 +2862,14 @@ async function guardarOrden(estado){
 }
 
 async function _guardarOrdenInterno(estado){
+  // Defensa: nunca crear/actualizar una orden sin pipeline_id. Antes podía pasar
+  // si S.pipelineId se perdía momentáneamente y el autosave creaba una orden
+  // con pipeline_id=NULL — el constraint UNIQUE permite múltiples NULL así
+  // que esa orden quedaba huérfana y desincronizada del LIVE.
+  if(!S.pipelineId){
+    console.warn('[guardarOrden] abortando: S.pipelineId está vacío. No se guarda para evitar orden huérfana.');
+    return;
+  }
   const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
   const data={
     op:S.orden.op||('OP-'+Date.now()),
