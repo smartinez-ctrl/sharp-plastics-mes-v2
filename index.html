@@ -2553,27 +2553,48 @@ async function enviarAprobacion(){
   // Comprimir y subir fotos DIRECTAMENTE a Supabase Storage desde el browser
   const fotoUrls = [null,null,null,null];
   const fotoLabelsUp = ['Frente','Reverso','Lado-izquierdo','Lado-derecho'];
+  const fotosErrores = []; // para mostrar al operador qué fotos fallaron
   for(let i=0;i<4;i++){
     if(fotos[i]){
-      const compressed = await comprimirFoto(fotos[i]);
-      const base64Data = compressed.replace(/^data:image\/\w+;base64,/, '');
-      const byteStr = atob(base64Data);
-      const arr = new Uint8Array(byteStr.length);
-      for(let j=0;j<byteStr.length;j++) arr[j]=byteStr.charCodeAt(j);
-      const blob = new Blob([arr], {type:'image/jpeg'});
-      const filename = `${finalOrdenId}/foto-${i}-${fotoLabelsUp[i]}-${Date.now()}.jpg`;
-      const upRes = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${filename}`, {
-        method: 'POST',
-        headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true'},
-        body: blob,
-      });
-      if(upRes.ok) {
-        fotoUrls[i] = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
-        // CRÍTICO: actualizar S.fotos con la URL de Storage (antes era dataURL base64).
-        // Así si el operador cierra la pestaña, al volver el cargarOrdenExistente
-        // encuentra URLs válidas en o.foto_urls y las restaura correctamente.
-        S.fotos[i] = fotoUrls[i];
+      let intento = 0;
+      let exito = false;
+      let lastError = '';
+      while(intento < 3 && !exito){
+        intento++;
+        try {
+          const compressed = await comprimirFoto(fotos[i]);
+          const base64Data = compressed.replace(/^data:image\/\w+;base64,/, '');
+          const byteStr = atob(base64Data);
+          const arr = new Uint8Array(byteStr.length);
+          for(let j=0;j<byteStr.length;j++) arr[j]=byteStr.charCodeAt(j);
+          const blob = new Blob([arr], {type:'image/jpeg'});
+          const filename = `${finalOrdenId}/foto-${i}-${fotoLabelsUp[i]}-${Date.now()}.jpg`;
+          const upRes = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${filename}`, {
+            method: 'POST',
+            headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true'},
+            body: blob,
+          });
+          if(upRes.ok) {
+            fotoUrls[i] = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
+            // CRÍTICO: actualizar S.fotos con la URL de Storage (antes era dataURL base64).
+            // Así si el operador cierra la pestaña, al volver el cargarOrdenExistente
+            // encuentra URLs válidas en o.foto_urls y las restaura correctamente.
+            S.fotos[i] = fotoUrls[i];
+            exito = true;
+          } else {
+            const txt = await upRes.text().catch(()=>'');
+            lastError = 'HTTP '+upRes.status+(txt?': '+txt.substring(0,80):'');
+            console.warn(`[upload foto ${i}] intento ${intento}/3 falló: ${lastError}`);
+            // Esperar antes de reintentar (red intermitente puede recuperarse)
+            if(intento<3) await new Promise(r=>setTimeout(r,1000*intento));
+          }
+        } catch(e) {
+          lastError = e.message || String(e);
+          console.warn(`[upload foto ${i}] intento ${intento}/3 throw:`, lastError);
+          if(intento<3) await new Promise(r=>setTimeout(r,1000*intento));
+        }
       }
+      if(!exito) fotosErrores.push(`${fotoLabelsUp[i]}: ${lastError||'falló 3 veces'}`);
     }
     const pct = Math.round(((i+1)/4)*80);
     if(uploadBar) uploadBar.style.width=pct+'%';
@@ -2583,7 +2604,17 @@ async function enviarAprobacion(){
   const urlsOk = fotoUrls.filter(Boolean).length;
   console.log('Fotos exitosas:', urlsOk, '/ 4');
   console.log('finalOrdenId:', finalOrdenId);
-  if(urlsOk===0){setAprobacionStatus('error','No se pudieron subir las fotos. Revisa la conexión.');if(uploadStatus)uploadStatus.style.display='none';return;}
+  if(urlsOk===0){
+    setAprobacionStatus('error','❌ Ninguna foto se subió. Detalles: '+fotosErrores.join(' | ')+'. Revisa la conexión y vuelve a intentar.');
+    if(uploadStatus)uploadStatus.style.display='none';
+    return;
+  }
+  if(urlsOk<4){
+    // Subió algunas pero no todas — abortar para evitar mandar email incompleto
+    setAprobacionStatus('error','⚠ Solo se subieron '+urlsOk+' de 4 fotos. Detalles: '+fotosErrores.join(' | ')+'. Vuelve a intentar.');
+    if(uploadStatus)uploadStatus.style.display='none';
+    return;
+  }
   if(uploadBar) uploadBar.style.width='95%';
   if(uploadPct) uploadPct.textContent='Enviando email...';
 
