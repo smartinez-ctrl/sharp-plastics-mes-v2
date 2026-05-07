@@ -707,7 +707,11 @@ function populateSupervisoresSelects(){
 // ══════════════════════════════════════════════════════
 // CATÁLOGOS
 // ══════════════════════════════════════════════════════
-const TINTAS={
+// Catálogo de tintas: se carga desde Supabase al login (loadTintasSB).
+// Mantenemos los valores conocidos como FALLBACK por si la carga inicial
+// falla (sin red, Supabase caído). Si la carga es exitosa, los reemplaza.
+// Estructura por proveedor: {proveedor: [{sku, nombre, precio, id}]}
+let TINTAS={
   Rodatec:[
     {sku:'MM095',nombre:'Multiplack Base MM095',precio:2215.60},
     {sku:'MM435',nombre:'Multiplack Amarillo Medio MM435',precio:2818.80},
@@ -883,6 +887,7 @@ function checkPin(){
     showScreen('dashboard');
     renderDashboard();
     loadAditivosSB();
+    loadTintasSB();
     return;
   }
   document.getElementById('pin-error').textContent='Rol sin acceso';
@@ -926,7 +931,42 @@ async function loadAditivosSB(){
   try{
     const rows=await sbGet('aditivos','activo=eq.true&order=nombre.asc');
     ADITIVOS=rows.map(r=>({nombre:r.nombre,prov:r.proveedor||'',precio:parseFloat(r.precio_kg)||0,id:r.id}));
+    if(document.getElementById('screen-ajuste')?.classList.contains('active')){
+      try{renderTintasAjuste();}catch(e){console.warn('re-render tras loadAditivos falló:',e);}
+    }
   }catch(e){console.warn('No se cargaron aditivos:',e);}
+}
+
+// Carga tintas del catálogo de Supabase y construye el objeto TINTAS agrupado
+// por proveedor. Esto reemplaza el catálogo hardcodeado para que cuando se
+// agregue una tinta nueva en el portal de gestión (o desde otro dispositivo),
+// el iPad la vea inmediatamente al recargar — sin redeploy.
+//
+// Mantiene los valores hardcodeados como FALLBACK si la carga falla.
+async function loadTintasSB(){
+  try{
+    const rows=await sbGet('tintas','activo=eq.true&order=proveedor.asc,nombre.asc');
+    if(!rows||!rows.length){console.warn('Catálogo de tintas vacío en Supabase, usando fallback hardcodeado');return;}
+    // Construir el mapa {proveedor: [tintas]} desde las filas de la tabla
+    const nuevoTINTAS={};
+    rows.forEach(r=>{
+      const prov=r.proveedor||'Sin proveedor';
+      if(!nuevoTINTAS[prov])nuevoTINTAS[prov]=[];
+      nuevoTINTAS[prov].push({
+        sku:r.sku||r.id, // fallback al id si no hay sku (raro pero defensivo)
+        nombre:r.nombre||'',
+        precio:parseFloat(r.precio_kg)||0,
+        id:r.id,
+      });
+    });
+    TINTAS=nuevoTINTAS;
+    console.log('[loadTintasSB] cargados',rows.length,'tintas en',Object.keys(TINTAS).length,'proveedores');
+    // Si el operador ya está en la pantalla de ajuste (donde se renderizan las
+    // tintas), re-renderizar para que aparezcan las nuevas opciones del catálogo.
+    if(document.getElementById('screen-ajuste')?.classList.contains('active')){
+      try{renderTintasAjuste();}catch(e){console.warn('re-render tras loadTintas falló:',e);}
+    }
+  }catch(e){console.warn('No se cargaron tintas del catálogo, usando fallback:',e);}
 }
 
 // Mostrar/ocultar pedidos pendientes adicionales en el dashboard de producción
@@ -1870,6 +1910,13 @@ function addColor(){
   const n=document.getElementById('new-color-nombre').value.trim();
   const p=document.getElementById('new-color-pantone').value.trim();
   if(!n){toast('Escribe el nombre del color');return;}
+  // Detectar duplicados case-insensitive por nombre+pantone para evitar
+  // que "Brown 161C" y "Brown 161c" aparezcan como dos colores distintos
+  const dup=S.orden.colores.some(c=>
+    (c.nombre||'').trim().toLowerCase()===n.toLowerCase() &&
+    (c.pantone||'').trim().toLowerCase()===p.toLowerCase()
+  );
+  if(dup){toast('Ese color ya está agregado','warn');return;}
   S.orden.colores.push({nombre:n,pantone:p});
   document.getElementById('new-color-nombre').value='';
   document.getElementById('new-color-pantone').value='';
@@ -2093,8 +2140,22 @@ function renderTintaRow(col,i){
   const tc=t.componentes.reduce((s,x)=>s+(x.gramos&&x.precio?(x.gramos/1000)*x.precio:0),0)
     +t.aditivos.reduce((s,a)=>{if(!a.pct||!a.precio)return s;const g=tg*(parseFloat(a.pct)/100);return s+(g/1000)*a.precio;},0);
   const compsHTML=t.componentes.map((comp,ci)=>{
-    const provOpts=Object.keys(TINTAS).map(p=>`<option ${comp.prov===p?'selected':''}>${p}</option>`).join('');
-    const tOpts='<option value="">Tinta...</option>'+((TINTAS[comp.prov||'Rodatec'])||[]).map(x=>`<option value="${x.sku}" ${comp.sku===x.sku?'selected':''}>${x.sku} — ${x.nombre}</option>`).join('');
+    // Lista de proveedores: todos los del catálogo + el del componente actual
+    // (por si fue guardado con un proveedor que ya no está en el catálogo)
+    const provsCatalogo=Object.keys(TINTAS);
+    const provsSet=new Set(provsCatalogo);
+    if(comp.prov)provsSet.add(comp.prov);
+    const provs=Array.from(provsSet);
+    const provOpts=provs.map(p=>`<option ${comp.prov===p?'selected':''}>${p}</option>`).join('');
+    // Lista de tintas para el proveedor actual del componente.
+    // Si el proveedor no existe en TINTAS pero el componente tiene un sku/nombre,
+    // agregamos esa tinta a la lista para que aparezca seleccionada.
+    const tintasDelProv=TINTAS[comp.prov]||[];
+    const tintasOpts=[...tintasDelProv];
+    if(comp.sku && !tintasDelProv.find(t=>t.sku===comp.sku)){
+      tintasOpts.push({sku:comp.sku,nombre:comp.nombre||'(sin nombre)',precio:comp.precio||0});
+    }
+    const tOpts='<option value="">Tinta...</option>'+tintasOpts.map(x=>`<option value="${x.sku}" ${comp.sku===x.sku?'selected':''}>${x.sku} — ${x.nombre}</option>`).join('');
     const c=comp.gramos&&comp.precio?'$'+((comp.gramos/1000)*comp.precio).toFixed(2):'$0.00';
     return `<div class="comp-row">
       <div class="field" style="margin:0"><label style="margin-bottom:2px;font-size:10px">Proveedor</label>
@@ -2108,8 +2169,15 @@ function renderTintaRow(col,i){
     </div>`;
   }).join('');
   const aditsHTML=t.aditivos.map((a,ai)=>{
-    const provOpts=['Rodatec','Norcote','Otro'].map(p=>`<option ${a.prov===p?'selected':''}>${p}</option>`).join('');
-    const provFilt=a.prov||'Rodatec';
+    // Proveedores de aditivos: tomar todos los del catálogo ADITIVOS + el actual
+    // (por compatibilidad si el aditivo fue guardado con un proveedor que ya no existe).
+    const provsAditivosSet=new Set();
+    ADITIVOS.forEach(x=>{if(x.prov)provsAditivosSet.add(x.prov);});
+    if(a.prov)provsAditivosSet.add(a.prov);
+    if(!provsAditivosSet.size)provsAditivosSet.add('Rodatec'); // fallback mínimo
+    const provsAditivos=Array.from(provsAditivosSet);
+    const provOpts=provsAditivos.map(p=>`<option ${a.prov===p?'selected':''}>${p}</option>`).join('')+'<option value="Otro">Otro</option>';
+    const provFilt=a.prov||provsAditivos[0]||'Rodatec';
     const adOpts=ADITIVOS.filter(x=>!x.prov||x.prov===provFilt||provFilt==='Otro').map(x=>`<option ${a.nombre===x.nombre?'selected':''}>${x.nombre}</option>`).join('');
     const gramos=a.pct&&tg?parseFloat((tg*(parseFloat(a.pct)/100)).toFixed(2)):0;
     const info=gramos>0?`<span style="font-size:10px;color:var(--text3)">${gramos}g</span>`:'';
