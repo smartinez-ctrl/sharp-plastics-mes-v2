@@ -207,6 +207,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
   /* Foto slots: evitar bordes muy delgados */
   .foto-slot .foto-icon{font-size:24px}
   .foto-slot .foto-label{font-size:10px}
+  /* CRÍTICO: bottom-bar fixed para que SIEMPRE esté visible en mobile.
+     Sticky a veces falla con la barra dinámica de Safari iOS y Chrome
+     Android. Fixed garantiza que el botón sea tocable siempre. */
+  .bottom-bar{
+    position:fixed !important;
+    left:0;right:0;bottom:0;
+    background:var(--bg2);
+    box-shadow:0 -2px 12px rgba(0,0,0,.4);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom)) 14px;
+    z-index:100;
+  }
+  /* Padding extra al final del scroll para que el contenido no quede
+     tapado por el bottom-bar fixed. ~80px = altura típica del botón + padding */
+  .scroll{padding-bottom:90px}
   /* Badge un poco más compacto */
   .badge{padding:2px 6px;font-size:9px}
   /* Topbar logo: separador // ocultar en mobile */
