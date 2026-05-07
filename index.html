@@ -1787,19 +1787,26 @@ async function cargarOrdenExistente(pipelineId){
         .then(()=>console.log('[DIAG cargarOrden] pipeline marcado En producción'))
         .catch(e=>console.warn('[DIAG cargarOrden] no se pudo actualizar estado:',e));
       setTimeout(()=>{
-        S.timers.prod.s = o.tiempo_produccion_seg||0;
-        S.timers.prod.total = o.tiempo_produccion_seg||0;
+        // Usar el MAYOR entre tiempo_produccion_seg y tiempo_pausado.
+        // Esto previene el bug donde "Pausar y salir" guardaba en tiempo_pausado
+        // pero no actualizaba tiempo_produccion_seg, causando que al volver
+        // se reanudara desde un valor antiguo.
+        const tProdReal = Math.max(o.tiempo_produccion_seg||0, o.tiempo_pausado||0);
+        S.timers.prod.s = tProdReal;
+        S.timers.prod.total = tProdReal;
         S.timers.ajuste.s = o.tiempo_ajuste_seg||0;
         S.timers.ajuste.total = o.tiempo_ajuste_seg||0;
         // Ir a pantalla de producción
         showScreen('produccion');
         renderSteps('steps-prod','produccion');
         setTimeout(()=>{
-          // Sanity check: si algo entre los setTimeouts modificó S.timers.prod.s, restaurarlo
-          if(S.timers.prod.s !== (o.tiempo_produccion_seg||0)){
-            console.warn('[DIAG cargarOrden] S.timers.prod.s fue modificado entre setTimeouts:',S.timers.prod.s,'→ restaurando a',o.tiempo_produccion_seg||0);
-            S.timers.prod.s = o.tiempo_produccion_seg||0;
-            S.timers.prod.total = o.tiempo_produccion_seg||0;
+          // Sanity check: si algo entre los setTimeouts modificó S.timers.prod.s, restaurarlo.
+          // Igual que arriba, el valor correcto es el MAYOR entre tiempo_produccion_seg y tiempo_pausado.
+          const tProdReal = Math.max(o.tiempo_produccion_seg||0, o.tiempo_pausado||0);
+          if(S.timers.prod.s !== tProdReal){
+            console.warn('[DIAG cargarOrden] S.timers.prod.s fue modificado entre setTimeouts:',S.timers.prod.s,'→ restaurando a',tProdReal);
+            S.timers.prod.s = tProdReal;
+            S.timers.prod.total = tProdReal;
           }
           console.log('[DIAG cargarOrden] antes de timerPlay: S.timers.prod.s=',S.timers.prod.s,'S.timers.prod.total=',S.timers.prod.total,'S.timers.prod.running=',S.timers.prod.running);
           const tPrEl=document.getElementById('timer-prod');
@@ -2861,13 +2868,21 @@ async function pausarYSalir(){
       // Determinar estado: si ya hay tiempo de producción, sigue 'En producción'
       const estadoFlow=(S.timers.prod.total||S.timers.prod.s)>0?'produccion':'ajuste';
       await guardarOrden(estadoFlow);
-      // Y luego marcar info de pausa
+      // Y luego marcar info de pausa. CRÍTICO: actualizar también
+      // tiempo_produccion_seg con el valor pausado para que al volver a entrar,
+      // cargarOrdenExistente lea el valor correcto. Antes solo guardaba en
+      // tiempo_pausado y eso quedaba huérfano.
       if(S.ordenId){
         const tiempoSegundos=S.timers.prod.s||0;
         await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.ordenId,{
           method:'PATCH',
           headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
-          body:JSON.stringify({tiempo_pausado:tiempoSegundos,pausado_por:S.user?.nombre||null,pausado_at:new Date().toISOString()})
+          body:JSON.stringify({
+            tiempo_pausado:tiempoSegundos,
+            tiempo_produccion_seg:tiempoSegundos,
+            pausado_por:S.user?.nombre||null,
+            pausado_at:new Date().toISOString()
+          })
         });
       }
     }catch(e){console.error('Error guardando pausa:',e);}
