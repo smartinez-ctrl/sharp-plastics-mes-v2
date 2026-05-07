@@ -1558,7 +1558,7 @@ async function verPDFCompletado(pipelineId, tipo){
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
-function goNuevaOrden(idx){
+async function goNuevaOrden(idx){
   resetOrden();
   if(idx!==null&&window._dashRows&&window._dashRows[idx]){
     const p=window._dashRows[idx];
@@ -1582,18 +1582,18 @@ function goNuevaOrden(idx){
       if(cols.length)S.orden.colores=cols;
     }
     // Defensa anti-duplicados: SIEMPRE intentar cargar orden existente al entrar
-    // al pedido, sin importar el estado del pipeline. Si existe una orden vacía
-    // o con datos, la reusamos en lugar de crear una nueva.
+    // al pedido, sin importar el estado del pipeline. Esperamos la respuesta
+    // ANTES de mostrar la UI para que S.ordenId esté correcto antes de que
+    // cualquier acción del operador dispare un guardarOrden.
     if(p.estado==='En producción'||p.estado==='En produccion'||p.estado==='En ajuste'){
       toast('Cargando orden en proceso...','ok');
       cargarOrdenExistente(p.id);
     } else {
       // Pipeline en Pendiente: revisar si por alguna razón ya hay orden creada.
-      // Si sí (caso raro: orden creada por error previo), reusar su id para
-      // evitar crear duplicado. Si no, mandar email de inicio normal.
-      cargarOrdenSiExiste(p.id).then(existe=>{
-        if(!existe) setTimeout(()=>enviarEmailInicioOrden(p), 500);
-      });
+      // Si sí (caso raro: orden creada por error previo o por otra sesión en
+      // paralelo), reusar su id para evitar crear duplicado.
+      const existe=await cargarOrdenSiExiste(p.id);
+      if(!existe) setTimeout(()=>enviarEmailInicioOrden(p), 500);
     }
   }
   showScreen('orden');
@@ -2956,14 +2956,17 @@ async function _guardarOrdenInterno(estado){
       }catch(e){console.warn('[guardarOrden] check duplicado falló:',e);}
     }
 
-    // Helper: intenta el PATCH/POST; si falla por PGRST204 (columna inexistente),
-    // identifica la columna del mensaje, la retira del payload y reintenta hasta 5 veces.
+    // Helper: intenta el PATCH/POST. Maneja:
+    //  - PGRST204 (columna inexistente): retira la columna y reintenta
+    //  - 23505 (UNIQUE violation en pipeline_id): otra sesión/pestaña creó la
+    //    orden primero — buscar su id y convertir a PATCH
     async function intentarConRetry(metodo, payload){
       let intentos=0;
       let pl={...payload};
+      let metodoActual=metodo;
       while(intentos<6){
         try{
-          if(metodo==='PATCH'){
+          if(metodoActual==='PATCH'){
             await sbPatch('ordenes_produccion',pl,'id=eq.'+S.ordenId);
             return [{id:S.ordenId}];
           }else{
@@ -2972,13 +2975,29 @@ async function _guardarOrdenInterno(estado){
         }catch(e){
           const txt=(e&&e.message)||'';
           // PGRST204: 'Could not find the X column of Y in the schema cache'
-          // Capturamos el nombre de columna entre comillas simples
-          const m=txt.match(/PGRST204[\s\S]*?'([^']+)'/) || txt.match(/Could not find the '([^']+)' column/);
-          if(m && m[1] && pl.hasOwnProperty(m[1])){
-            console.warn('[guardarOrden] columna inexistente, retirando:',m[1]);
-            delete pl[m[1]];
+          const colMatch=txt.match(/PGRST204[\s\S]*?'([^']+)'/) || txt.match(/Could not find the '([^']+)' column/);
+          if(colMatch && colMatch[1] && pl.hasOwnProperty(colMatch[1])){
+            console.warn('[guardarOrden] columna inexistente, retirando:',colMatch[1]);
+            delete pl[colMatch[1]];
             intentos++;
             continue;
+          }
+          // 23505: violación de UNIQUE constraint. Significa que otra sesión
+          // (otra pestaña, celular, otro operador) creó la orden primero.
+          // En lugar de fallar, hacemos SELECT para encontrar la orden existente
+          // y convertimos el siguiente intento en PATCH.
+          if(metodoActual==='POST' && (txt.includes('23505') || txt.includes('duplicate key') || txt.includes('already exists'))){
+            console.warn('[guardarOrden] otra sesión creó la orden primero. Recuperando id...');
+            try{
+              const existentes=await sbGet('ordenes_produccion','pipeline_id=eq.'+S.pipelineId+'&order=created_at.desc&limit=1&select=id');
+              if(existentes&&existentes[0]&&existentes[0].id){
+                S.ordenId=existentes[0].id;
+                metodoActual='PATCH';
+                console.log('[guardarOrden] convertido a PATCH sobre orden:',S.ordenId);
+                intentos++;
+                continue;
+              }
+            }catch(e2){console.warn('[guardarOrden] recovery fail:',e2);}
           }
           throw e;
         }
