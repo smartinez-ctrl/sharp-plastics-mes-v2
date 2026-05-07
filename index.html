@@ -1042,8 +1042,10 @@ async function renderDashboard(){
         .filter(p=>p.estado==='En ajuste'||p.estado==='En producción')
         .map(p=>p.id);
       if(pipelineIdsActivos.length){
-        const idsCsv=pipelineIdsActivos.map(id=>'"'+id+'"').join(',');
+        // PostgREST: in.(uuid1,uuid2,uuid3) — UUIDs sin comillas
+        const idsCsv=pipelineIdsActivos.join(',');
         const ordenesActivas=await sbGet('ordenes_produccion','pipeline_id=in.('+idsCsv+')&select=pipeline_id,updated_at');
+        console.log('[dashboard] órdenes activas para edición concurrente:',ordenesActivas?.length||0);
         const ahora=Date.now();
         ordenesActivas.forEach(o=>{
           if(!o.updated_at||!o.pipeline_id)return;
