@@ -1725,11 +1725,40 @@ async function cargarOrdenExistente(pipelineId){
     const o=rows[0];
     console.log('[DIAG cargarOrden] pipeline_id=',pipelineId,'orden.id=',o.id,'tiempo_produccion_seg=',o.tiempo_produccion_seg,'tiempo_ajuste_seg=',o.tiempo_ajuste_seg);
     S.ordenId=o.id;
-    // Restaurar timers
-    S.timers.ajuste.total=o.tiempo_ajuste_seg||0;
-    S.timers.ajuste.s=o.tiempo_ajuste_seg||0;
-    S.timers.prod.total=o.tiempo_produccion_seg||0;
-    S.timers.prod.s=o.tiempo_produccion_seg||0;
+    // Restaurar timers — si tenía started_at, calcular el tiempo real
+    // transcurrido (sobrevive a sleep/lock del dispositivo).
+    // El tiempo total = segundos guardados + (NOW - started_at).
+    const ajusteSegBase=Math.max(o.tiempo_ajuste_seg||0, o.tiempo_pausado||0);
+    const prodSegBase=o.tiempo_produccion_seg||0;
+    if(o.tiempo_ajuste_started_at){
+      const startedMs=new Date(o.tiempo_ajuste_started_at).getTime();
+      const transcurrido=Math.max(0, Math.floor((Date.now()-startedMs)/1000));
+      // El segundos_base incluye lo acumulado ANTES del play actual; sumamos
+      // el tiempo transcurrido desde started_at para obtener el total real.
+      // Pero ojo: segundos_base PUEDE ya incluir el tiempo del play actual
+      // si hubo autosaves después de started_at. Para evitar doble-conteo,
+      // usamos el MÁXIMO entre segundos_base y (acumulado_previo + transcurrido).
+      // El acumulado_previo no lo guardamos en DB, lo aproximamos como 0 si
+      // started_at es muy reciente. En la práctica ajusteSegBase es lo correcto
+      // si los autosaves estuvieron corriendo, y (transcurrido) es el correcto
+      // si el dispositivo estuvo dormido. Tomamos el mayor.
+      S.timers.ajuste.s=Math.max(ajusteSegBase, transcurrido);
+      S.timers.ajuste.total=S.timers.ajuste.s;
+      console.log('[DIAG cargarOrden] timer ajuste reconstruido: base='+ajusteSegBase+' transcurrido='+transcurrido+' final='+S.timers.ajuste.s);
+    } else {
+      S.timers.ajuste.total=ajusteSegBase;
+      S.timers.ajuste.s=ajusteSegBase;
+    }
+    if(o.tiempo_produccion_started_at){
+      const startedMs=new Date(o.tiempo_produccion_started_at).getTime();
+      const transcurrido=Math.max(0, Math.floor((Date.now()-startedMs)/1000));
+      S.timers.prod.s=Math.max(prodSegBase, transcurrido);
+      S.timers.prod.total=S.timers.prod.s;
+      console.log('[DIAG cargarOrden] timer prod reconstruido: base='+prodSegBase+' transcurrido='+transcurrido+' final='+S.timers.prod.s);
+    } else {
+      S.timers.prod.total=prodSegBase;
+      S.timers.prod.s=prodSegBase;
+    }
     // Restaurar merma
     S.merma.ajuste=o.merma_ajuste||{};
     S.merma.prod=o.merma_produccion||{};
@@ -1799,11 +1828,25 @@ async function cargarOrdenExistente(pipelineId){
         // Esto previene el bug donde "Pausar y salir" guardaba en tiempo_pausado
         // pero no actualizaba tiempo_produccion_seg, causando que al volver
         // se reanudara desde un valor antiguo.
-        const tProdReal = Math.max(o.tiempo_produccion_seg||0, o.tiempo_pausado||0);
+        // Y si hay started_at, sumamos el tiempo transcurrido desde el último
+        // play (sobrevive a sleep/lock del dispositivo).
+        let tProdReal = Math.max(o.tiempo_produccion_seg||0, o.tiempo_pausado||0);
+        let tAjusteReal = o.tiempo_ajuste_seg||0;
+        if(o.tiempo_produccion_started_at){
+          const startedMs=new Date(o.tiempo_produccion_started_at).getTime();
+          const transcurrido=Math.max(0, Math.floor((Date.now()-startedMs)/1000));
+          tProdReal = Math.max(tProdReal, transcurrido);
+          console.log('[DIAG cargarOrden prod] timer reconstruido: transcurrido='+transcurrido+' final='+tProdReal);
+        }
+        if(o.tiempo_ajuste_started_at){
+          const startedMs=new Date(o.tiempo_ajuste_started_at).getTime();
+          const transcurrido=Math.max(0, Math.floor((Date.now()-startedMs)/1000));
+          tAjusteReal = Math.max(tAjusteReal, transcurrido);
+        }
         S.timers.prod.s = tProdReal;
         S.timers.prod.total = tProdReal;
-        S.timers.ajuste.s = o.tiempo_ajuste_seg||0;
-        S.timers.ajuste.total = o.tiempo_ajuste_seg||0;
+        S.timers.ajuste.s = tAjusteReal;
+        S.timers.ajuste.total = tAjusteReal;
         // Ir a pantalla de producción
         showScreen('produccion');
         renderSteps('steps-prod','produccion');
@@ -1839,8 +1882,16 @@ async function cargarOrdenExistente(pipelineId){
       window._ajusteIniciado=true;
       iniciarAutosaveGlobal();
       setTimeout(()=>{
-        S.timers.ajuste.s = o.tiempo_ajuste_seg||0;
-        S.timers.ajuste.total = o.tiempo_ajuste_seg||0;
+        // Si hay started_at activo, sumar tiempo transcurrido (sobrevive a sleep)
+        let tAjusteReal = o.tiempo_ajuste_seg||0;
+        if(o.tiempo_ajuste_started_at){
+          const startedMs=new Date(o.tiempo_ajuste_started_at).getTime();
+          const transcurrido=Math.max(0, Math.floor((Date.now()-startedMs)/1000));
+          tAjusteReal = Math.max(tAjusteReal, transcurrido);
+          console.log('[DIAG cargarOrden ajuste] timer reconstruido: transcurrido='+transcurrido+' final='+tAjusteReal);
+        }
+        S.timers.ajuste.s = tAjusteReal;
+        S.timers.ajuste.total = tAjusteReal;
         showScreen('ajuste');
         renderSteps('steps-ajuste','ajuste');
         setTimeout(()=>{
@@ -2354,7 +2405,13 @@ function timerPlay(name){
   const esPrimerInicio=name==='prod'&&t.s===0&&!window._monitorEmailEnviado;
   const esPrimerAjuste=name==='ajuste'&&t.s===0&&!window._ajusteIniciado;
   t.running=true;
-  t.startTs=Date.now()-(t.s*1000); // reanudar desde donde quedó
+  t.startTs=Date.now()-(t.s*1000); // reanudar desde donde quedó (tiempo wallclock para cálculo del delta)
+  // CRÍTICO: startedAt = timestamp absoluto cuando empezó este "tramo" de play.
+  // Si el dispositivo se duerme con timer corriendo y vuelve después, calculamos
+  // tiempo_real = Date.now() - startedAt + tiempo_acumulado_previo. Esto sobrevive
+  // a sleep, lock screen, navegador pausado, todo.
+  t.startedAt=Date.now();
+  t.acumuladoPrevio=t.s; // segundos ya acumulados antes de este play (de pauses anteriores)
   // Actualizar display INMEDIATAMENTE — no esperar al primer tick del setInterval (500ms)
   const dispNow=document.getElementById('timer-'+name);
   if(dispNow){dispNow.textContent=fmt(t.s);dispNow.className='timer-display running mono';}
@@ -2381,6 +2438,9 @@ function timerPlay(name){
       guardarOrden('ajuste').catch(e=>console.error('Error guardando ajuste inicial (timerPlay):',e));
     }
     iniciarAutosaveGlobal();
+  } else {
+    // Guardar inmediato cuando el operador da play (no esperar al setInterval de 10s)
+    guardarOrden(name==='prod'?'produccion':'ajuste').catch(e=>console.warn('guardar tras play:',e));
   }
   // Mandar email de monitor solo al primer inicio del cronómetro de producción
   if(esPrimerInicio){
@@ -2400,17 +2460,23 @@ function timerPause(name){
   if(!t.running)return;
   t.s=Math.floor((Date.now()-t.startTs)/1000); // guardar segundos exactos al pausar
   t.running=false;clearInterval(t.iv);
+  t.startedAt=null; // limpiar — al reanudar se setea de nuevo
   const disp=document.getElementById('timer-'+name);if(disp)disp.className='timer-display paused mono';
   const pb=document.getElementById('btn-'+name+'-pause');if(pb)pb.style.display='none';
   const plb=document.getElementById('btn-'+name+'-play');if(plb){plb.style.display='flex';plb.innerHTML='▶ Reanudar';}
+  // Guardar inmediato al pausar
+  guardarOrden(name==='prod'?'produccion':'ajuste').catch(e=>console.warn('guardar tras pause:',e));
 }
 function timerStop(name){
   const t=S.timers[name];
   if(t.running)t.s=Math.floor((Date.now()-t.startTs)/1000);
   t.running=false;clearInterval(t.iv);t.total=t.s;
+  t.startedAt=null;
   const disp=document.getElementById('timer-'+name);if(disp)disp.className='timer-display stopped mono';
   ['pause','stop'].forEach(a=>{const b=document.getElementById('btn-'+name+'-'+a);if(b)b.style.display='none';});
   const plb=document.getElementById('btn-'+name+'-play');if(plb){plb.style.display='flex';plb.innerHTML='▶ Iniciar';}
+  // Guardar inmediato al detener
+  guardarOrden(name==='prod'?'produccion':'ajuste').catch(e=>console.warn('guardar tras stop:',e));
 }
 function startGlobalTimer(){
   if(S.timers.global.running)return;
@@ -3039,6 +3105,12 @@ async function _guardarOrdenInterno(estado){
     estado,
     tiempo_ajuste_seg:S.timers.ajuste.total||S.timers.ajuste.s||0,
     tiempo_produccion_seg:S.timers.prod.total||S.timers.prod.s||0,
+    // started_at: timestamp absoluto del último play. Permite que si el
+    // dispositivo se duerme/bloquea y vuelve después, sepamos cuánto tiempo
+    // real transcurrió aunque los autosaves no hayan corrido en background.
+    // null cuando el timer está pausado/detenido.
+    tiempo_ajuste_started_at:S.timers.ajuste.running&&S.timers.ajuste.startedAt?new Date(S.timers.ajuste.startedAt).toISOString():null,
+    tiempo_produccion_started_at:S.timers.prod.running&&S.timers.prod.startedAt?new Date(S.timers.prod.startedAt).toISOString():null,
     piezas_buenas:buenas,
     merma_ajuste:S.merma.ajuste||{},
     merma_produccion:S.merma.prod||{},
@@ -3961,7 +4033,41 @@ loadUsers();
 
 // Re-sincronizar timers al volver a la pestaña
 document.addEventListener('visibilitychange',function(){
-  if(document.visibilityState!=='visible')return;
+  if(document.visibilityState==='hidden'){
+    // La pestaña se va al fondo — ahora es cuando los navegadores empiezan
+    // a pausar setIntervals. Guardar AHORA con keepalive antes de que el
+    // navegador suspenda la pestaña. Esto cubre el caso "operador minimiza
+    // Safari" o "iPad se bloquea con app abierta".
+    if(!S.pipelineId||!S.ordenId)return;
+    try{
+      // Capturar tiempo actual de timers running antes de guardar
+      ['prod','ajuste'].forEach(function(name){
+        const t=S.timers[name];
+        if(t.running&&t.startTs)t.s=t.total=Math.floor((Date.now()-t.startTs)/1000);
+      });
+      const payload={
+        tiempo_ajuste_seg:S.timers.ajuste.total||S.timers.ajuste.s||0,
+        tiempo_produccion_seg:S.timers.prod.total||S.timers.prod.s||0,
+        // started_at: si los timers están corriendo, el navegador puede pausarse
+        // ahora pero el tiempo real sigue contando. started_at permite reconstruir
+        // el tiempo correcto al volver.
+        tiempo_ajuste_started_at:S.timers.ajuste.running&&S.timers.ajuste.startedAt?new Date(S.timers.ajuste.startedAt).toISOString():null,
+        tiempo_produccion_started_at:S.timers.prod.running&&S.timers.prod.startedAt?new Date(S.timers.prod.startedAt).toISOString():null,
+        piezas_buenas:parseInt(document.getElementById('buenas-input')?.value)||0,
+        merma_ajuste:S.merma.ajuste||{},
+        merma_produccion:S.merma.prod||{},
+        tm_ajuste:S.tm.ajuste||{},
+        tm_produccion:S.tm.prod||{},
+      };
+      const url=SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.ordenId;
+      const headers={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'};
+      fetch(url,{method:'PATCH',headers:headers,body:JSON.stringify(payload),keepalive:true}).catch(()=>{});
+    }catch(e){console.warn('visibilitychange hidden save fail:',e);}
+    return;
+  }
+  // visibilityState === 'visible': la pestaña vuelve al frente.
+  // Recalcular display de timers que estaban running (Date.now() avanzó
+  // aunque el setInterval estuvo pausado).
   ['prod','ajuste','global'].forEach(function(name){
     const t=S.timers[name];
     if(t.running&&t.startTs){
@@ -3971,6 +4077,14 @@ document.addEventListener('visibilitychange',function(){
     }
   });
   syncTimerBars();
+  // También reactivar el setInterval del autosave si quedó suspendido por el navegador
+  if(window._autosaveIv && S.pipelineId && S.ordenId){
+    // Forzar un guardado inmediato al volver para sincronizar lo que pasó
+    // mientras estábamos en background (en caso de que el navegador haya
+    // cancelado el setInterval sin avisar).
+    const estado=(S.timers.prod.s||S.timers.prod.total||0)>0?'produccion':'ajuste';
+    guardarOrden(estado).catch(e=>console.warn('save on visible:',e));
+  }
 });
 </script>
 </body>
