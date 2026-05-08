@@ -2981,6 +2981,39 @@ function renderDetallePedido(p) {
     (col.componentes||[]).forEach(function(x){costoTintas+=(x.gramos&&x.precio_kg?(x.gramos/1000)*x.precio_kg:0);});
     (col.aditivos||[]).forEach(function(a){costoTintas+=(a.gramos&&a.precio_kg?(a.gramos/1000)*a.precio_kg:0);});
   });
+  // Calcular costo REAL de tintas si la orden tiene consumo registrado
+  var cachedOrdenDet = window._ordenCache && window._ordenCache[p.id];
+  var costoTintasRealPreparado = 0;
+  var tieneTintasReales = false;
+  if (cachedOrdenDet) {
+    var consumoDet = cachedOrdenDet.consumo_real_tintas || [];
+    var formulaDet = cachedOrdenDet.formula_tintas || p.formula_tintas || [];
+    consumoDet.forEach(function(cr, i) {
+      var preparado = parseFloat(cr.gramos_usados) || 0;
+      if (preparado <= 0) return;
+      var col = formulaDet[i] || {};
+      var comp = col.componentes || [];
+      var adit = col.aditivos || [];
+      var tgComp = comp.reduce(function(s, x) { return s + (parseFloat(x.gramos) || 0); }, 0);
+      var totalGr = 0, totalCosto = 0;
+      comp.forEach(function(x) {
+        var gr = parseFloat(x.gramos) || 0;
+        var pk = parseFloat(x.precio_kg || x.precio) || 0;
+        totalGr += gr;
+        totalCosto += (gr/1000) * pk;
+      });
+      adit.forEach(function(a) {
+        var pct = parseFloat(a.pct) || 0;
+        var gr = pct > 0 ? (pct/100 * tgComp) : (parseFloat(a.gramos) || 0);
+        var pk = parseFloat(a.precio_kg || a.precio) || 0;
+        totalGr += gr;
+        totalCosto += (gr/1000) * pk;
+      });
+      var precioPorGr = totalGr > 0 ? totalCosto / totalGr : 0;
+      costoTintasRealPreparado += preparado * precioPorGr;
+      tieneTintasReales = true;
+    });
+  }
   var costoTotal = piezas*costBot + piezas*costTap + costoTintas + colores*costPant + colores*costPos + piezas*(tfP+tfT);
   // Si hay costo guardado en pipeline, mostrarlo en el total con MO
   var costoGuardado = p.costo_total || costoTotal;
@@ -3042,7 +3075,9 @@ function renderDetallePedido(p) {
     + '</tr></thead><tbody>'
     + costoRow('Botellas '+cap+'ml', piezas, costBot)
     + costoRow('Tapas', piezas, costTap)
-    + costoRow('Tintas (estimado)', 1, costoTintas, costoTintas===0?'— sin fórmula':'')
+    + (tieneTintasReales
+        ? costoRow('Tintas (real)', 1, costoTintasRealPreparado, '— consumo registrado')
+        : costoRow('Tintas (estimado)', 1, costoTintas, costoTintas===0?'— sin fórmula':''))
     + costoRow('Pantallas ('+colores+' col)', colores, costPant)
     + costoRow('Positivos ('+colores+' col)', colores, costPos)
     + costoRow('Empaque', piezas, tfP+tfT)
@@ -3050,11 +3085,11 @@ function renderDetallePedido(p) {
     + '</tbody></table></div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg3);border-radius:10px;margin-bottom:6px">'
     + '<span style="font-size:13px;font-weight:600">Total costo (sin MO)</span>'
-    + '<span style="font-family:\'Space Mono\',monospace;font-size:15px;font-weight:700;color:var(--red)">' + mxn(costoTotal) + '</span>'
+    + '<span style="font-family:\'Space Mono\',monospace;font-size:15px;font-weight:700;color:var(--red)">' + mxn(tieneTintasReales ? (costoTotal - costoTintas + costoTintasRealPreparado) : costoTotal) + '</span>'
     + '</div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;margin-bottom:14px">'
     + '<span style="font-size:14px;font-weight:700">Total costo (con MO)</span>'
-    + '<span style="font-family:\'Space Mono\',monospace;font-size:18px;font-weight:700;color:var(--red)">' + mxn(costoTotalConMO) + '</span>'
+    + '<span style="font-family:\'Space Mono\',monospace;font-size:18px;font-weight:700;color:var(--red)">' + mxn(tieneTintasReales ? (costoTotalConMO - costoTintas + costoTintasRealPreparado) : costoTotalConMO) + '</span>'
     + '</div>'
     + ((function(){
         var mermaReal = p.costo_merma_real||0;
