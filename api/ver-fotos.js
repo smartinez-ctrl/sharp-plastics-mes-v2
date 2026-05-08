@@ -69,8 +69,8 @@ export default async function handler(req, res) {
     .info-val { font-size: 14px; font-weight: 700; }
     .fotos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .foto-card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-    .foto-card .foto-img-wrap { width: 100%; aspect-ratio: 4/3; overflow: hidden; }
-    .foto-card .foto-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .foto-card .foto-img-wrap { width: 100%; aspect-ratio: 4/3; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
+    .foto-card .foto-img-wrap img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; }
     .foto-label { padding: 8px 12px; font-size: 11px; font-weight: 600; color: #374151; border-top: 1px solid #f1f5f9; }
     .print-btn { display: block; text-align: center; margin: 20px 0; }
     .print-btn button { background: #0d0f12; color: #fff; border: none; border-radius: 8px; padding: 12px 32px; font-size: 14px; font-weight: 600; cursor: pointer; }
