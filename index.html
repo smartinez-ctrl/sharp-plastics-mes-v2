@@ -2931,16 +2931,31 @@ async function salirGuardando(){
 function iniciarAutosaveGlobal(){
   if(window._autosaveIv){clearInterval(window._autosaveIv);}
   window._autosaveIv=setInterval(()=>{
-    // Determinar el estado según la screen activa
+    // BUG ANTERIOR: solo guardaba si la pantalla activa era del flow (ajuste/
+    // fotos/produccion/qa/cierre). Si el operador navegaba al dashboard a ver
+    // otros pedidos, el autosave se volvía no-op silenciosamente. El timer del
+    // header seguía corriendo dando ilusión de que todo estaba bien, pero la DB
+    // no recibía nada. Si el operador después cerraba la pestaña, perdía todo
+    // lo trabajado desde la última vez que estuvo en pantalla del flow.
+    //
+    // FIX: lo único que importa para guardar es que haya una orden activa
+    // (S.pipelineId + S.ordenId). Si no hay orden activa, el operador no
+    // está produciendo y no hay nada que guardar. Si hay orden activa,
+    // guardamos aunque esté mirando el dashboard u otra pantalla.
+    if(!S.pipelineId || !S.ordenId) return;
+    // Determinar estado según pantalla activa, fallback a 'ajuste' si está
+    // en una pantalla externa al flow (es solo metadato, no afecta la lógica).
     const pantallasFlow=['ajuste','fotos','produccion','qa','cierre'];
     let estadoActual=null;
     for(const p of pantallasFlow){
       if(document.getElementById('screen-'+p)?.classList.contains('active')){estadoActual=p;break;}
     }
-    if(!estadoActual)return; // No estamos en flujo, no guardar
-    // Mapeo: ajuste y fotos guardan como 'ajuste', producción/qa/cierre como 'produccion'
-    const estado=(estadoActual==='ajuste'||estadoActual==='fotos')?'ajuste':'produccion';
-    if(S.pipelineId){guardarOrden(estado).catch(e=>console.warn('Autosave falló:',e));}
+    const estado=(estadoActual==='ajuste'||estadoActual==='fotos')?'ajuste':
+                 (estadoActual==='produccion'||estadoActual==='qa'||estadoActual==='cierre')?'produccion':
+                 // Sin pantalla del flow activa: usar el último estado conocido
+                 // (basado en si hay tiempo de producción o solo ajuste)
+                 ((S.timers.prod.s||S.timers.prod.total||0)>0?'produccion':'ajuste');
+    guardarOrden(estado).catch(e=>console.warn('Autosave falló:',e));
   },10000);
 }
 
