@@ -1118,10 +1118,12 @@ async function abrirDetallePedido(id){
       // Costo real de tintas: TODO lo preparado (gramos_usados) cuenta como costo, ya que
       // el sobrante también es merma — la mezcla preparada no se reutiliza para otro pedido
       let costoTintasReal=0;
+      let costoTintasPreparadoTotal=0; // costo del TOTAL preparado real (consumido + sobrante)
       const consumo=orden.consumo_real_tintas||[];
       const formulaOr=orden.formula_tintas||p.formula_tintas||[];
       consumo.forEach((cr,i)=>{
         const sobrante=parseFloat(cr.gramos_sobrante)||0;
+        const preparado=parseFloat(cr.gramos_usados)||0; // total preparado por el operador
         const col=formulaOr[i]||{};
         // Calcular precio promedio por gramo de la fórmula del color
         const comp=col.componentes||[];
@@ -1142,8 +1144,11 @@ async function abrirDetallePedido(id){
         const precioPorGr=totalGr>0?totalCosto/totalGr:0;
         // Merma de tinta = solo gramos sobrantes (no consumidos en producto) × precio/g
         costoTintasReal+=sobrante*precioPorGr;
+        // Costo TOTAL real preparado = todos los gramos que se prepararon × precio/g
+        // (este es el dato real "$77.42" en la imagen — el costo total que se gastó en tintas)
+        costoTintasPreparadoTotal+=preparado*precioPorGr;
       });
-      return {mermaBotPzas,costoMermaBot,costoTintasReal,hasData:true};
+      return {mermaBotPzas,costoMermaBot,costoTintasReal,costoTintasPreparadoTotal,hasData:true};
     };
     let mermaCalc=calcMerma(cachedOrden);
     console.log('[DIAG abrirPedido] pipeline_id=',p.id,'cachedOrden?',!!cachedOrden,'mermaInicial=',mermaCalc);
@@ -1216,7 +1221,9 @@ async function abrirDetallePedido(id){
           <tbody>
             ${costoRow('Botellas '+cap+'ml',piezas,costBot,'','bot')}
             ${costoRow('Tapas',piezas,costTap,'','tap')}
-            ${costoRow('Tintas (estimado)',1,costoTintas,costoTintas===0?'— sin fórmula':'','tintas')}
+            ${(mermaCalc.hasData && mermaCalc.costoTintasPreparadoTotal>0)
+              ? costoRow('Tintas (real)',1,mermaCalc.costoTintasPreparadoTotal,'— consumo registrado','tintas')
+              : costoRow('Tintas (estimado)',1,costoTintas,costoTintas===0?'— sin fórmula':'','tintas')}
             ${costoRow('Pantallas ('+colores+' col)',colores,costPant,'','pant')}
             ${costoRow('Positivos ('+colores+' col)',colores,costPos,'','pos')}
             ${costoRow('Empaque',piezas,(tfP+tfT),'','emp')}
@@ -1226,7 +1233,7 @@ async function abrirDetallePedido(id){
               <td style="padding:10px 14px;text-align:center"><input type="number" id="merma-bot-unit" value="${costBot.toFixed(2)}" min="0" step="0.01" style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;font-family:'Space Mono',monospace" oninput="recalcMermaRow('bot')"></td>
               <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="merma-bot-sub">${mxn(mermaCalc.costoMermaBot)}</td>
             </tr>
-            <tr id="row-merma-tin" style="border-bottom:1px solid var(--border);background:var(--red-bg)">
+            <tr id="row-merma-tin" style="border-bottom:1px solid var(--border);background:var(--red-bg);${(mermaCalc.hasData && mermaCalc.costoTintasPreparadoTotal>0)?'display:none':''}">
               <td style="padding:10px 14px;font-size:13px">Merma tintas <span id="merma-tin-note" style="font-size:10px;color:var(--text3)">${mermaCalc.hasData?'— auto: gramos sobrantes × $/g':'— sin datos aún'}</span></td>
               <td style="padding:10px 14px;text-align:center"><input type="number" id="merma-tin-qty" value="1" min="0" step="1" style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;font-family:'Space Mono',monospace" oninput="recalcMermaRow('tin')"></td>
               <td style="padding:10px 14px;text-align:center"><input type="number" id="merma-tin-unit" value="${mermaCalc.costoTintasReal.toFixed(2)}" min="0" step="0.01" style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;font-family:'Space Mono',monospace" oninput="recalcMermaRow('tin')"></td>
@@ -1243,12 +1250,21 @@ async function abrirDetallePedido(id){
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg3);border-radius:10px;margin-bottom:12px">
         <span style="font-size:14px;font-weight:700">Total costo (sin MO)</span>
-        <span id="costo-total-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">${mxn(costoTotal+mermaCalc.costoMermaBot+mermaCalc.costoTintasReal)}</span>
+        <span id="costo-total-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">${mxn(
+          (mermaCalc.hasData && mermaCalc.costoTintasPreparadoTotal>0)
+            ? (costoTotal - costoTintas + mermaCalc.costoTintasPreparadoTotal + mermaCalc.costoMermaBot)
+            : (costoTotal + mermaCalc.costoMermaBot + mermaCalc.costoTintasReal)
+        )}</span>
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:10px;margin-bottom:10px">
         <span style="font-size:14px;font-weight:700">Total costo (con MO)</span>
-        <span id="costo-total-mo-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--amber)">${mxn(costoTotal+mermaCalc.costoMermaBot+mermaCalc.costoTintasReal+(p.mo_horas||0)*(p.mo_tarifa||70))}</span>
+        <span id="costo-total-mo-display" style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--amber)">${mxn(
+          ((mermaCalc.hasData && mermaCalc.costoTintasPreparadoTotal>0)
+            ? (costoTotal - costoTintas + mermaCalc.costoTintasPreparadoTotal + mermaCalc.costoMermaBot)
+            : (costoTotal + mermaCalc.costoMermaBot + mermaCalc.costoTintasReal))
+          + (p.mo_horas||0)*(p.mo_tarifa||70)
+        )}</span>
       </div>
 
       ${(p.costo_merma_real||p.costo_tintas_real) ? `
