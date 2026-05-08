@@ -1242,8 +1242,8 @@ async function abrirDetallePedido(id){
             <tr style="border-bottom:1px solid var(--border)">
               <td style="padding:10px 14px;font-size:13px">Mano de obra</td>
               <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-horas" value="${p.mo_horas||0}" min="0" step="0.5" style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()"></td>
-              <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-hora" value="${p.mo_tarifa||70}" min="0" step="0.01" style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()"></td>
-              <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="costo-sub-mo">${mxn((p.mo_horas||0)*(p.mo_tarifa||70))}</td>
+              <td style="padding:10px 14px;text-align:center"><input type="number" id="costo-mo-hora" value="${p.mo_tarifa||CAT.tarifas_fijas['mo_tarifa_por_hora']||100}" min="0" step="0.01" style="width:80px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none" oninput="recalcMO()"></td>
+              <td style="padding:10px 14px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:var(--red)" id="costo-sub-mo">${mxn((p.mo_horas||0)*(p.mo_tarifa||CAT.tarifas_fijas['mo_tarifa_por_hora']||100))}</td>
             </tr>
           </tbody>
         </table>
@@ -1263,7 +1263,7 @@ async function abrirDetallePedido(id){
           ((mermaCalc.hasData && mermaCalc.costoTintasPreparadoTotal>0)
             ? (costoTotal - costoTintas + mermaCalc.costoTintasPreparadoTotal + mermaCalc.costoMermaBot)
             : (costoTotal + mermaCalc.costoMermaBot + mermaCalc.costoTintasReal))
-          + (p.mo_horas||0)*(p.mo_tarifa||70)
+          + (p.mo_horas||0)*(p.mo_tarifa||CAT.tarifas_fijas['mo_tarifa_por_hora']||100)
         )}</span>
       </div>
 
@@ -3493,7 +3493,7 @@ async function abrirPDFInterno(p){
   if(p.merma_bot_unit!==undefined&&p.merma_bot_unit!==null){costoMermaBot=mermaBotPzas*(parseFloat(p.merma_bot_unit)||0);}else{costoMermaBot=mermaBotPzas*costBot;}
   if(p.merma_tin_unit!==undefined&&p.merma_tin_unit!==null){costoMermaTinta=parseFloat(p.merma_tin_unit)||0;}
 
-  const moHoras=p.mo_horas||0, moTarifa=p.mo_tarifa||70;
+  const moHoras=p.mo_horas||0, moTarifa=p.mo_tarifa||CAT.tarifas_fijas['mo_tarifa_por_hora']||100;
   const costoMO=moHoras*moTarifa;
   const costoSinMO=piezas*costBot+piezas*costTap+costoTintas+colores*costPant+colores*costPos+piezas*(tfP+tfT)+costoMermaBot+costoMermaTinta;
   const costoTotal=costoSinMO+costoMO;
