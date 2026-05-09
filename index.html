@@ -826,14 +826,42 @@ function showScreen(id){
     // Auto-refresh cada 15s mientras el dashboard esté visible. Esto mantiene
     // los badges de "✏️ Editándose ahora" actualizados sin que el operador
     // tenga que pulsar refresh manualmente. Se cancela al salir del dashboard.
+    //
+    // Para no interrumpir al operador buscando un pedido, el refresh:
+    //  - Se skipea si el operador interactuó (scroll/touch/click) en últimos 8s
+    //  - Preserva la posición del scroll después de rerenderear
     if(window._dashRefreshIv){clearInterval(window._dashRefreshIv);}
+    if(!window._dashLastInteraction){
+      window._dashLastInteraction=0;
+      const markInteraction=()=>{window._dashLastInteraction=Date.now();};
+      const dashEl=document.getElementById('screen-dashboard');
+      if(dashEl){
+        dashEl.addEventListener('scroll',markInteraction,{passive:true,capture:true});
+        dashEl.addEventListener('touchstart',markInteraction,{passive:true});
+        dashEl.addEventListener('click',markInteraction,{passive:true});
+      }
+      // También captura scroll del window por si scrollea el contenedor padre
+      window.addEventListener('scroll',markInteraction,{passive:true});
+    }
     window._dashRefreshIv=setInterval(()=>{
-      if(document.getElementById('screen-dashboard')?.classList.contains('active')){
-        renderDashboard();
-      } else {
+      if(!document.getElementById('screen-dashboard')?.classList.contains('active')){
         clearInterval(window._dashRefreshIv);
         window._dashRefreshIv=null;
+        return;
       }
+      // Skipear refresh si el operador interactuó hace menos de 8 segundos
+      // (está buscando un pedido, no queremos cortarle el scroll)
+      if(Date.now()-window._dashLastInteraction<8000) return;
+      // Preservar scroll antes de rerenderear
+      const dashEl=document.getElementById('screen-dashboard');
+      const scrollY=dashEl?dashEl.scrollTop:window.scrollY;
+      renderDashboard();
+      // Restaurar scroll después del render (el rerender es síncrono pero
+      // el browser puede necesitar un tick para aplicar el nuevo DOM)
+      requestAnimationFrame(()=>{
+        if(dashEl)dashEl.scrollTop=scrollY;
+        else window.scrollTo(0,scrollY);
+      });
     },15000);
   } else {
     if(window._dashRefreshIv){clearInterval(window._dashRefreshIv);window._dashRefreshIv=null;}
