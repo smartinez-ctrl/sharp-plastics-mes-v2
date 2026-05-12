@@ -29,12 +29,13 @@ export default async function handler(req, res) {
   // Ordenar por nombre (tienen timestamp) y tomar la última foto de cada posición (0-3)
   const fotoLabels = ['Frente', 'Reverso', 'Lado izquierdo', 'Lado derecho'];
   const fotosByPos = [null, null, null, null];
+  const colorByPos = [null, null, null, null];
   if (Array.isArray(files)) {
     files.sort((a, b) => b.name.localeCompare(a.name)); // más reciente primero
     files.forEach(f => {
-      const match = f.name.match(/foto-(\d)-/);
-      if (match) {
-        const pos = parseInt(match[1]);
+      const m = f.name.match(/foto-(\d)-/);
+      if (m) {
+        const pos = parseInt(m[1]);
         if (pos >= 0 && pos <= 3 && !fotosByPos[pos]) {
           fotosByPos[pos] = {
             url: `${SB_URL}/storage/v1/object/public/${BUCKET}/${id}/${f.name}`,
@@ -42,9 +43,20 @@ export default async function handler(req, res) {
           };
         }
       }
+      const mc = f.name.match(/color-(\d)-/);
+      if (mc) {
+        const pos = parseInt(mc[1]);
+        if (pos >= 0 && pos <= 3 && !colorByPos[pos]) {
+          colorByPos[pos] = {
+            url: `${SB_URL}/storage/v1/object/public/${BUCKET}/${id}/${f.name}`,
+            label: `Color ${pos + 1}`,
+          };
+        }
+      }
     });
   }
   const fotoUrls = fotosByPos.filter(Boolean);
+  const colorUrls = colorByPos.filter(Boolean);
 
   const fecha = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -89,6 +101,16 @@ export default async function handler(req, res) {
       <div class="info-item"><div class="info-label">Producto</div><div class="info-val">${orden.producto || '—'}</div></div>
       <div class="info-item"><div class="info-label">Piezas</div><div class="info-val">${(orden.piezas_total || 0).toLocaleString()}</div></div>
     </div>
+    ${colorUrls.length > 0 ? `
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin:8px 0 12px;font-weight:700">Color Validation</h2>
+    <div class="fotos-grid" style="margin-bottom:24px">
+      ${colorUrls.map(f => `
+        <div class="foto-card">
+          <div class="foto-img-wrap"><img src="${f.url}" alt="${f.label}"></div>
+          <div class="foto-label">${f.label}</div>
+        </div>`).join('')}
+    </div>` : ''}
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin:8px 0 12px;font-weight:700">Bottle Photos</h2>
     <div class="fotos-grid">
       ${fotoUrls.map(f => `
         <div class="foto-card">

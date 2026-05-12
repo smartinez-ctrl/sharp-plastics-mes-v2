@@ -6,10 +6,10 @@ const BASE_URL = 'https://sharp-plastics-mes-v2.vercel.app';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { orden_id, orden_op, cliente, sub_cliente, piezas, colores, foto_urls = [], observaciones, diseno_url } = req.body;
+  const { orden_id, orden_op, cliente, sub_cliente, piezas, colores, foto_urls = [], foto_color_urls = [], observaciones, diseno_url } = req.body;
   if (!orden_id) return res.status(400).json({ error: 'orden_id requerido' });
 
-  console.log('send-approval: orden_id=', orden_id, 'foto_urls:', foto_urls.length, foto_urls.map(u => u ? 'OK' : 'null'));
+  console.log('send-approval: orden_id=', orden_id, 'foto_urls:', foto_urls.length, foto_urls.map(u => u ? 'OK' : 'null'), 'foto_color_urls:', foto_color_urls.length);
 
   // Token de aprobación + guardar foto_urls en la orden para que se conserven al recargar
   const token = Buffer.from(`${orden_id}:${Date.now()}:approve`).toString('base64url');
@@ -21,6 +21,7 @@ export default async function handler(req, res) {
       aprobacion_estado: 'pendiente',
       aprobacion_enviada_at: new Date().toISOString(),
       foto_urls: foto_urls.filter(u => u && typeof u === 'string' && u.startsWith('http')), // solo URLs válidas (no dataURLs base64)
+      foto_color_urls: foto_color_urls.filter(u => u && typeof u === 'string' && u.startsWith('http')),
     }),
   });
 
