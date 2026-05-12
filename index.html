@@ -728,12 +728,18 @@ async function loadUsers(){
   const modoPDF = pdfPipeline && (pdfTipo==='cliente'||pdfTipo==='interno');
 
   if(modoPDF){
-    // Reemplazar la pantalla con un mensaje claro para esta pestaña
-    document.body.innerHTML=`
-      <div style="font-family:-apple-system,sans-serif;background:#0d0f12;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:24px">
-        <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:#f59e0b">SHARP <span style="color:#fff">PLASTICS</span></div>
-        <div id="pdf-msg" style="font-size:15px;color:#9ca3af;text-align:center">⏳ Generando PDF de ${pdfTipo}...</div>
-      </div>`;
+    // Crear un overlay encima del body sin reemplazarlo — los selects/inputs
+    // del DOM (cierreXhatch, cierreAgua, uv-int, etc.) deben seguir existiendo
+    // porque verPDFCompletado y generarPDFInterno los leen para llenar el PDF.
+    // Si reemplazáramos document.body.innerHTML, esos elementos desaparecen y
+    // el PDF saldría con campos vacíos.
+    const overlay=document.createElement('div');
+    overlay.id='pdf-overlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:#0d0f12;color:#fff;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:24px;font-family:-apple-system,sans-serif';
+    overlay.innerHTML=`
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:#f59e0b">SHARP <span style="color:#fff">PLASTICS</span></div>
+      <div id="pdf-msg" style="font-size:15px;color:#9ca3af;text-align:center">⏳ Generando PDF de ${pdfTipo}...</div>`;
+    document.body.appendChild(overlay);
   }
 
   try{
