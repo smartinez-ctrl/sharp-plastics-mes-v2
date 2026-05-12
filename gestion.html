@@ -1018,9 +1018,10 @@ function renderPipeline(){
       <div></div>
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-xs" title="Fotos empaque" onclick="abrirFotosEmpaque('${p.id}')">📦</button>
-        <button class="btn btn-ghost btn-xs" title="PDF cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
-        <button class="btn btn-ghost btn-xs" title="PDF interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
-        <button class="btn btn-ghost btn-xs" title="Ver producción" onclick="verReportesProduccion('${p.id}')">🔍</button>
+        <button class="btn btn-ghost btn-xs" title="PDF cotización cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
+        <button class="btn btn-ghost btn-xs" title="PDF cotización interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
+        <button class="btn btn-ghost btn-xs" title="PDF producción cliente (QA + fotos)" onclick="abrirPDFProduccionCliente('${p.id}')">📋</button>
+        <button class="btn btn-ghost btn-xs" title="PDF producción interno (QA + fotos + merma)" onclick="abrirPDFProduccionInterno('${p.id}')">🛠</button>
         <button class="btn btn-ghost btn-xs" title="Enviar reporte completo por email" onclick="enviarReporteCompleto('${p.id}',this)">📧</button>
         <button class="btn btn-ghost btn-xs" title="Ocultar pedido" onclick="ocultarPedido('${p.id}',true)" style="opacity:0.6">🙈</button>
         ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
@@ -2607,8 +2608,23 @@ function editProdField(ordenId, campo, valor){
 }
 
 async function verPDFCompletadoGestion(pipelineId, tipo){
-  // Use the same function from index.html logic but from gestion context
-  toast('Abre el pedido desde producción para ver los PDFs');
+  // Mantenida por compatibilidad — abrir en index.html con params
+  abrirPDFProduccion(pipelineId, tipo);
+}
+
+function abrirPDFProduccion(pipelineId, tipo){
+  // Abre index.html en nueva pestaña con params que disparan el PDF
+  // automáticamente (sin pedir PIN, sin mostrar pantalla de login)
+  const url = `index.html?pdfPipeline=${pipelineId}&tipo=${tipo}`;
+  window.open(url, '_blank');
+}
+
+function abrirPDFProduccionCliente(pipelineId){
+  abrirPDFProduccion(pipelineId, 'cliente');
+}
+
+function abrirPDFProduccionInterno(pipelineId){
+  abrirPDFProduccion(pipelineId, 'interno');
 }
 
 function fmtSeg(s){s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return [h,m,ss].map(x=>String(x).padStart(2,'0')).join(':');}

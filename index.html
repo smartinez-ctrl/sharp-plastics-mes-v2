@@ -734,6 +734,30 @@ async function loadUsers(){
     grid.style.display='grid';
     renderUsers(false);
     populateSupervisoresSelects();
+    // Modo PDF: si vienen los params ?pdfPipeline=ID&tipo=cliente|interno,
+    // generar el PDF automáticamente y cerrar la pestaña al terminar.
+    // Esto permite que gestion.html abra los PDFs de producción sin
+    // duplicar el código del template aquí.
+    const params=new URLSearchParams(window.location.search);
+    const pdfPipeline=params.get('pdfPipeline');
+    const pdfTipo=params.get('tipo');
+    if(pdfPipeline && (pdfTipo==='cliente'||pdfTipo==='interno')){
+      // Tomar el primer usuario master/supervisor disponible para firma del PDF
+      const userFirma=USERS.find(u=>u.role==='master')||USERS.find(u=>u.role==='supervisor')||USERS[0];
+      if(userFirma)S.user=userFirma;
+      // Cargar catálogos necesarios para el PDF (precios de tintas, etc.)
+      try{await loadAditivosSB();}catch(e){}
+      try{await loadTintasSB();}catch(e){}
+      // Disparar PDF — la función ya hace todo (trae pipeline+orden,
+      // carga fotos de Storage, abre window.print)
+      try{
+        await verPDFCompletado(pdfPipeline, pdfTipo);
+      }catch(e){
+        console.error('Error generando PDF:',e);
+        document.body.innerHTML='<div style="padding:40px;text-align:center;font-family:sans-serif"><h2>Error al generar PDF</h2><p>'+e.message+'</p></div>';
+      }
+      return; // no continuar con flow normal (no mostrar pantalla de login)
+    }
   }catch(e){
     document.getElementById('login-loading').innerHTML='<span style="color:var(--red)">Error cargando usuarios: '+e.message+'</span>';
   }
