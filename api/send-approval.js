@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   const fotosHTML = fotosOk.length > 0
     ? `<div style="padding:0 32px;margin-bottom:24px;text-align:center">
         <a href="${verFotosUrl}" target="_blank" style="display:inline-block;background:#0d0f12;color:#fff;font-size:14px;font-weight:600;padding:12px 32px;border-radius:10px;text-decoration:none">
-          📷 Ver ${fotosOk.length} fotos de aprobación
+          📷 Ver fotos de aprobación
         </a>
         <p style="font-size:11px;color:#9ca3af;margin:8px 0 0">Se abre una página con todas las fotos</p>
       ` + (diseno_url ? `<div style="text-align:center;margin-top:10px"><a href="${diseno_url}" target="_blank" style="display:inline-block;background:#1e2028;color:#f59e0b;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none">🎨 Ver diseño del cliente</a></div>` : '') + `
