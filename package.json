@@ -1,0 +1,10 @@
+{
+  "name": "sharp-plastics-mes-v2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sharp Plastics MES - serverless functions deployed to Vercel",
+  "type": "module",
+  "dependencies": {
+    "jspdf": "^2.5.2"
+  }
+}
