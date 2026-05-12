@@ -718,6 +718,24 @@ async function sbPatch(t,d,f){
 let USERS=[];
 
 async function loadUsers(){
+  // Modo PDF: si vienen los params ?pdfPipeline=ID&tipo=cliente|interno,
+  // generar el PDF automáticamente sin pasar por el login.
+  // Esto permite que gestion.html abra los PDFs de producción sin
+  // duplicar el código del template aquí.
+  const params=new URLSearchParams(window.location.search);
+  const pdfPipeline=params.get('pdfPipeline');
+  const pdfTipo=params.get('tipo');
+  const modoPDF = pdfPipeline && (pdfTipo==='cliente'||pdfTipo==='interno');
+
+  if(modoPDF){
+    // Reemplazar la pantalla con un mensaje claro para esta pestaña
+    document.body.innerHTML=`
+      <div style="font-family:-apple-system,sans-serif;background:#0d0f12;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:24px">
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:#f59e0b">SHARP <span style="color:#fff">PLASTICS</span></div>
+        <div id="pdf-msg" style="font-size:15px;color:#9ca3af;text-align:center">⏳ Generando PDF de ${pdfTipo}...</div>
+      </div>`;
+  }
+
   try{
     const rows=await sbGet('usuarios','activo=eq.true&order=nombre.asc');
     window._allUsers=rows;
@@ -729,37 +747,39 @@ async function loadUsers(){
       pin:u.pin,
       hidden:u.rol==='master'||u.rol==='facturacion',
     }));
-    document.getElementById('login-loading').style.display='none';
-    const grid=document.getElementById('users-grid');
-    grid.style.display='grid';
-    renderUsers(false);
-    populateSupervisoresSelects();
-    // Modo PDF: si vienen los params ?pdfPipeline=ID&tipo=cliente|interno,
-    // generar el PDF automáticamente y cerrar la pestaña al terminar.
-    // Esto permite que gestion.html abra los PDFs de producción sin
-    // duplicar el código del template aquí.
-    const params=new URLSearchParams(window.location.search);
-    const pdfPipeline=params.get('pdfPipeline');
-    const pdfTipo=params.get('tipo');
-    if(pdfPipeline && (pdfTipo==='cliente'||pdfTipo==='interno')){
-      // Tomar el primer usuario master/supervisor disponible para firma del PDF
+
+    if(modoPDF){
+      // Asignar usuario de firma (master o supervisor)
       const userFirma=USERS.find(u=>u.role==='master')||USERS.find(u=>u.role==='supervisor')||USERS[0];
       if(userFirma)S.user=userFirma;
       // Cargar catálogos necesarios para el PDF (precios de tintas, etc.)
       try{await loadAditivosSB();}catch(e){}
       try{await loadTintasSB();}catch(e){}
-      // Disparar PDF — la función ya hace todo (trae pipeline+orden,
-      // carga fotos de Storage, abre window.print)
       try{
         await verPDFCompletado(pdfPipeline, pdfTipo);
+        // Actualizar mensaje: el PDF se abrió en otra pestaña
+        const msg=document.getElementById('pdf-msg');
+        if(msg)msg.innerHTML='✓ PDF generado en pestaña nueva.<br><br><span style="font-size:13px">Puedes cerrar esta pestaña.</span>';
       }catch(e){
         console.error('Error generando PDF:',e);
-        document.body.innerHTML='<div style="padding:40px;text-align:center;font-family:sans-serif"><h2>Error al generar PDF</h2><p>'+e.message+'</p></div>';
+        const msg=document.getElementById('pdf-msg');
+        if(msg)msg.innerHTML='<span style="color:#ef4444">❌ Error al generar PDF</span><br><span style="font-size:12px">'+e.message+'</span>';
       }
-      return; // no continuar con flow normal (no mostrar pantalla de login)
+      return; // no continuar con flow normal
     }
+
+    document.getElementById('login-loading').style.display='none';
+    const grid=document.getElementById('users-grid');
+    grid.style.display='grid';
+    renderUsers(false);
+    populateSupervisoresSelects();
   }catch(e){
-    document.getElementById('login-loading').innerHTML='<span style="color:var(--red)">Error cargando usuarios: '+e.message+'</span>';
+    if(modoPDF){
+      const msg=document.getElementById('pdf-msg');
+      if(msg)msg.innerHTML='<span style="color:#ef4444">❌ Error: '+e.message+'</span>';
+    } else {
+      document.getElementById('login-loading').innerHTML='<span style="color:var(--red)">Error cargando usuarios: '+e.message+'</span>';
+    }
   }
 }
 
