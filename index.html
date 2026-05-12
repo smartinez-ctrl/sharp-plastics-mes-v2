@@ -865,6 +865,9 @@ function showScreen(id){
       // También captura scroll del window por si scrollea el contenedor padre
       window.addEventListener('scroll',markInteraction,{passive:true});
     }
+    // Refresh "ligero" cada 15s: solo actualiza badges "Editándose ahora"
+    // sin rerenderar las cards (evita parpadeo). Hace una query separada
+    // mucho más pequeña y modifica el DOM solo donde cambió.
     window._dashRefreshIv=setInterval(()=>{
       if(!document.getElementById('screen-dashboard')?.classList.contains('active')){
         clearInterval(window._dashRefreshIv);
@@ -872,21 +875,30 @@ function showScreen(id){
         return;
       }
       // Skipear refresh si el operador interactuó hace menos de 8 segundos
-      // (está buscando un pedido, no queremos cortarle el scroll)
       if(Date.now()-window._dashLastInteraction<8000) return;
-      // Preservar scroll antes de rerenderear
+      actualizarBadgesEdicion().catch(e=>console.warn('actualizarBadges:',e));
+    },15000);
+    // Refresh "completo" cada 90s para detectar cambios estructurales
+    // (pedidos nuevos, cambios de estado, etc.) que el refresh ligero no captura
+    if(window._dashFullRefreshIv){clearInterval(window._dashFullRefreshIv);}
+    window._dashFullRefreshIv=setInterval(()=>{
+      if(!document.getElementById('screen-dashboard')?.classList.contains('active')){
+        clearInterval(window._dashFullRefreshIv);
+        window._dashFullRefreshIv=null;
+        return;
+      }
+      if(Date.now()-window._dashLastInteraction<8000) return;
       const dashEl=document.getElementById('screen-dashboard');
       const scrollY=dashEl?dashEl.scrollTop:window.scrollY;
       renderDashboard();
-      // Restaurar scroll después del render (el rerender es síncrono pero
-      // el browser puede necesitar un tick para aplicar el nuevo DOM)
       requestAnimationFrame(()=>{
         if(dashEl)dashEl.scrollTop=scrollY;
         else window.scrollTo(0,scrollY);
       });
-    },15000);
+    },90000);
   } else {
     if(window._dashRefreshIv){clearInterval(window._dashRefreshIv);window._dashRefreshIv=null;}
+    if(window._dashFullRefreshIv){clearInterval(window._dashFullRefreshIv);window._dashFullRefreshIv=null;}
   }
   if(id==='fotos')pintarFotosEnSlots();
 }
@@ -926,6 +938,53 @@ function pintarFotosEnSlots(){
   }
 }
 function dismissKeyboard(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();}
+
+// Refresh ligero del dashboard: actualiza únicamente los badges de "Editándose
+// ahora" sin tocar el resto del DOM. Esto evita el parpadeo que ocurría con
+// el rerender completo cada 15s. Hace una query mínima a updated_at y modifica
+// solo los elementos .badge-editando-wrap dentro de cada .dash-card.
+async function actualizarBadgesEdicion(){
+  try{
+    const activos=(window._dashRows||[]).filter(p=>p.estado==='En ajuste'||p.estado==='En producción');
+    if(!activos.length) return;
+    const ids=activos.map(p=>p.id).join(',');
+    const ordenes=await sbGet('ordenes_produccion','pipeline_id=in.('+ids+')&select=pipeline_id,updated_at');
+    const ahora=Date.now();
+    const edicion={};
+    (ordenes||[]).forEach(o=>{
+      if(!o.updated_at||!o.pipeline_id)return;
+      const ms=ahora-new Date(o.updated_at).getTime();
+      if(!edicion[o.pipeline_id]||edicion[o.pipeline_id]>ms){
+        edicion[o.pipeline_id]=ms;
+      }
+    });
+    window._edicionPorPipeline=edicion;
+    // Actualizar solo los badges en el DOM
+    document.querySelectorAll('.dash-card').forEach(card=>{
+      const pid=card.dataset.pipelineId;
+      const wrap=card.querySelector('.badge-editando-wrap');
+      if(!wrap)return;
+      const ms=edicion[pid];
+      const editando=ms!=null && ms<30000;
+      if(editando){
+        const seg=Math.floor(ms/1000);
+        // Reusar el badge si ya existe (solo actualizar texto). Si no existe, crear.
+        let badge=wrap.querySelector('.badge-editando');
+        if(badge){
+          // Actualizar texto sin reemplazar el elemento (cero flash)
+          badge.textContent='✏️ Editándose ahora · hace '+seg+'s';
+        } else {
+          wrap.innerHTML='<div class="badge-editando" style="background:#f59e0b22;border:1px solid #f59e0b66;color:#f59e0b;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px">✏️ Editándose ahora · hace '+seg+'s</div>';
+        }
+      } else {
+        // No hay edición concurrente — limpiar badge si existía
+        if(wrap.innerHTML!=='')wrap.innerHTML='';
+      }
+    });
+  }catch(e){
+    console.warn('[actualizarBadgesEdicion] error:',e);
+  }
+}
 function renderSteps(elId,current){const el=document.getElementById(elId);if(!el)return;const cur=STEPS.indexOf(current);el.innerHTML=STEPS.map((s,i)=>`<div class="step-dot ${i<cur?'done':i===cur?'active':''}"></div>`).join('');}
 function updateOrderStrip(){const el=document.getElementById('strip-nombre-ajuste');if(el)el.textContent=(S.orden.cliente?S.orden.cliente+' · ':'')+S.orden.op+' · '+(S.orden.pzas||0).toLocaleString()+' pzas';}
 
@@ -1152,15 +1211,15 @@ async function renderDashboard(){
         const editandoAhora=enProgreso && msDesdeUpdate!=null && msDesdeUpdate<30000;
         const segDesdeUpdate=msDesdeUpdate!=null?Math.floor(msDesdeUpdate/1000):null;
         const editandoBadge=editandoAhora
-          ?`<div style="background:#f59e0b22;border:1px solid #f59e0b66;color:#f59e0b;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px">✏️ Editándose ahora · hace ${segDesdeUpdate}s</div>`
+          ?`<div class="badge-editando" style="background:#f59e0b22;border:1px solid #f59e0b66;color:#f59e0b;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px">✏️ Editándose ahora · hace ${segDesdeUpdate}s</div>`
           :'';
         const btn=esOperador
           ?`<div style="background:var(--bg4);color:var(--text3);border-radius:8px;padding:10px;text-align:center;font-size:12px">Solo lectura</div>`
           :enProgreso
             ?`<div style="background:#3b82f6;color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${idx},${editandoAhora})">▶ Continuar orden</div>`
             :`<div style="background:var(--green);color:#0d0f12;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${idx})">▶ Iniciar</div>`;
-        return `<div class="card" style="margin-bottom:10px${urgente?';border-left:3px solid var(--red)':''}">
-          ${editandoBadge}
+        return `<div class="card dash-card" data-pipeline-id="${p.id}" style="margin-bottom:10px${urgente?';border-left:3px solid var(--red)':''}">
+          <div class="badge-editando-wrap">${editandoBadge}</div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div style="font-size:15px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
             <div style="display:flex;align-items:center;gap:6px">
