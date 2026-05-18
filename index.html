@@ -2823,6 +2823,7 @@ function handleFotoColorDrop(i, event){
       slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
     }
     toast('Validación color '+(i+1)+' cargada');
+    subirFotoColorAStorage(i, e.target.result);
   };
   reader.readAsDataURL(file);
 }
@@ -2848,9 +2849,55 @@ function handleFotoColor(i,input){
     const slot=document.getElementById('color-'+i);
     if(slot){slot.classList.add('taken');slot.innerHTML=`<img src="${e.target.result}" alt="color ${i}">`;}
     toast('Validación color '+(i+1)+' guardada ✓');
+    // Subir a Storage en background para persistir antes del "Enviar aprobación"
+    subirFotoColorAStorage(i, e.target.result);
   };
   reader.readAsDataURL(file);
   input.value='';
+}
+
+// Sube una foto de color a Storage y actualiza S.fotosColor[i] con la URL pública.
+// Después dispara un guardarOrden para persistir foto_color_urls en la base.
+// Esto evita que las fotos se pierdan al refrescar antes de "Enviar aprobación".
+async function subirFotoColorAStorage(i, dataUrl){
+  try{
+    if(!S.ordenId){
+      // Si no hay ordenId aún (orden no creada), forzar guardarOrden primero
+      // para crear la orden y obtener el id.
+      await guardarOrden('ajuste').catch(()=>{});
+      if(!S.ordenId){
+        console.warn('subirFotoColorAStorage: sin ordenId, no se puede subir');
+        return;
+      }
+    }
+    const compressed = await comprimirFoto(dataUrl);
+    const base64Data = compressed.replace(/^data:image\/\w+;base64,/, '');
+    const byteStr = atob(base64Data);
+    const arr = new Uint8Array(byteStr.length);
+    for(let j=0;j<byteStr.length;j++) arr[j]=byteStr.charCodeAt(j);
+    const blob = new Blob([arr], {type:'image/jpeg'});
+    const filename = `${S.ordenId}/color-${i}-validacion-${Date.now()}.jpg`;
+    const upRes = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${filename}`, {
+      method: 'POST',
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true'},
+      body: blob,
+    });
+    if(upRes.ok){
+      const url = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
+      S.fotosColor[i] = url;
+      // Actualizar el slot visual con la URL pública (no afecta lo que ve el operador)
+      const slot=document.getElementById('color-'+i);
+      if(slot){slot.innerHTML=`<img src="${url}" alt="color ${i}">`;}
+      // Forzar guardado inmediato para persistir foto_color_urls en la base
+      guardarOrden('ajuste').catch(e=>console.warn('guardar tras foto color:',e));
+    } else {
+      console.warn('Error subiendo color', i, upRes.status);
+    }
+  }catch(e){
+    console.warn('subirFotoColorAStorage falló:', e);
+    // No molestar al operador: la foto sigue en memoria y se intentará subir
+    // al enviar aprobación. Solo registramos en consola.
+  }
 }
 function goFotos(){
   guardarOrden('fotos');
@@ -3334,6 +3381,7 @@ window.addEventListener('beforeunload', function(){
       ajustadores:S.orden.ajustadores||[],
       operadores:S.orden.operadores||[],
       foto_urls:(S.fotos||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
+      foto_color_urls:(S.fotosColor||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
     };
     const url=SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.ordenId;
     const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
@@ -3416,6 +3464,7 @@ async function _guardarOrdenInterno(estado){
     tm_produccion:S.tm.prod||{},
     // Solo persistir URLs HTTP de Storage (no dataURLs base64 que ocuparían MB en DB)
     foto_urls:(S.fotos||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
+    foto_color_urls:(S.fotosColor||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
   };
   try{
     let rows;
