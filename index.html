@@ -1712,27 +1712,42 @@ async function verPDFCompletado(pipelineId, tipo){
 
     // Cargar fotos desde Storage
     let fotos=[null,null,null,null];
+    let fotosColor=[null,null,null,null];
     if(orden?.id){
       try{
         const rF=await fetch(SB_URL+'/storage/v1/object/list/fotos-aprobacion',{
           method:'POST',
           headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
-          body:JSON.stringify({prefix:orden.id+'/',limit:20,sortBy:{column:'name',order:'asc'}})
+          body:JSON.stringify({prefix:orden.id+'/',limit:30,sortBy:{column:'name',order:'asc'}})
         });
         const files=await rF.json();
         if(Array.isArray(files)){
-          // Tomar la foto más reciente por posición (0-3)
+          // Tomar la foto más reciente por posición (0-3) para cada tipo
           files.sort((a,b)=>b.name.localeCompare(a.name));
           files.forEach(f=>{
+            // Botellas: foto-N-
             const m=f.name.match(/foto-(\d)-/);
             if(m){
               const pos=parseInt(m[1]);
               if(pos>=0&&pos<=3&&!fotos[pos])
                 fotos[pos]=SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+orden.id+'/'+f.name;
             }
+            // Validación de color: color-N-
+            const mc=f.name.match(/color-(\d)-/);
+            if(mc){
+              const pos=parseInt(mc[1]);
+              if(pos>=0&&pos<=3&&!fotosColor[pos])
+                fotosColor[pos]=SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+orden.id+'/'+encodeURIComponent(f.name);
+            }
           });
         }
       }catch(e){console.warn('Error cargando fotos:',e);}
+    }
+    // Fallback: si no encontramos por listing, usar las URLs guardadas en DB
+    if(Array.isArray(orden?.foto_color_urls)){
+      orden.foto_color_urls.forEach((url,i)=>{
+        if(url && i<4 && !fotosColor[i]) fotosColor[i]=url;
+      });
     }
 
     const tmpS = {
@@ -1766,6 +1781,7 @@ async function verPDFCompletado(pipelineId, tipo){
       qa:orden?.qa_resultados||{},
       tintas:pipe.formula_tintas||[],
       fotos:fotos,
+      fotosColor:fotosColor,
       consumoReal:orden?.consumo_real_tintas||[],
       reajustes:orden?.reajustes||0,
     };
