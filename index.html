@@ -2860,6 +2860,17 @@ function handleFotoColor(i,input){
 // Después dispara un guardarOrden para persistir foto_color_urls en la base.
 // Esto evita que las fotos se pierdan al refrescar antes de "Enviar aprobación".
 async function subirFotoColorAStorage(i, dataUrl){
+  const slot = document.getElementById('color-'+i);
+  // Indicador visual de "subiendo" sobre el slot
+  if(slot){
+    const overlay = document.createElement('div');
+    overlay.className = 'foto-uploading-overlay';
+    overlay.id = 'uploading-color-'+i;
+    overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;border-radius:8px;pointer-events:none';
+    overlay.innerHTML = '⏳ Subiendo...';
+    slot.style.position='relative';
+    slot.appendChild(overlay);
+  }
   try{
     if(!S.ordenId){
       // Si no hay ordenId aún (orden no creada), forzar guardarOrden primero
@@ -2867,6 +2878,8 @@ async function subirFotoColorAStorage(i, dataUrl){
       await guardarOrden('ajuste').catch(()=>{});
       if(!S.ordenId){
         console.warn('subirFotoColorAStorage: sin ordenId, no se puede subir');
+        const ov = document.getElementById('uploading-color-'+i);
+        if(ov) ov.innerHTML='⚠ Reintentar al enviar';
         return;
       }
     }
@@ -2885,16 +2898,21 @@ async function subirFotoColorAStorage(i, dataUrl){
     if(upRes.ok){
       const url = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
       S.fotosColor[i] = url;
-      // Actualizar el slot visual con la URL pública (no afecta lo que ve el operador)
-      const slot=document.getElementById('color-'+i);
-      if(slot){slot.innerHTML=`<img src="${url}" alt="color ${i}">`;}
       // Forzar guardado inmediato para persistir foto_color_urls en la base
       guardarOrden('ajuste').catch(e=>console.warn('guardar tras foto color:',e));
+      // Quitar overlay de subida
+      const ov = document.getElementById('uploading-color-'+i);
+      if(ov) ov.remove();
     } else {
-      console.warn('Error subiendo color', i, upRes.status);
+      const errText = await upRes.text().catch(()=>'');
+      console.warn('Error subiendo color', i, upRes.status, errText);
+      const ov = document.getElementById('uploading-color-'+i);
+      if(ov) ov.innerHTML='⚠ Error '+upRes.status;
     }
   }catch(e){
     console.warn('subirFotoColorAStorage falló:', e);
+    const ov = document.getElementById('uploading-color-'+i);
+    if(ov) ov.innerHTML='⚠ Reintentar al enviar';
     // No molestar al operador: la foto sigue en memoria y se intentará subir
     // al enviar aprobación. Solo registramos en consola.
   }
@@ -3072,33 +3090,41 @@ async function enviarAprobacion(){
 
   // Subir fotos de validación de color (opcionales). Solo las que el operador cargó.
   // Si una falla, NO bloquea el envío — son opcionales y se reporta como warning.
+  // Si la foto YA es una URL pública (porque subirFotoColorAStorage corrió en
+  // background), no la re-subimos — simplemente la reusamos.
   const fotosColor = S.fotosColor || [];
   const fotoColorUrls = [];
   for(let i=0;i<4;i++){
-    if(fotosColor[i]){
-      try {
-        const compressed = await comprimirFoto(fotosColor[i]);
-        const base64Data = compressed.replace(/^data:image\/\w+;base64,/, '');
-        const byteStr = atob(base64Data);
-        const arr = new Uint8Array(byteStr.length);
-        for(let j=0;j<byteStr.length;j++) arr[j]=byteStr.charCodeAt(j);
-        const blob = new Blob([arr], {type:'image/jpeg'});
-        const filename = `${finalOrdenId}/color-${i}-validacion-${Date.now()}.jpg`;
-        const upRes = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${filename}`, {
-          method: 'POST',
-          headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true'},
-          body: blob,
-        });
-        if(upRes.ok) {
-          const url = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
-          fotoColorUrls.push(url);
-          S.fotosColor[i] = url; // sustituir dataURL por URL pública
-        } else {
-          console.warn(`[upload color ${i}] HTTP ${upRes.status}`);
-        }
-      } catch(e) {
-        console.warn(`[upload color ${i}] error:`, e);
+    if(!fotosColor[i]) continue;
+    // Si ya es URL pública (https://...), reusarla sin re-subir
+    if(typeof fotosColor[i] === 'string' && fotosColor[i].startsWith('http')){
+      fotoColorUrls.push(fotosColor[i]);
+      console.log(`[color ${i}] reusando URL ya subida`);
+      continue;
+    }
+    // Si es dataURL, subir ahora
+    try {
+      const compressed = await comprimirFoto(fotosColor[i]);
+      const base64Data = compressed.replace(/^data:image\/\w+;base64,/, '');
+      const byteStr = atob(base64Data);
+      const arr = new Uint8Array(byteStr.length);
+      for(let j=0;j<byteStr.length;j++) arr[j]=byteStr.charCodeAt(j);
+      const blob = new Blob([arr], {type:'image/jpeg'});
+      const filename = `${finalOrdenId}/color-${i}-validacion-${Date.now()}.jpg`;
+      const upRes = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${filename}`, {
+        method: 'POST',
+        headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true'},
+        body: blob,
+      });
+      if(upRes.ok) {
+        const url = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
+        fotoColorUrls.push(url);
+        S.fotosColor[i] = url;
+      } else {
+        console.warn(`[upload color ${i}] HTTP ${upRes.status}`);
       }
+    } catch(e) {
+      console.warn(`[upload color ${i}] error:`, e);
     }
   }
   console.log('URLs color subidas:', fotoColorUrls.length, 'de', fotosColor.filter(Boolean).length);
