@@ -762,7 +762,18 @@ function buildRow(prod, variante, cantidad, minimo, ubicacion){
   } else {
     estadoBadge = cantidad>0 ? '<span class="badge badge-green">OK</span>' : '<span class="badge">—</span>';
   }
-  const nombre = variante ? `<span class="variant-name">${variante.nombre}</span> <span style="font-size:11px;color:var(--text3)">${variante.pantone?'· '+variante.pantone:''}</span>` : prod.nombre;
+  // Para botellas mostrar la capacidad antes del color (ej: "500ml · CLEAR")
+  // ya que el grupo 'Botellas' agrupa 3 capacidades distintas
+  let nombre;
+  if(variante){
+    let prefijo = '';
+    if(prod.categoria === 'botella' && prod.capacidad){
+      prefijo = `<span style="font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-bg);padding:2px 7px;border-radius:4px;margin-right:8px">${prod.capacidad}ml</span>`;
+    }
+    nombre = `${prefijo}<span class="variant-name">${variante.nombre}</span> <span style="font-size:11px;color:var(--text3)">${variante.pantone?'· '+variante.pantone:''}</span>`;
+  } else {
+    nombre = prod.nombre;
+  }
   const qtyClass = cantidad===0 ? 'zero' : estadoClase;
   // Botón ⚙ disponible para variantes Y para productos sin variantes (edita minimo respectivo)
   const btnConfig = variante
