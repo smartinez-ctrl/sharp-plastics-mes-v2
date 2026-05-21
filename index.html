@@ -294,6 +294,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
   </div>
   <div class="scroll"><div class="scroll-narrow">
     <div style="margin-bottom:16px"><div class="section-title">Pedidos</div><div class="section-sub" id="dash-sub">Selecciona un pedido para iniciar</div></div>
+    <input type="text" id="dash-search" placeholder="🔍 Buscar PO, cliente, producto, color..." oninput="filtrarDashboard()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:14px">
     <div id="dash-pedidos"></div>
     <div class="divider"></div>
     <button class="btn btn-secondary btn-full" id="btn-nueva-orden" onclick="goNuevaOrden(null)" style="font-size:13px;display:none">+ Nueva orden manual</button>
@@ -1256,6 +1257,41 @@ function toggleRestoPedidos(){
   }
 }
 
+function filtrarDashboard(){
+  const inp = document.getElementById('dash-search');
+  const q = (inp?.value || '').toLowerCase().trim();
+  // Si hay query, expandir automáticamente el "ver más" para no esconder matches
+  const resto = document.getElementById('dash-resto');
+  if(q && resto && resto.style.display==='none'){
+    resto.style.display='';
+    const btn = document.getElementById('dash-toggle-resto');
+    if(btn) btn.style.display='none';
+  } else if(!q && resto){
+    // Restaurar estado colapsado al limpiar búsqueda
+    resto.style.display='none';
+    const btn = document.getElementById('dash-toggle-resto');
+    if(btn) btn.style.display='';
+  }
+  // Mostrar/ocultar cards según el query
+  const cards = document.querySelectorAll('#dash-pedidos .dash-card');
+  let matches = 0;
+  cards.forEach(c=>{
+    const blob = c.dataset.search || '';
+    if(!q || blob.includes(q)){
+      c.style.display = '';
+      matches++;
+    } else {
+      c.style.display = 'none';
+    }
+  });
+  // Actualizar subtítulo con conteo
+  const sub = document.getElementById('dash-sub');
+  if(sub){
+    if(q) sub.textContent = matches+' resultado'+(matches===1?'':'s')+' para "'+q+'"';
+    else sub.textContent = 'Selecciona un pedido para iniciar';
+  }
+}
+
 async function renderDashboard(){
   const el=document.getElementById('dash-pedidos');if(!el)return;
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)"><div style="font-size:20px;margin-bottom:8px">⏳</div>Cargando...</div>';
@@ -1319,7 +1355,8 @@ async function renderDashboard(){
           :enProgreso
             ?`<div style="background:#3b82f6;color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${idx},${editandoAhora})">▶ Continuar orden</div>`
             :`<div style="background:var(--green);color:#0d0f12;border-radius:8px;padding:10px;text-align:center;font-weight:600;cursor:pointer;touch-action:manipulation" onclick="goNuevaOrden(${idx})">▶ Iniciar</div>`;
-        return `<div class="card dash-card" data-pipeline-id="${p.id}" style="margin-bottom:10px${urgente?';border-left:3px solid var(--red)':''}">
+        const searchBlob = ((p.po||'')+' '+(p.sub_cliente||'')+' '+(p.cliente||'')+' '+(p.capacidad||'')+' '+(p.color_botella||'')+' '+(p.color_tapa||'')+' '+(p.color_boquilla||'')+' '+(p.estado||'')+' '+(p.piezas||'')).toLowerCase();
+        return `<div class="card dash-card" data-pipeline-id="${p.id}" data-search="${searchBlob.replace(/"/g,'&quot;')}" style="margin-bottom:10px${urgente?';border-left:3px solid var(--red)':''}">
           <div class="badge-editando-wrap">${editandoBadge}</div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div style="font-size:15px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
@@ -1352,7 +1389,9 @@ async function renderDashboard(){
     }
     if(completados.length){
       html+='<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin:16px 0 8px">Completados</div>';
-      html+=completados.map(p=>`<div class="card" style="opacity:0.75;margin-bottom:8px">
+      html+=completados.map(p=>{
+        const searchBlob = ((p.po||'')+' '+(p.sub_cliente||'')+' '+(p.cliente||'')+' '+(p.capacidad||'')+' '+(p.color_botella||'')+' '+(p.color_tapa||'')+' '+(p.color_boquilla||'')+' '+(p.estado||'')+' '+(p.piezas||'')).toLowerCase();
+        return `<div class="card dash-card" data-search="${searchBlob.replace(/"/g,'&quot;')}" style="opacity:0.75;margin-bottom:8px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div><div style="font-size:13px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
           <div style="font-size:11px;color:var(--text2);margin-top:2px">${p.po} · ${(p.piezas||0).toLocaleString()} pzas</div></div>
@@ -1365,9 +1404,12 @@ async function renderDashboard(){
           ${S.user&&S.user.role==='master'?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEditarCompletado('${p.id}')" title="Editar">✏️</button>`:''}
           <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation;opacity:0.5" onclick="ocultarCompletadoProd('${p.id}')" title="Ocultar">🙈</button>
         </div>
-      </div>`).join('');
+      </div>`;
+      }).join('');
     }
     el.innerHTML=html;
+    // Si había un query previo, re-aplicarlo
+    if(document.getElementById('dash-search')?.value) filtrarDashboard();
   }catch(e){
     el.innerHTML=`<div style="text-align:center;padding:20px;color:var(--red)">Error: ${e.message}</div>`;
   }
