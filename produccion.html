@@ -510,8 +510,8 @@ function renderInventario(){
   const {productos, variantes, stock} = _data;
   const q = (document.getElementById('q-inventario')?.value||'').toLowerCase().trim();
   const filas = [];
-  const cats = ['botella','tapa','chupon','liner','papel','liga','tag','corrugado'];
-  const tituloCat = {botella:'Botellas',tapa:'Tapas',chupon:'Chupones',liner:'Liners',papel:'Papel empaque',liga:'Ligas',tag:'Tags',corrugado:'Corrugado'};
+  const cats = ['botella','tapa','chupon','liner','papel','liga','tag','corrugado','materia_prima','master_batch'];
+  const tituloCat = {botella:'Botellas',tapa:'Tapas',chupon:'Chupones',liner:'Liners',papel:'Papel empaque',liga:'Ligas',tag:'Tags',corrugado:'Corrugado',materia_prima:'Materia prima',master_batch:'Master Batch'};
   filas.push(`<div class="product-row header">
     <div>Producto</div>
     <div style="text-align:right">Almacén</div>
@@ -549,7 +549,7 @@ function renderInventario(){
           const h = (prod.nombre+' '+totA+' '+totP).toLowerCase();
           if(!h.includes(q)) return;
         }
-        filasCat.push(buildInvRow(prod.nombre, totA, totP, 0));
+        filasCat.push(buildInvRow(prod.nombre, totA, totP, prod.minimo_reserva||0));
       }
     });
     if(filasCat.length){

@@ -648,7 +648,7 @@ function construirFilasInventario(ubicacion){
   const q = (document.getElementById('q-'+ubicacion)?.value||'').toLowerCase().trim();
   const filas = [];
   // Agrupar por categoría
-  const cats = ['botella','tapa','chupon','liner','papel','liga','tag','corrugado'];
+  const cats = ['botella','tapa','chupon','liner','papel','liga','tag','corrugado','materia_prima','master_batch'];
   cats.forEach(cat=>{
     const prodsCat = PRODUCTOS.filter(p=>p.categoria===cat);
     if(!prodsCat.length) return;
@@ -683,7 +683,7 @@ function construirFilasInventario(ubicacion){
           const haystack = (prod.nombre+' '+cant).toLowerCase();
           if(!haystack.includes(q)) return;
         }
-        filasCat.push(buildRow(prod, null, cant, 0, ubicacion));
+        filasCat.push(buildRow(prod, null, cant, prod.minimo_reserva||0, ubicacion));
       }
     });
     // Solo agregar título de categoría si hay filas que mostrar
@@ -696,7 +696,7 @@ function construirFilasInventario(ubicacion){
 }
 
 function tituloCat(cat){
-  return {botella:'Botellas',tapa:'Tapas',chupon:'Chupones',liner:'Liners',papel:'Papel empaque',liga:'Ligas',tag:'Tags',corrugado:'Corrugado'}[cat]||cat;
+  return {botella:'Botellas',tapa:'Tapas',chupon:'Chupones',liner:'Liners',papel:'Papel empaque',liga:'Ligas',tag:'Tags',corrugado:'Corrugado',materia_prima:'Materia prima',master_batch:'Master Batch'}[cat]||cat;
 }
 
 function buildRow(prod, variante, cantidad, minimo, ubicacion){
@@ -706,18 +706,20 @@ function buildRow(prod, variante, cantidad, minimo, ubicacion){
     else if(cantidad < minimo){estadoClase='low';estadoBadge='<span class="badge badge-amber">EN RIESGO</span>';}
     else estadoBadge='<span class="badge badge-green">OK</span>';
   } else {
-    estadoBadge = cantidad>0 ? '<span class="badge badge-green">OK</span>' : '<span class="badge badge-red">SIN STOCK</span>';
+    estadoBadge = cantidad>0 ? '<span class="badge badge-green">OK</span>' : '<span class="badge">—</span>';
   }
   const nombre = variante ? `<span class="variant-name">${variante.nombre}</span> <span style="font-size:11px;color:var(--text3)">${variante.pantone?'· '+variante.pantone:''}</span>` : prod.nombre;
   const qtyClass = cantidad===0 ? 'zero' : estadoClase;
+  // Botón ⚙ disponible para variantes Y para productos sin variantes (edita minimo respectivo)
+  const btnConfig = variante
+    ? `<button class="btn btn-xs btn-ghost" title="Editar mínimo de reserva" onclick="editarMinimo('variante','${variante.id}',${minimo})">⚙</button>`
+    : `<button class="btn btn-xs btn-ghost" title="Editar mínimo de reserva" onclick="editarMinimo('producto','${prod.id}',${minimo})">⚙</button>`;
   return `<div class="product-row ${minimo>0&&cantidad<minimo?'alert-amber':''}${cantidad===0?'':''}">
     <div>${nombre}</div>
     <div class="qty ${qtyClass}">${Math.floor(cantidad).toLocaleString()}</div>
     <div class="qty" style="color:var(--text3)">${minimo>0?minimo.toLocaleString():'—'}</div>
     <div style="text-align:right">${estadoBadge}</div>
-    <div class="actions-cell">
-      ${variante?`<button class="btn btn-xs btn-ghost" onclick="editarMinimo('${variante.id}',${minimo})">⚙</button>`:''}
-    </div>
+    <div class="actions-cell">${btnConfig}</div>
   </div>`;
 }
 
@@ -1045,13 +1047,15 @@ async function resolverAsignarExistente(){
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
-async function editarMinimo(varianteId, actual){
+async function editarMinimo(tipo, id, actual){
+  // tipo = 'variante' | 'producto'
   const nuevo = prompt('Nuevo mínimo de reserva:', actual);
   if(nuevo===null) return;
   const n = parseInt(nuevo);
   if(isNaN(n)||n<0){toast('Valor inválido','err');return;}
   try{
-    await sbPatch('inventario_variantes',{minimo_reserva:n},'id=eq.'+varianteId);
+    const tabla = tipo==='producto' ? 'inventario_productos' : 'inventario_variantes';
+    await sbPatch(tabla,{minimo_reserva:n},'id=eq.'+id);
     toast('Mínimo actualizado ✓','ok');
     await cargarInventario();
   }catch(e){toast('Error: '+e.message,'err');}

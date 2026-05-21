@@ -153,6 +153,8 @@ function calcularAlertasInventario({pedidos, productos, variantes, stock}){
 
   // Ahora construir la lista de requerimientos con stock y alertas
   const requerimientos = [];
+
+  // PASO A: items que SÍ tienen requerimientos de pedidos pendientes
   req.forEach((cantidadReq, key)=>{
     const [prodId, varIdRaw] = key.split('|');
     const varId = varIdRaw || null;
@@ -163,13 +165,14 @@ function calcularAlertasInventario({pedidos, productos, variantes, stock}){
     const cantAlm = parseFloat(stkAlm?.cantidad) || 0;
     const cantProd = parseFloat(stkProd?.cantidad) || 0;
     const total = cantAlm + cantProd;
-    const minimo = variante?.minimo_reserva || 0;
+    // Mínimo: prioridad a variante, luego al producto
+    const minimo = (variante?.minimo_reserva || prod?.minimo_reserva || 0);
     const restanteDespuesPedidos = total - cantidadReq;
     let alerta = null;
     if(total < cantidadReq){
-      alerta = 'roja'; // No alcanza para los pedidos pendientes
+      alerta = 'roja';
     } else if(minimo > 0 && restanteDespuesPedidos < minimo){
-      alerta = 'amarilla'; // Alcanza pero queda bajo el mínimo de reserva
+      alerta = 'amarilla';
     }
     requerimientos.push({
       producto_id: prodId,
@@ -186,6 +189,70 @@ function calcularAlertasInventario({pedidos, productos, variantes, stock}){
       alerta: alerta,
       contribuciones: contribuciones.get(key) || [],
     });
+  });
+
+  // PASO B: items SIN requerimientos de pedidos pendientes pero CON minimo_reserva > 0
+  // Si stock_total < minimo → alerta amarilla (bajo mínimo absoluto)
+  // Si stock_total == 0 y minimo > 0 → alerta roja (sin stock crítico)
+  productos.forEach(prod=>{
+    if(prod.tiene_variantes){
+      const vars = variantes.filter(v=>v.producto_id===prod.id);
+      vars.forEach(v=>{
+        const minimo = v.minimo_reserva || prod.minimo_reserva || 0;
+        if(minimo <= 0) return;
+        const key = prod.id + '|' + v.id;
+        if(req.has(key)) return; // ya cubierto en PASO A
+        const stkAlm = stock.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion==='almacen');
+        const stkProd = stock.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion==='produccion');
+        const cantAlm = parseFloat(stkAlm?.cantidad) || 0;
+        const cantProd = parseFloat(stkProd?.cantidad) || 0;
+        const total = cantAlm + cantProd;
+        if(total >= minimo) return; // OK, no hay alerta
+        const alerta = (total === 0) ? 'roja' : 'amarilla';
+        requerimientos.push({
+          producto_id: prod.id,
+          variante_id: v.id,
+          producto_nombre: prod.nombre,
+          producto_categoria: prod.categoria,
+          variante_nombre: v.nombre,
+          requerido: 0, // no hay pedidos pendientes
+          stock_almacen: cantAlm,
+          stock_produccion: cantProd,
+          stock_total: total,
+          restante_despues_pedidos: total,
+          minimo: minimo,
+          alerta: alerta,
+          contribuciones: [],
+        });
+      });
+    } else {
+      const minimo = prod.minimo_reserva || 0;
+      if(minimo <= 0) return;
+      const key = prod.id + '|';
+      if(req.has(key)) return;
+      const stkAlm = stock.find(s=>s.producto_id===prod.id && !s.variante_id && s.ubicacion==='almacen');
+      const stkProd = stock.find(s=>s.producto_id===prod.id && !s.variante_id && s.ubicacion==='produccion');
+      const cantAlm = parseFloat(stkAlm?.cantidad) || 0;
+      const cantProd = parseFloat(stkProd?.cantidad) || 0;
+      const total = cantAlm + cantProd;
+      if(total >= minimo) return;
+      const alerta = (total === 0) ? 'roja' : 'amarilla';
+      requerimientos.push({
+        producto_id: prod.id,
+        variante_id: null,
+        producto_nombre: prod.nombre,
+        producto_categoria: prod.categoria,
+        variante_nombre: null,
+        requerido: 0,
+        stock_almacen: cantAlm,
+        stock_produccion: cantProd,
+        stock_total: total,
+        restante_despues_pedidos: total,
+        minimo: minimo,
+        alerta: alerta,
+        contribuciones: [],
+      });
+    }
   });
 
   // Ordenar: alertas rojas primero, después amarillas, después el resto
