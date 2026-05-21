@@ -279,7 +279,7 @@ tr:hover td{background:var(--bg3)}
 
 <script>
 const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY0NTE0NDcsImV4cCI6MjA1MjAyNzQ0N30.kE4OKf94IZA7OFCKLO00qYDU-pBQT4nlGyZNFkbQS8I';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
 const SB_H = {apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
 async function sbGet(t,f){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+(f||''),{headers:SB_H});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPost(t,d){const r=await fetch(SB_URL+'/rest/v1/'+t,{method:'POST',headers:{...SB_H,'Prefer':'return=representation'},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());try{return r.json();}catch{return null;}}
