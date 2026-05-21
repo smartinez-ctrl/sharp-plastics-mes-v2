@@ -1054,7 +1054,25 @@ function adminRelease(){clearTimeout(adminTimer);}
 // LOGIN
 // ══════════════════════════════════════════════════════
 function renderUsers(showAll){
-  const visible=showAll?USERS:USERS.filter(u=>!u.hidden);
+  // Orden custom: poner master/supervisor/operador primero (orden operativo),
+  // y los roles administrativos/staff (facturacion, almacen, produccion) al final.
+  // Dentro del mismo grupo, mantener orden alfabético.
+  const orden = (r)=>{
+    if(r==='supervisor')return 1;
+    if(r==='operador')return 2;
+    if(r==='master')return 3;
+    if(r==='facturacion')return 4;
+    if(r==='almacen')return 5;
+    if(r==='produccion')return 6;
+    return 9;
+  };
+  const visible=(showAll?USERS:USERS.filter(u=>!u.hidden))
+    .slice()
+    .sort((a,b)=>{
+      const oa=orden(a.role),ob=orden(b.role);
+      if(oa!==ob)return oa-ob;
+      return (a.name||'').localeCompare(b.name||'');
+    });
   document.getElementById('users-grid').innerHTML=visible.map(u=>`
     <div class="user-card" onclick="selectUser('${u.id}')" style="border-color:${u.color}33">
       <div class="user-avatar-lg" style="background:${u.color}22;border:1px solid ${u.color}44;color:${u.color}">${u.name.slice(0,2).toUpperCase()}</div>
@@ -1084,6 +1102,27 @@ function cerrarSesion(){S.user=null;goLogin();}
 function pinKey(k){if(!k||S.pinBuf.length>=4)return;S.pinBuf+=k;updatePinDots();if(S.pinBuf.length===4)setTimeout(checkPin,150);}
 function pinDel(){S.pinBuf=S.pinBuf.slice(0,-1);updatePinDots();}
 function updatePinDots(){for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.className='pin-dot'+(i<S.pinBuf.length?' filled':'');}}
+
+// Permitir teclado físico para meter el PIN cuando la pantalla activa es 'pin'
+document.addEventListener('keydown',e=>{
+  const pinScreen=document.getElementById('screen-pin');
+  if(!pinScreen||!pinScreen.classList.contains('active'))return;
+  // No interferir si hay un input enfocado (escenario raro pero por seguridad)
+  if(document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
+  if(/^[0-9]$/.test(e.key)){
+    pinKey(e.key);
+    e.preventDefault();
+  } else if(e.key==='Backspace' || e.key==='Delete'){
+    pinDel();
+    e.preventDefault();
+  } else if(e.key==='Enter'){
+    if(S.pinBuf.length===4) checkPin();
+    e.preventDefault();
+  } else if(e.key==='Escape'){
+    goLogin();
+    e.preventDefault();
+  }
+});
 
 function checkPin(){
   if(S.pinBuf!==S.pinTarget.pin){
