@@ -26,6 +26,9 @@
     },
     "api/send-monitor.js": {
       "maxDuration": 10
+    },
+    "api/send-alertas-inventario.js": {
+      "maxDuration": 15
     }
   }
 }

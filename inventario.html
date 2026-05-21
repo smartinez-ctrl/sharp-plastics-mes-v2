@@ -110,6 +110,8 @@ tr:hover td{background:var(--bg3)}
 <!-- MAIN -->
 <div id="screen-main" class="screen">
   <div class="container">
+    <!-- Banner de alertas -->
+    <div id="banner-alertas"></div>
     <div class="tabs">
       <div class="tab active" onclick="switchTab('almacen')">📦 Almacén</div>
       <div class="tab" onclick="switchTab('produccion')">🏭 Producción</div>
@@ -277,6 +279,7 @@ tr:hover td{background:var(--bg3)}
   </div>
 </div>
 
+<script src="inventario-alertas.js"></script>
 <script>
 const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
@@ -389,19 +392,50 @@ document.addEventListener('keydown',e=>{
 // ════════ INVENTARIO ════════
 async function cargarInventario(){
   try{
-    const [productos, variantes, stock] = await Promise.all([
+    const [productos, variantes, stock, pedidos] = await Promise.all([
       sbGet('inventario_productos','order=categoria,capacidad,nombre'),
       sbGet('inventario_variantes','activo=eq.true&order=nombre'),
       sbGet('inventario_stock','select=*,inventario_productos(*),inventario_variantes(*)'),
+      sbGet('pipeline_mf','select=po,sub_cliente,cliente,piezas,capacidad,color_botella,color_tapa,color_boquilla,estado&estado=not.eq.Completado'),
     ]);
     PRODUCTOS = productos;
     VARIANTES = variantes;
     STOCK = stock;
     renderInventario();
     poblarSelectsProducto();
+    // Calcular y mostrar banner de alertas
+    if(typeof calcularAlertasInventario === 'function'){
+      const r = calcularAlertasInventario({pedidos, productos, variantes, stock});
+      renderBannerAlertas(r.resumen);
+    }
   }catch(e){
     toast('Error: '+e.message,'err');
   }
+}
+
+function renderBannerAlertas(resumen){
+  const el = document.getElementById('banner-alertas');
+  if(!el) return;
+  let html = '';
+  if(resumen.alertas_rojas > 0){
+    html += `<div style="background:var(--red-bg);border:1px solid var(--red-border);border-radius:12px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="window.location.href='produccion.html'">
+      <div style="font-size:22px">🚨</div>
+      <div style="flex:1">
+        <div style="font-weight:700;color:var(--red);font-size:14px">${resumen.alertas_rojas} alerta(s) crítica(s) — material insuficiente para pedidos</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">Click para ver detalle en Producción</div>
+      </div>
+    </div>`;
+  }
+  if(resumen.alertas_amarillas > 0){
+    html += `<div style="background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:12px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="window.location.href='produccion.html'">
+      <div style="font-size:22px">⚠️</div>
+      <div style="flex:1">
+        <div style="font-weight:700;color:var(--amber);font-size:14px">${resumen.alertas_amarillas} item(s) en riesgo — quedan bajo el mínimo después de pedidos</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">Click para ver detalle en Producción</div>
+      </div>
+    </div>`;
+  }
+  el.innerHTML = html;
 }
 
 function renderInventario(){

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sharp Plastics — Producción</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d10;--bg2:#111418;--bg3:#181c23;--bg4:#1e232d;--bg5:#252b38;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);--border3:rgba(255,255,255,0.18);--text:#e2e6f0;--text2:#7d8799;--text3:#454e60;--amber:#f5a623;--amber2:#ffc15e;--amber-bg:rgba(245,166,35,0.08);--amber-border:rgba(245,166,35,0.25);--green:#2dd4a0;--green-bg:rgba(45,212,160,0.08);--green-border:rgba(45,212,160,0.25);--blue:#4a9eff;--blue-bg:rgba(74,158,255,0.08);--blue-border:rgba(74,158,255,0.25);--red:#f87171;--red-bg:rgba(248,113,113,0.08);--red-border:rgba(248,113,113,0.25);--topbar:52px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{height:var(--topbar);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:fixed;top:0;left:0;right:0;z-index:100}
+.logo{font-family:"Space Mono",monospace;font-size:12px;color:var(--text2);letter-spacing:.1em}.logo b{color:var(--amber)}
+.tag{font-size:10px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);border-radius:4px;padding:2px 7px;font-weight:600}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:999px;padding:4px 14px 4px 5px;font-size:13px}
+.user-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+.topbar-left,.topbar-right{display:flex;align-items:center;gap:10px}
+.btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;touch-action:manipulation}
+.btn:hover{background:var(--bg4)}
+.btn-ghost{background:transparent;border:1px solid var(--border)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.container{max-width:1280px;margin:0 auto;padding:calc(var(--topbar) + 20px) 20px 40px}
+.section-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);margin-bottom:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:760px){.stat-row{grid-template-columns:1fr 1fr}}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.stat-val{font-size:26px;font-weight:700;font-family:"Space Mono",monospace}
+.stat-lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.tabs{display:flex;gap:4px;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:18px;width:fit-content;flex-wrap:wrap}
+.tab{padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text2);touch-action:manipulation}
+.tab.active{background:var(--bg5);color:var(--text)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg3);color:var(--text);padding:11px 22px;border-radius:10px;font-weight:600;font-size:13px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.4);border:1px solid var(--border2)}
+.toast.ok{border-color:var(--green-border);color:var(--green)}
+.toast.err{border-color:var(--red-border);color:var(--red)}
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
+.alert-banner{background:var(--red-bg);border:1px solid var(--red-border);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.alert-banner.amber{background:var(--amber-bg);border-color:var(--amber-border)}
+.alert-banner-icon{font-size:22px}
+.alert-banner-text{flex:1}
+.alert-banner-title{font-weight:700;color:var(--red);font-size:14px;margin-bottom:2px}
+.alert-banner.amber .alert-banner-title{color:var(--amber)}
+.alert-banner-sub{font-size:12px;color:var(--text2)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border)}
+tr:hover td{background:var(--bg3)}
+.mono{font-family:"Space Mono",monospace}
+.qty{font-family:"Space Mono",monospace;text-align:right;font-weight:600}
+.badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px;display:inline-block}
+.badge-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.badge-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.badge-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.row-red{background:var(--red-bg)}
+.row-amber{background:var(--amber-bg)}
+.screen{display:none}.screen.active{display:block}
+.product-row{display:grid;grid-template-columns:1.2fr 90px 90px 90px 90px 90px 120px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px}
+.product-row.header{font-weight:700;font-size:10px;text-transform:uppercase;color:var(--text2);border-bottom:2px solid var(--border2)}
+@media(max-width:900px){.product-row{font-size:11px;grid-template-columns:1.2fr 70px 70px 70px 70px 70px 90px}}
+@media(max-width:680px){.product-row{display:block;padding:12px 0}.product-row>div{display:inline-block;margin-right:12px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">SHARP <b>PLASTICS</b></div>
+    <div class="tag">PRODUCCIÓN</div>
+  </div>
+  <div class="topbar-right">
+    <div id="user-pill" class="user-pill" style="display:none"></div>
+    <button class="btn btn-ghost btn-sm" onclick="enviarAlertasEmail()" id="btn-email" style="display:none">📧 Mandar alertas</button>
+    <button class="btn btn-ghost btn-sm" onclick="cerrarSesion()">Salir</button>
+  </div>
+</div>
+
+<!-- LOGIN (solo si entró directo sin sessionStorage) -->
+<div id="screen-login" class="screen active">
+  <div class="container" style="max-width:480px;padding-top:80px">
+    <div class="card" style="padding:32px;text-align:center">
+      <div style="font-size:20px;font-weight:700;margin-bottom:6px">Producción</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:24px">Selecciona tu usuario</div>
+      <div id="users-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+      <div id="pin-section" style="display:none;margin-top:20px">
+        <label style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;font-weight:600">PIN</label>
+        <input id="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" style="text-align:center;font-size:22px;letter-spacing:.4em;font-family:'Space Mono',monospace;width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px;border-radius:8px;margin-top:6px">
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn btn-ghost" style="flex:1" onclick="cancelarLogin()">← Volver</button>
+          <button class="btn" style="flex:1;background:var(--amber);color:#0b0d10;border:none" onclick="loginConPin()">Entrar</button>
+        </div>
+        <div id="login-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="screen-main" class="screen">
+  <div class="container">
+    <!-- KPIs -->
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue)" id="kpi-pedidos">—</div><div class="stat-lbl">Pedidos pendientes</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)" id="kpi-rojas">—</div><div class="stat-lbl">Alertas críticas</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--amber)" id="kpi-amarillas">—</div><div class="stat-lbl">En riesgo</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--text2)" id="kpi-sinmatch">—</div><div class="stat-lbl">Sin match catálogo</div></div>
+    </div>
+
+    <!-- Banner de alertas si las hay -->
+    <div id="banner-area"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('alertas')">🚨 Alertas</div>
+      <div class="tab" onclick="switchTab('pedidos')">📋 Pedidos pendientes</div>
+      <div class="tab" onclick="switchTab('inventario')">📦 Inventario</div>
+      <div class="tab" onclick="switchTab('sinmatch')">⚠ Sin match</div>
+    </div>
+    <div style="margin-bottom:14px;display:flex;gap:8px;align-items:center;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="recargar()">↻ Actualizar</button>
+    </div>
+
+    <div id="vista-alertas" class="vista">
+      <div class="card"><div id="lista-alertas"></div></div>
+    </div>
+
+    <div id="vista-pedidos" class="vista" style="display:none">
+      <div class="card"><div id="lista-pedidos"></div></div>
+    </div>
+
+    <div id="vista-inventario" class="vista" style="display:none">
+      <div class="card"><div id="lista-inventario"></div></div>
+    </div>
+
+    <div id="vista-sinmatch" class="vista" style="display:none">
+      <div class="card"><div id="lista-sinmatch"></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="inventario-alertas.js"></script>
+<script>
+const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
+const SB_H = {apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
+async function sbGet(t,f){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+(f||''),{headers:SB_H});if(!r.ok)throw new Error(await r.text());return r.json();}
+
+let USER = null;
+let _data = null;
+let _selectedUser = null;
+
+function toast(msg, type){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:'');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+}
+
+// ════════ LOGIN ════════
+async function cargarUsuarios(){
+  try{
+    const rows = await sbGet('usuarios','activo=eq.true&rol=in.(produccion,almacen,master,supervisor)&order=nombre.asc');
+    const grid = document.getElementById('users-grid');
+    if(!rows.length){grid.innerHTML='<div class="empty">No hay usuarios con acceso</div>';return;}
+    grid.innerHTML = rows.map(u=>{
+      const initials = (u.nombre||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+      const color = u.color||'#7d8799';
+      return `<div onclick='seleccionarUsuario(${JSON.stringify(u)})' style="cursor:pointer;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;text-align:center;transition:all .15s" onmouseover="this.style.borderColor='${color}'" onmouseout="this.style.borderColor='var(--border2)'">
+        <div class="user-av" style="background:${color}33;color:${color};margin:0 auto 6px;width:42px;height:42px;font-size:13px">${initials}</div>
+        <div style="font-weight:600;font-size:13px">${u.nombre}</div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase">${u.rol}</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    document.getElementById('users-grid').innerHTML='<div class="empty" style="color:var(--red)">Error: '+e.message+'</div>';
+  }
+}
+function seleccionarUsuario(u){
+  _selectedUser = u;
+  document.getElementById('users-grid').style.display='none';
+  document.getElementById('pin-section').style.display='block';
+  setTimeout(()=>document.getElementById('pin-input').focus(),100);
+}
+function cancelarLogin(){
+  _selectedUser=null;
+  document.getElementById('pin-section').style.display='none';
+  document.getElementById('users-grid').style.display='grid';
+  document.getElementById('pin-input').value='';
+  document.getElementById('login-error').style.display='none';
+}
+async function loginConPin(){
+  const pin = document.getElementById('pin-input').value;
+  const err = document.getElementById('login-error');
+  err.style.display='none';
+  if(!pin){err.textContent='Ingresa tu PIN';err.style.display='block';return;}
+  if(String(_selectedUser.pin) !== String(pin)){
+    err.textContent='PIN incorrecto';err.style.display='block';
+    document.getElementById('pin-input').value='';
+    return;
+  }
+  USER = _selectedUser;
+  sessionStorage.setItem('inv_user', JSON.stringify(USER));
+  mostrarMain();
+}
+function cerrarSesion(){
+  sessionStorage.removeItem('inv_user');
+  USER=null;
+  window.location.href = 'index.html';
+}
+function mostrarMain(){
+  const pill = document.getElementById('user-pill');
+  const initials = (USER.nombre||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  pill.innerHTML = `<div class="user-av" style="background:${(USER.color||'#7d8799')}33;color:${USER.color||'#7d8799'}">${initials}</div><span>${USER.nombre}</span><span style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-left:4px">${USER.rol||''}</span>`;
+  pill.style.display='flex';
+  // Botón de email solo para master y supervisor
+  if(USER.rol==='master' || USER.rol==='supervisor'){
+    document.getElementById('btn-email').style.display='';
+  }
+  showScreen('main');
+  recargar();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && document.getElementById('pin-section').style.display==='block'){
+    loginConPin();
+  }
+});
+
+// ════════ DATA ════════
+async function recargar(){
+  try{
+    const [pedidos, productos, variantes, stock] = await Promise.all([
+      sbGet('pipeline_mf','select=*&estado=not.eq.Completado&order=fecha_entrega.asc.nullslast'),
+      sbGet('inventario_productos','order=categoria,capacidad,nombre'),
+      sbGet('inventario_variantes','activo=eq.true&order=nombre'),
+      sbGet('inventario_stock'),
+    ]);
+    const r = calcularAlertasInventario({pedidos, productos, variantes, stock});
+    _data = {pedidos, productos, variantes, stock, ...r};
+    renderTodo();
+  }catch(e){toast('Error: '+e.message,'err');console.error(e);}
+}
+
+function renderTodo(){
+  const {resumen, requerimientos, sinMatch, pedidos, productos, variantes, stock} = _data;
+  document.getElementById('kpi-pedidos').textContent = resumen.pedidos_pendientes;
+  document.getElementById('kpi-rojas').textContent = resumen.alertas_rojas;
+  document.getElementById('kpi-amarillas').textContent = resumen.alertas_amarillas;
+  document.getElementById('kpi-sinmatch').textContent = resumen.items_sin_match;
+
+  // Banner arriba
+  const banner = document.getElementById('banner-area');
+  banner.innerHTML = '';
+  if(resumen.alertas_rojas > 0){
+    banner.innerHTML += `<div class="alert-banner">
+      <div class="alert-banner-icon">🚨</div>
+      <div class="alert-banner-text">
+        <div class="alert-banner-title">${resumen.alertas_rojas} alerta(s) crítica(s): material insuficiente</div>
+        <div class="alert-banner-sub">No hay suficiente stock para cubrir los pedidos pendientes. Revisa la pestaña Alertas.</div>
+      </div>
+    </div>`;
+  }
+  if(resumen.alertas_amarillas > 0){
+    banner.innerHTML += `<div class="alert-banner amber">
+      <div class="alert-banner-icon">⚠️</div>
+      <div class="alert-banner-text">
+        <div class="alert-banner-title">${resumen.alertas_amarillas} item(s) en riesgo</div>
+        <div class="alert-banner-sub">Después de cubrir los pedidos, el inventario quedaría debajo del mínimo de reserva.</div>
+      </div>
+    </div>`;
+  }
+
+  renderAlertas();
+  renderPedidos();
+  renderInventario();
+  renderSinMatch();
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const idx = {alertas:0, pedidos:1, inventario:2, sinmatch:3}[name];
+  document.querySelectorAll('.tab')[idx].classList.add('active');
+  document.querySelectorAll('.vista').forEach(v=>v.style.display='none');
+  document.getElementById('vista-'+name).style.display='block';
+}
+
+// ════════ RENDER ALERTAS ════════
+function renderAlertas(){
+  const el = document.getElementById('lista-alertas');
+  const alertas = _data.requerimientos.filter(r=>r.alerta);
+  if(!alertas.length){
+    el.innerHTML = '<div class="empty">✅ Sin alertas activas — el inventario cubre todos los pedidos pendientes</div>';
+    return;
+  }
+  el.innerHTML = `<div class="product-row header">
+    <div>Producto</div>
+    <div style="text-align:right">Requerido</div>
+    <div style="text-align:right">Almacén</div>
+    <div style="text-align:right">Producción</div>
+    <div style="text-align:right">Total</div>
+    <div style="text-align:right">Restante</div>
+    <div style="text-align:right">Estado</div>
+  </div>` + alertas.map(r=>buildAlertaRow(r)).join('');
+}
+
+function buildAlertaRow(r){
+  const rowClass = r.alerta==='roja' ? 'row-red' : (r.alerta==='amarilla' ? 'row-amber' : '');
+  const estado = r.alerta==='roja'
+    ? '<span class="badge badge-red">NO ALCANZA</span>'
+    : r.alerta==='amarilla'
+      ? '<span class="badge badge-amber">EN RIESGO</span>'
+      : '<span class="badge badge-green">OK</span>';
+  const restanteColor = r.restante_despues_pedidos < 0 ? 'color:var(--red)' : r.restante_despues_pedidos < r.minimo ? 'color:var(--amber)' : '';
+  const titulo = `${r.producto_nombre}${r.variante_nombre?' · '+r.variante_nombre:''}`;
+  return `<div class="product-row ${rowClass}">
+    <div><strong>${titulo}</strong></div>
+    <div class="qty">${Math.floor(r.requerido).toLocaleString()}</div>
+    <div class="qty">${Math.floor(r.stock_almacen).toLocaleString()}</div>
+    <div class="qty">${Math.floor(r.stock_produccion).toLocaleString()}</div>
+    <div class="qty">${Math.floor(r.stock_total).toLocaleString()}</div>
+    <div class="qty" style="${restanteColor}">${Math.floor(r.restante_despues_pedidos).toLocaleString()}</div>
+    <div style="text-align:right">${estado}</div>
+  </div>`;
+}
+
+// ════════ RENDER PEDIDOS ════════
+function renderPedidos(){
+  const el = document.getElementById('lista-pedidos');
+  const pedidos = _data.pedidos;
+  if(!pedidos.length){
+    el.innerHTML = '<div class="empty">No hay pedidos pendientes</div>';
+    return;
+  }
+  el.innerHTML = `<table>
+    <thead><tr>
+      <th>PO</th>
+      <th>Cliente</th>
+      <th style="text-align:right">Piezas</th>
+      <th>Capacidad</th>
+      <th>Botella</th>
+      <th>Tapa</th>
+      <th>Chupón</th>
+      <th>Estado</th>
+      <th>Entrega</th>
+    </tr></thead>
+    <tbody>${pedidos.map(p=>{
+      const fecha = p.fecha_entrega ? new Date(p.fecha_entrega).toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '—';
+      const estadoBadge = p.estado==='En producción' || p.estado==='En produccion' ? '<span class="badge badge-blue">EN PROD</span>'
+        : p.estado==='En ajuste' ? '<span class="badge badge-amber">EN AJUSTE</span>'
+        : '<span class="badge">PENDIENTE</span>';
+      return `<tr>
+        <td class="mono" style="font-size:11px">${p.po||'—'}</td>
+        <td>${p.sub_cliente||p.cliente||'—'}</td>
+        <td class="qty">${(p.piezas||0).toLocaleString()}</td>
+        <td class="mono" style="font-size:11px">${p.capacidad||'—'}ml</td>
+        <td style="font-size:11px">${p.color_botella||'—'}</td>
+        <td style="font-size:11px">${p.color_tapa||'—'}</td>
+        <td style="font-size:11px">${p.color_boquilla||'—'}</td>
+        <td>${estadoBadge}</td>
+        <td class="mono" style="font-size:11px">${fecha}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+// ════════ RENDER INVENTARIO ════════
+function renderInventario(){
+  const el = document.getElementById('lista-inventario');
+  const {productos, variantes, stock} = _data;
+  const filas = [];
+  const cats = ['botella','tapa','chupon','liner','papel','liga','tag','corrugado'];
+  const tituloCat = {botella:'Botellas',tapa:'Tapas',chupon:'Chupones',liner:'Liners',papel:'Papel empaque',liga:'Ligas',tag:'Tags',corrugado:'Corrugado'};
+  filas.push(`<div class="product-row header">
+    <div>Producto</div>
+    <div style="text-align:right">Almacén</div>
+    <div style="text-align:right">Producción</div>
+    <div style="text-align:right">Total</div>
+    <div style="text-align:right">Mínimo</div>
+    <div></div>
+    <div style="text-align:right">Estado</div>
+  </div>`);
+  cats.forEach(cat=>{
+    const prodsCat = productos.filter(p=>p.categoria===cat);
+    if(!prodsCat.length) return;
+    filas.push(`<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em">${tituloCat[cat]}</div>`);
+    prodsCat.forEach(prod=>{
+      if(prod.tiene_variantes){
+        const vars = variantes.filter(v=>v.producto_id===prod.id);
+        if(!vars.length){
+          filas.push(`<div class="product-row" style="opacity:0.4"><div>${prod.nombre} <span style="font-size:11px;color:var(--text3)">(sin colores)</span></div><div></div><div></div><div></div><div></div><div></div><div></div></div>`);
+        }
+        vars.forEach(v=>{
+          const stkA = stock.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion==='almacen');
+          const stkP = stock.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion==='produccion');
+          filas.push(buildInvRow(prod.nombre+' · '+v.nombre, parseFloat(stkA?.cantidad)||0, parseFloat(stkP?.cantidad)||0, v.minimo_reserva||0));
+        });
+      } else {
+        const stkA = stock.find(s=>s.producto_id===prod.id && !s.variante_id && s.ubicacion==='almacen');
+        const stkP = stock.find(s=>s.producto_id===prod.id && !s.variante_id && s.ubicacion==='produccion');
+        filas.push(buildInvRow(prod.nombre, parseFloat(stkA?.cantidad)||0, parseFloat(stkP?.cantidad)||0, 0));
+      }
+    });
+  });
+  el.innerHTML = filas.join('');
+}
+
+function buildInvRow(nombre, almacen, produccion, minimo){
+  const total = almacen + produccion;
+  let estado;
+  if(total===0) estado = '<span class="badge badge-red">SIN STOCK</span>';
+  else if(minimo>0 && total<minimo) estado = '<span class="badge badge-amber">BAJO MÍNIMO</span>';
+  else estado = '<span class="badge badge-green">OK</span>';
+  return `<div class="product-row">
+    <div>${nombre}</div>
+    <div class="qty">${Math.floor(almacen).toLocaleString()}</div>
+    <div class="qty">${Math.floor(produccion).toLocaleString()}</div>
+    <div class="qty" style="font-weight:700">${Math.floor(total).toLocaleString()}</div>
+    <div class="qty" style="color:var(--text3)">${minimo>0?minimo.toLocaleString():'—'}</div>
+    <div></div>
+    <div style="text-align:right">${estado}</div>
+  </div>`;
+}
+
+// ════════ RENDER SIN MATCH ════════
+function renderSinMatch(){
+  const el = document.getElementById('lista-sinmatch');
+  const {sinMatch} = _data;
+  if(!sinMatch.length){
+    el.innerHTML = '<div class="empty">✅ Todos los pedidos matchean correctamente con el catálogo</div>';
+    return;
+  }
+  // Agrupar para no repetir
+  el.innerHTML = `<div style="font-size:12px;color:var(--text2);background:var(--bg3);padding:10px;border-radius:8px;margin-bottom:14px">
+    Items de pedidos que no se pudieron mapear al inventario. Causas comunes: color no agregado al catálogo, capacidad no encontrada, pedido sin color especificado.
+  </div>
+  <table>
+    <thead><tr><th>PO</th><th>Categoría</th><th>Capacidad</th><th>Color</th><th>Motivo</th></tr></thead>
+    <tbody>${sinMatch.map(s=>`<tr>
+      <td class="mono" style="font-size:11px">${s.pedido_po||'—'}</td>
+      <td>${s.categoria}</td>
+      <td class="mono" style="font-size:11px">${s.capacidad?s.capacidad+'ml':'—'}</td>
+      <td>${s.color||'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${s.motivo}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+// ════════ EMAIL ALERTAS ════════
+async function enviarAlertasEmail(){
+  if(!_data){toast('Espera a que cargue los datos','err');return;}
+  const {requerimientos, resumen, sinMatch} = _data;
+  const alertas = requerimientos.filter(r=>r.alerta);
+  if(!alertas.length){toast('No hay alertas para enviar','ok');return;}
+  if(!confirm(`¿Enviar reporte de ${alertas.length} alerta(s) por email?`)) return;
+  const btn = document.getElementById('btn-email');
+  const original = btn.innerHTML;
+  btn.innerHTML = '⏳ Enviando...';
+  btn.disabled = true;
+  try{
+    const r = await fetch('/api/send-alertas-inventario', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        resumen,
+        alertas: alertas.map(a=>({
+          producto: a.producto_nombre + (a.variante_nombre?' · '+a.variante_nombre:''),
+          requerido: a.requerido,
+          stock_total: a.stock_total,
+          stock_almacen: a.stock_almacen,
+          stock_produccion: a.stock_produccion,
+          restante: a.restante_despues_pedidos,
+          minimo: a.minimo,
+          alerta: a.alerta,
+        })),
+        sin_match: sinMatch,
+        usuario: USER.nombre,
+      })
+    });
+    if(!r.ok){
+      const t = await r.text();
+      throw new Error('Server '+r.status+': '+t);
+    }
+    toast('Reporte enviado ✓','ok');
+  }catch(e){
+    toast('Error: '+e.message,'err');
+  } finally {
+    btn.innerHTML = original;
+    btn.disabled = false;
+  }
+}
+
+// ════════ INIT ════════
+(async ()=>{
+  const stored = sessionStorage.getItem('inv_user');
+  if(stored){
+    try{
+      USER = JSON.parse(stored);
+      mostrarMain();
+      return;
+    }catch{}
+  }
+  cargarUsuarios();
+})();
+</script>
+</body>
+</html>
