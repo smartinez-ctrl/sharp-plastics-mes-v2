@@ -59,6 +59,11 @@ tr:hover td{background:var(--bg3)}
 .screen{display:none}
 .screen.active{display:block}
 .product-row{display:grid;grid-template-columns:1fr 100px 100px 100px 140px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.product-row.header{position:sticky;top:0;background:var(--bg2);z-index:10;border-bottom:2px solid var(--border3);padding:12px 0;margin:0 -2px}
+.product-row.header > div{cursor:pointer;user-select:none;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);padding:0 4px}
+.product-row.header > div:hover{color:var(--amber)}
+.product-row.header > div.sort-active{color:var(--amber)}
+.cat-title{text-align:center;font-size:14px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.15em;margin:24px 0 12px;padding:10px 16px;background:linear-gradient(90deg,transparent,var(--bg3),transparent);border-radius:8px}
 .product-row.alert-red{background:var(--red-bg)}
 .product-row.alert-amber{background:var(--amber-bg)}
 .variant-name{font-weight:600}
@@ -361,6 +366,8 @@ let PRODUCTOS = [];
 let VARIANTES = [];
 let STOCK = [];
 let TAB_ACTIVA = 'almacen';
+// Sort por ubicación: {almacen:{campo,asc}, produccion:{campo,asc}}
+let _invSort = {almacen:null, produccion:null};
 let _selectedUser = null;
 
 function toast(msg, type){
@@ -633,14 +640,24 @@ function renderInventario(){
     const el = document.getElementById('lista-'+ub);
     const filas = construirFilasInventario(ub);
     if(!filas.length){el.innerHTML='<div class="empty">Sin productos cargados</div>';return;}
-    el.innerHTML = `<div class="product-row" style="font-weight:700;font-size:11px;text-transform:uppercase;color:var(--text2);border-bottom:2px solid var(--border2)">
-      <div>Producto</div>
-      <div style="text-align:right">Cantidad</div>
-      <div style="text-align:right">Mínimo</div>
-      <div style="text-align:right">Estado</div>
+    const sort = _invSort[ub];
+    const arrow = (k)=>sort && sort.campo===k ? (sort.asc?' ↑':' ↓') : '';
+    const cls = (k)=>sort && sort.campo===k ? 'sort-active' : '';
+    el.innerHTML = `<div class="product-row header">
+      <div class="${cls('nombre')}" onclick="sortInventario('${ub}','nombre')">Producto${arrow('nombre')}</div>
+      <div class="${cls('cantidad')}" style="text-align:right" onclick="sortInventario('${ub}','cantidad')">Cantidad${arrow('cantidad')}</div>
+      <div class="${cls('minimo')}" style="text-align:right" onclick="sortInventario('${ub}','minimo')">Mínimo${arrow('minimo')}</div>
+      <div class="${cls('estado')}" style="text-align:right" onclick="sortInventario('${ub}','estado')">Estado${arrow('estado')}</div>
       <div></div>
     </div>` + filas.join('');
   });
+}
+
+function sortInventario(ubicacion, campo){
+  const s = _invSort[ubicacion];
+  if(s && s.campo===campo) s.asc = !s.asc;
+  else _invSort[ubicacion] = {campo, asc:false}; // primer click descendente para cantidades
+  renderInventario();
 }
 
 function construirFilasInventario(ubicacion){
@@ -652,43 +669,80 @@ function construirFilasInventario(ubicacion){
   cats.forEach(cat=>{
     const prodsCat = PRODUCTOS.filter(p=>p.categoria===cat);
     if(!prodsCat.length) return;
-    const filasCat = [];
+    // Recolectar items planos para este grupo (para poder ordenar)
+    const items = []; // {tipo, prod, variante, cantidad, minimo, estadoOrden}
     prodsCat.forEach(prod=>{
       if(prod.tiene_variantes){
         const vars = VARIANTES.filter(v=>v.producto_id===prod.id);
         if(!vars.length){
           if(!q || prod.nombre.toLowerCase().includes(q)){
-            filasCat.push(`<div class="product-row" style="opacity:0.4">
-              <div>${prod.nombre} <span style="font-size:11px;color:var(--text3)">(sin colores agregados)</span></div>
-              <div></div><div></div><div></div>
-              <div class="actions-cell"><button class="btn btn-xs" onclick="abrirModalVariantePrecargado('${prod.id}')">+ Agregar color</button></div>
-            </div>`);
+            items.push({tipo:'sin-colores', prod, nombre:prod.nombre, cantidad:0, minimo:0, estadoOrden:99});
           }
         }
         vars.forEach(v=>{
           const stk = STOCK.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion===ubicacion);
-          const cant = stk?.cantidad || 0;
+          const cant = parseFloat(stk?.cantidad) || 0;
           const min = v.minimo_reserva || 0;
-          // Filtrar por query (busca en nombre producto, nombre variante, pantone y cantidad)
           if(q){
             const haystack = (prod.nombre+' '+v.nombre+' '+(v.pantone||'')+' '+cant).toLowerCase();
             if(!haystack.includes(q)) return;
           }
-          filasCat.push(buildRow(prod, v, cant, min, ubicacion));
+          // estadoOrden: 0=SIN_STOCK, 1=EN_RIESGO, 2=OK
+          let estadoOrden = 2;
+          if(min > 0){
+            if(cant === 0) estadoOrden = 0;
+            else if(cant < min) estadoOrden = 1;
+          } else {
+            if(cant === 0) estadoOrden = 3;
+          }
+          items.push({tipo:'fila', prod, variante:v, nombre:v.nombre, cantidad:cant, minimo:min, estadoOrden});
         });
       } else {
         const stk = STOCK.find(s=>s.producto_id===prod.id && s.variante_id===null && s.ubicacion===ubicacion);
-        const cant = stk?.cantidad || 0;
+        const cant = parseFloat(stk?.cantidad) || 0;
+        const min = prod.minimo_reserva || 0;
         if(q){
           const haystack = (prod.nombre+' '+cant).toLowerCase();
           if(!haystack.includes(q)) return;
         }
-        filasCat.push(buildRow(prod, null, cant, prod.minimo_reserva||0, ubicacion));
+        let estadoOrden = 2;
+        if(min > 0){
+          if(cant === 0) estadoOrden = 0;
+          else if(cant < min) estadoOrden = 1;
+        } else {
+          if(cant === 0) estadoOrden = 3;
+        }
+        items.push({tipo:'fila', prod, variante:null, nombre:prod.nombre, cantidad:cant, minimo:min, estadoOrden});
       }
+    });
+    // Aplicar sort dentro del grupo si hay sort activo
+    const sort = _invSort[ubicacion];
+    if(sort){
+      items.sort((a,b)=>{
+        let va, vb;
+        if(sort.campo==='nombre'){va = a.nombre.toLowerCase(); vb = b.nombre.toLowerCase();}
+        else if(sort.campo==='cantidad'){va = a.cantidad; vb = b.cantidad;}
+        else if(sort.campo==='minimo'){va = a.minimo; vb = b.minimo;}
+        else if(sort.campo==='estado'){va = a.estadoOrden; vb = b.estadoOrden;}
+        if(typeof va==='number' && typeof vb==='number') return sort.asc ? va-vb : vb-va;
+        const sa = String(va), sb = String(vb);
+        return sort.asc ? sa.localeCompare(sb) : sb.localeCompare(sa);
+      });
+    }
+    // Construir HTML por item
+    const filasCat = items.map(it=>{
+      if(it.tipo==='sin-colores'){
+        return `<div class="product-row" style="opacity:0.4">
+          <div>${it.prod.nombre} <span style="font-size:11px;color:var(--text3)">(sin colores agregados)</span></div>
+          <div></div><div></div><div></div>
+          <div class="actions-cell"><button class="btn btn-xs" onclick="abrirModalVariantePrecargado('${it.prod.id}')">+ Agregar color</button></div>
+        </div>`;
+      }
+      return buildRow(it.prod, it.variante, it.cantidad, it.minimo, ubicacion);
     });
     // Solo agregar título de categoría si hay filas que mostrar
     if(filasCat.length){
-      filas.push(`<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em">${tituloCat(cat)}</div>`);
+      filas.push(`<div class="cat-title">${tituloCat(cat)}</div>`);
       filas.push(...filasCat);
     }
   });
