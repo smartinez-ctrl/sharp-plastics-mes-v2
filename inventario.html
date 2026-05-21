@@ -309,7 +309,7 @@ function showScreen(id){
 // ════════ LOGIN ════════
 async function cargarUsuarios(){
   try{
-    const rows = await sbGet('usuarios','activo=eq.true&rol=in.(almacen,master,supervisor)&order=nombre.asc');
+    const rows = await sbGet('usuarios','activo=eq.true&rol=in.(almacen,produccion,master,supervisor)&order=nombre.asc');
     const grid = document.getElementById('users-grid');
     if(!rows.length){grid.innerHTML='<div class="empty">No hay usuarios con acceso a inventario</div>';return;}
     grid.innerHTML = rows.map(u=>{
@@ -359,15 +359,23 @@ async function loginConPin(){
 function cerrarSesion(){
   sessionStorage.removeItem('inv_user');
   USER=null;
-  showScreen('login');
-  cancelarLogin();
+  // Si llegó desde el login principal, regresarlo ahí
+  window.location.href = 'index.html';
 }
 
 function mostrarMain(){
   const pill = document.getElementById('user-pill');
   const initials = (USER.nombre||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
-  pill.innerHTML = `<div class="user-av" style="background:${(USER.color||'#7d8799')}33;color:${USER.color||'#7d8799'}">${initials}</div><span>${USER.nombre}</span>`;
+  pill.innerHTML = `<div class="user-av" style="background:${(USER.color||'#7d8799')}33;color:${USER.color||'#7d8799'}">${initials}</div><span>${USER.nombre}</span><span style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-left:4px">${USER.rol||''}</span>`;
   pill.style.display='flex';
+  // Modo solo lectura para rol 'produccion': ocultar botones de modificación
+  if(USER.rol === 'produccion'){
+    document.body.classList.add('readonly');
+    // Ocultar todos los botones de acción (entrada/traspaso/salida/variante)
+    document.querySelectorAll('.btn-primary, .btn-blue, .btn-red, button[onclick^="abrirModal"]').forEach(b=>{
+      if(!b.classList.contains('btn-ghost')) b.style.display='none';
+    });
+  }
   showScreen('main');
   cargarInventario();
 }

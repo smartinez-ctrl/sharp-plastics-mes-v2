@@ -1098,6 +1098,18 @@ function checkPin(){
     window.location.href='gestion.html';
     return;
   }
+  // Rol almacen: redirigir a la página de inventario
+  if(rol==='almacen'){
+    sessionStorage.setItem('inv_user',JSON.stringify({id:S.user.id,nombre:S.user.name,rol:S.user.role,color:S.user.color,pin:S.user.pin}));
+    window.location.href='inventario.html';
+    return;
+  }
+  // Rol produccion: por ahora también a inventario (solo lectura). Después tendrá su propia vista.
+  if(rol==='produccion'){
+    sessionStorage.setItem('inv_user',JSON.stringify({id:S.user.id,nombre:S.user.name,rol:S.user.role,color:S.user.color,pin:S.user.pin}));
+    window.location.href='inventario.html';
+    return;
+  }
   if(rol==='master'||rol==='facturacion'||rol==='supervisor'||rol==='operador'){
     updateUserChips();
     applyRoleRestrictions();
