@@ -59,7 +59,7 @@ tr:hover td{background:var(--bg3)}
 .screen{display:none}
 .screen.active{display:block}
 .product-row{display:grid;grid-template-columns:1fr 100px 100px 100px 140px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
-.product-row.header{position:sticky;top:0;background:var(--bg2);z-index:10;border-bottom:2px solid var(--border3);padding:12px 0;margin:0 -2px}
+.product-row.header{position:sticky;top:var(--topbar);background:var(--bg2);z-index:50;border-bottom:2px solid var(--border3);padding:12px 4px;box-shadow:0 6px 8px -6px rgba(0,0,0,0.4)}
 .product-row.header > div{cursor:pointer;user-select:none;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);padding:0 4px}
 .product-row.header > div:hover{color:var(--amber)}
 .product-row.header > div.sort-active{color:var(--amber)}
