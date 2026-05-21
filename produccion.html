@@ -63,6 +63,7 @@ tr:hover td{background:var(--bg3)}
 .product-row.header{font-weight:700;font-size:10px;text-transform:uppercase;color:var(--text2);border-bottom:2px solid var(--border2)}
 @media(max-width:900px){.product-row{font-size:11px;grid-template-columns:1.2fr 70px 70px 70px 70px 70px 90px}}
 @media(max-width:680px){.product-row{display:block;padding:12px 0}.product-row>div{display:inline-block;margin-right:12px}}
+.modal-overlay.show{display:flex !important}
 </style>
 </head>
 <body>
@@ -124,23 +125,90 @@ tr:hover td{background:var(--bg3)}
     </div>
 
     <div id="vista-alertas" class="vista">
-      <div class="card"><div id="lista-alertas"></div></div>
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <input type="text" id="q-alertas" placeholder="🔍 Buscar producto, color, cantidad..." oninput="renderAlertas()" style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          <button class="btn btn-ghost btn-sm" onclick="exportarAlertasCSV()">📥 Excel</button>
+        </div>
+        <div id="lista-alertas"></div>
+      </div>
     </div>
 
     <div id="vista-pedidos" class="vista" style="display:none">
-      <div class="card"><div id="lista-pedidos"></div></div>
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <input type="text" id="q-pedidos" placeholder="🔍 Buscar PO, cliente, color, capacidad..." oninput="renderPedidos()" style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          <button class="btn btn-ghost btn-sm" onclick="exportarPedidosCSV()">📥 Excel</button>
+        </div>
+        <div id="lista-pedidos"></div>
+      </div>
     </div>
 
     <div id="vista-inventario" class="vista" style="display:none">
-      <div class="card"><div id="lista-inventario"></div></div>
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <input type="text" id="q-inventario" placeholder="🔍 Buscar producto, color..." oninput="renderInventario()" style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          <button class="btn btn-ghost btn-sm" onclick="exportarInventarioCSV()">📥 Excel</button>
+        </div>
+        <div id="lista-inventario"></div>
+      </div>
     </div>
 
     <div id="vista-sinmatch" class="vista" style="display:none">
-      <div class="card"><div id="lista-sinmatch"></div></div>
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <input type="text" id="q-sinmatch" placeholder="🔍 Buscar PO, color, motivo..." oninput="renderSinMatch()" style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          <button class="btn btn-ghost btn-sm" onclick="exportarSinMatchCSV()">📥 Excel</button>
+        </div>
+        <div id="lista-sinmatch"></div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- MODAL: RESOLVER MATCH -->
+<div id="modal-resolver" class="modal-overlay" onclick="if(event.target===this)cerrarModalResolver()" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="modal" style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:24px;max-width:580px;width:100%;max-height:90vh;overflow:auto">
+    <div style="font-size:16px;font-weight:700;margin-bottom:18px">🔧 Resolver match de pedido</div>
+    <div id="resolver-contexto" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px"></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Elige cómo resolver:</div>
+
+    <div id="resolver-opt-crear" style="border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="font-size:18px;line-height:1">🎨</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px">Agregar este color al catálogo</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Crea nueva variante. El pedido matcheará a partir de ahora.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="resolver-nuevo-nombre" type="text" style="flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none">
+            <input id="resolver-nuevo-minimo" type="number" placeholder="Mín." value="1500" min="0" step="100" style="width:100px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none">
+            <button class="btn btn-sm" style="background:var(--amber);color:#0b0d10;border:none" onclick="resolverCrearVariante()">Crear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="resolver-opt-existente" style="border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="font-size:18px;line-height:1">🔗</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px">Asignar a color existente</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Cambia el color del pedido para matchear con uno del catálogo.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="resolver-existente-select" style="flex:1;min-width:160px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none"></select>
+            <button class="btn btn-sm" style="background:var(--blue);color:#fff;border:none" onclick="resolverAsignarExistente()">Asignar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-ghost" onclick="cerrarModalResolver()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="inventario-utils.js"></script>
 <script src="inventario-alertas.js"></script>
 <script>
 const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
@@ -296,20 +364,60 @@ function switchTab(name){
 // ════════ RENDER ALERTAS ════════
 function renderAlertas(){
   const el = document.getElementById('lista-alertas');
-  const alertas = _data.requerimientos.filter(r=>r.alerta);
+  if(!_data) return;
+  let alertas = _data.requerimientos.filter(r=>r.alerta);
+  const q = (document.getElementById('q-alertas')?.value||'').toLowerCase().trim();
+  if(q){
+    alertas = alertas.filter(r=>{
+      const h = ((r.producto_nombre||'')+' '+(r.variante_nombre||'')+' '+r.requerido+' '+r.stock_total).toLowerCase();
+      return h.includes(q);
+    });
+  }
   if(!alertas.length){
-    el.innerHTML = '<div class="empty">✅ Sin alertas activas — el inventario cubre todos los pedidos pendientes</div>';
+    el.innerHTML = `<div class="empty">${q?'Sin resultados':'✅ Sin alertas activas — el inventario cubre todos los pedidos pendientes'}</div>`;
     return;
   }
-  el.innerHTML = `<div class="product-row header">
-    <div>Producto</div>
-    <div style="text-align:right">Requerido</div>
-    <div style="text-align:right">Almacén</div>
-    <div style="text-align:right">Producción</div>
-    <div style="text-align:right">Total</div>
-    <div style="text-align:right">Restante</div>
+  // Sort
+  const sort = _sort.alertas;
+  if(sort){
+    alertas = alertas.slice().sort((a,b)=>{
+      const va=a[sort.campo], vb=b[sort.campo];
+      if(va==null && vb==null)return 0;
+      if(va==null)return 1; if(vb==null)return -1;
+      const na=parseFloat(va), nb=parseFloat(vb);
+      if(!isNaN(na)&&!isNaN(nb)) return sort.asc ? na-nb : nb-na;
+      const sa=String(va).toLowerCase(), sb=String(vb).toLowerCase();
+      return sort.asc ? sa.localeCompare(sb) : sb.localeCompare(sa);
+    });
+  }
+  const arrow = (k)=>sort && sort.campo===k ? (sort.asc?' ↑':' ↓') : '';
+  const sty = (k)=>sort && sort.campo===k ? 'color:var(--amber)' : '';
+  el.innerHTML = `<div class="product-row header" style="cursor:default">
+    <div onclick="sortAlertas('producto_nombre')" style="cursor:pointer;${sty('producto_nombre')}">Producto${arrow('producto_nombre')}</div>
+    <div onclick="sortAlertas('requerido')" style="text-align:right;cursor:pointer;${sty('requerido')}">Requerido${arrow('requerido')}</div>
+    <div onclick="sortAlertas('stock_almacen')" style="text-align:right;cursor:pointer;${sty('stock_almacen')}">Almacén${arrow('stock_almacen')}</div>
+    <div onclick="sortAlertas('stock_produccion')" style="text-align:right;cursor:pointer;${sty('stock_produccion')}">Producción${arrow('stock_produccion')}</div>
+    <div onclick="sortAlertas('stock_total')" style="text-align:right;cursor:pointer;${sty('stock_total')}">Total${arrow('stock_total')}</div>
+    <div onclick="sortAlertas('restante_despues_pedidos')" style="text-align:right;cursor:pointer;${sty('restante_despues_pedidos')}">Restante${arrow('restante_despues_pedidos')}</div>
     <div style="text-align:right">Estado</div>
   </div>` + alertas.map(r=>buildAlertaRow(r)).join('');
+}
+
+let _sort = {alertas:null, pedidos:null, inventario:null, sinmatch:null};
+function sortAlertas(campo){
+  if(_sort.alertas && _sort.alertas.campo===campo) _sort.alertas.asc = !_sort.alertas.asc;
+  else _sort.alertas = {campo, asc:true};
+  renderAlertas();
+}
+function sortPedidos(campo){
+  if(_sort.pedidos && _sort.pedidos.campo===campo) _sort.pedidos.asc = !_sort.pedidos.asc;
+  else _sort.pedidos = {campo, asc:true};
+  renderPedidos();
+}
+function sortInventario(campo){
+  if(_sort.inventario && _sort.inventario.campo===campo) _sort.inventario.asc = !_sort.inventario.asc;
+  else _sort.inventario = {campo, asc:true};
+  renderInventario();
 }
 
 function buildAlertaRow(r){
@@ -335,22 +443,45 @@ function buildAlertaRow(r){
 // ════════ RENDER PEDIDOS ════════
 function renderPedidos(){
   const el = document.getElementById('lista-pedidos');
-  const pedidos = _data.pedidos;
+  if(!_data) return;
+  let pedidos = _data.pedidos;
+  const q = (document.getElementById('q-pedidos')?.value||'').toLowerCase().trim();
+  if(q){
+    pedidos = pedidos.filter(p=>{
+      const h = ((p.po||'')+' '+(p.sub_cliente||'')+' '+(p.cliente||'')+' '+(p.piezas||'')+' '+(p.capacidad||'')+' '+(p.color_botella||'')+' '+(p.color_tapa||'')+' '+(p.color_boquilla||'')+' '+(p.estado||'')).toLowerCase();
+      return h.includes(q);
+    });
+  }
   if(!pedidos.length){
-    el.innerHTML = '<div class="empty">No hay pedidos pendientes</div>';
+    el.innerHTML = `<div class="empty">${q?'Sin resultados':'No hay pedidos pendientes'}</div>`;
     return;
   }
-  el.innerHTML = `<table>
+  // Sort
+  const sort = _sort.pedidos;
+  if(sort){
+    pedidos = pedidos.slice().sort((a,b)=>{
+      const va=a[sort.campo], vb=b[sort.campo];
+      if(va==null&&vb==null)return 0;
+      if(va==null)return 1; if(vb==null)return -1;
+      const na=parseFloat(va), nb=parseFloat(vb);
+      if(!isNaN(na)&&!isNaN(nb)) return sort.asc ? na-nb : nb-na;
+      const sa=String(va).toLowerCase(), sb=String(vb).toLowerCase();
+      return sort.asc ? sa.localeCompare(sb) : sb.localeCompare(sa);
+    });
+  }
+  const arrow = (k)=>sort && sort.campo===k ? (sort.asc?' ↑':' ↓') : '';
+  const sty = (k)=>sort && sort.campo===k ? 'color:var(--amber);cursor:pointer' : 'cursor:pointer';
+  el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${pedidos.length} pedido(s)</div><table>
     <thead><tr>
-      <th>PO</th>
-      <th>Cliente</th>
-      <th style="text-align:right">Piezas</th>
-      <th>Capacidad</th>
-      <th>Botella</th>
-      <th>Tapa</th>
-      <th>Chupón</th>
-      <th>Estado</th>
-      <th>Entrega</th>
+      <th onclick="sortPedidos('po')" style="${sty('po')}">PO${arrow('po')}</th>
+      <th onclick="sortPedidos('sub_cliente')" style="${sty('sub_cliente')}">Cliente${arrow('sub_cliente')}</th>
+      <th onclick="sortPedidos('piezas')" style="text-align:right;${sty('piezas')}">Piezas${arrow('piezas')}</th>
+      <th onclick="sortPedidos('capacidad')" style="${sty('capacidad')}">Capacidad${arrow('capacidad')}</th>
+      <th onclick="sortPedidos('color_botella')" style="${sty('color_botella')}">Botella${arrow('color_botella')}</th>
+      <th onclick="sortPedidos('color_tapa')" style="${sty('color_tapa')}">Tapa${arrow('color_tapa')}</th>
+      <th onclick="sortPedidos('color_boquilla')" style="${sty('color_boquilla')}">Chupón${arrow('color_boquilla')}</th>
+      <th onclick="sortPedidos('estado')" style="${sty('estado')}">Estado${arrow('estado')}</th>
+      <th onclick="sortPedidos('fecha_entrega')" style="${sty('fecha_entrega')}">Entrega${arrow('fecha_entrega')}</th>
     </tr></thead>
     <tbody>${pedidos.map(p=>{
       const fecha = p.fecha_entrega ? new Date(p.fecha_entrega).toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '—';
@@ -375,7 +506,9 @@ function renderPedidos(){
 // ════════ RENDER INVENTARIO ════════
 function renderInventario(){
   const el = document.getElementById('lista-inventario');
+  if(!_data) return;
   const {productos, variantes, stock} = _data;
+  const q = (document.getElementById('q-inventario')?.value||'').toLowerCase().trim();
   const filas = [];
   const cats = ['botella','tapa','chupon','liner','papel','liga','tag','corrugado'];
   const tituloCat = {botella:'Botellas',tapa:'Tapas',chupon:'Chupones',liner:'Liners',papel:'Papel empaque',liga:'Ligas',tag:'Tags',corrugado:'Corrugado'};
@@ -391,24 +524,38 @@ function renderInventario(){
   cats.forEach(cat=>{
     const prodsCat = productos.filter(p=>p.categoria===cat);
     if(!prodsCat.length) return;
-    filas.push(`<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em">${tituloCat[cat]}</div>`);
+    const filasCat = [];
     prodsCat.forEach(prod=>{
       if(prod.tiene_variantes){
         const vars = variantes.filter(v=>v.producto_id===prod.id);
-        if(!vars.length){
-          filas.push(`<div class="product-row" style="opacity:0.4"><div>${prod.nombre} <span style="font-size:11px;color:var(--text3)">(sin colores)</span></div><div></div><div></div><div></div><div></div><div></div><div></div></div>`);
+        if(!vars.length && (!q || prod.nombre.toLowerCase().includes(q))){
+          filasCat.push(`<div class="product-row" style="opacity:0.4"><div>${prod.nombre} <span style="font-size:11px;color:var(--text3)">(sin colores)</span></div><div></div><div></div><div></div><div></div><div></div><div></div></div>`);
         }
         vars.forEach(v=>{
           const stkA = stock.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion==='almacen');
           const stkP = stock.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion==='produccion');
-          filas.push(buildInvRow(prod.nombre+' · '+v.nombre, parseFloat(stkA?.cantidad)||0, parseFloat(stkP?.cantidad)||0, v.minimo_reserva||0));
+          const totA=parseFloat(stkA?.cantidad)||0, totP=parseFloat(stkP?.cantidad)||0;
+          if(q){
+            const h = (prod.nombre+' '+v.nombre+' '+(v.pantone||'')+' '+totA+' '+totP).toLowerCase();
+            if(!h.includes(q)) return;
+          }
+          filasCat.push(buildInvRow(prod.nombre+' · '+v.nombre, totA, totP, v.minimo_reserva||0));
         });
       } else {
         const stkA = stock.find(s=>s.producto_id===prod.id && !s.variante_id && s.ubicacion==='almacen');
         const stkP = stock.find(s=>s.producto_id===prod.id && !s.variante_id && s.ubicacion==='produccion');
-        filas.push(buildInvRow(prod.nombre, parseFloat(stkA?.cantidad)||0, parseFloat(stkP?.cantidad)||0, 0));
+        const totA=parseFloat(stkA?.cantidad)||0, totP=parseFloat(stkP?.cantidad)||0;
+        if(q){
+          const h = (prod.nombre+' '+totA+' '+totP).toLowerCase();
+          if(!h.includes(q)) return;
+        }
+        filasCat.push(buildInvRow(prod.nombre, totA, totP, 0));
       }
     });
+    if(filasCat.length){
+      filas.push(`<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em">${tituloCat[cat]}</div>`);
+      filas.push(...filasCat);
+    }
   });
   el.innerHTML = filas.join('');
 }
@@ -433,25 +580,221 @@ function buildInvRow(nombre, almacen, produccion, minimo){
 // ════════ RENDER SIN MATCH ════════
 function renderSinMatch(){
   const el = document.getElementById('lista-sinmatch');
-  const {sinMatch} = _data;
+  if(!_data) return;
+  let sinMatch = _data.sinMatch || [];
+  const q = (document.getElementById('q-sinmatch')?.value||'').toLowerCase().trim();
+  if(q){
+    sinMatch = sinMatch.filter(s=>{
+      const h = ((s.pedido_po||'')+' '+s.categoria+' '+(s.color||'')+' '+(s.capacidad||'')+' '+(s.motivo||'')).toLowerCase();
+      return h.includes(q);
+    });
+  }
   if(!sinMatch.length){
-    el.innerHTML = '<div class="empty">✅ Todos los pedidos matchean correctamente con el catálogo</div>';
+    el.innerHTML = `<div class="empty">${q?'Sin resultados':'✅ Todos los pedidos matchean correctamente con el catálogo'}</div>`;
     return;
   }
-  // Agrupar para no repetir
   el.innerHTML = `<div style="font-size:12px;color:var(--text2);background:var(--bg3);padding:10px;border-radius:8px;margin-bottom:14px">
-    Items de pedidos que no se pudieron mapear al inventario. Causas comunes: color no agregado al catálogo, capacidad no encontrada, pedido sin color especificado.
+    Items de pedidos que no se pudieron mapear al inventario. Click en 🔧 Resolver para agregar el color al catálogo o asignarlo a uno existente.
   </div>
   <table>
-    <thead><tr><th>PO</th><th>Categoría</th><th>Capacidad</th><th>Color</th><th>Motivo</th></tr></thead>
-    <tbody>${sinMatch.map(s=>`<tr>
-      <td class="mono" style="font-size:11px">${s.pedido_po||'—'}</td>
-      <td>${s.categoria}</td>
-      <td class="mono" style="font-size:11px">${s.capacidad?s.capacidad+'ml':'—'}</td>
-      <td>${s.color||'—'}</td>
-      <td style="font-size:11px;color:var(--text2)">${s.motivo}</td>
-    </tr>`).join('')}</tbody>
+    <thead><tr><th>PO</th><th>Categoría</th><th>Capacidad</th><th>Color</th><th>Motivo</th><th style="text-align:right">Acción</th></tr></thead>
+    <tbody>${sinMatch.map((s,i)=>{
+      // i es índice dentro del filtrado, busco el índice global para el modal
+      const globalIdx = _data.sinMatch.indexOf(s);
+      return `<tr>
+        <td class="mono" style="font-size:11px">${s.pedido_po||'—'}</td>
+        <td>${s.categoria}</td>
+        <td class="mono" style="font-size:11px">${s.capacidad?s.capacidad+'ml':'—'}</td>
+        <td>${s.color||'—'}</td>
+        <td style="font-size:11px;color:var(--text2)">${s.motivo}</td>
+        <td style="text-align:right"><button class="btn btn-sm" onclick="abrirModalResolverMatch(${globalIdx})">🔧 Resolver</button></td>
+      </tr>`;
+    }).join('')}</tbody>
   </table>`;
+}
+
+// ════════ MODAL RESOLVER MATCH ════════
+let _resolverContexto = null;
+
+function abrirModalResolverMatch(idx){
+  if(!_data || !_data.sinMatch[idx]){toast('Error','err');return;}
+  const s = _data.sinMatch[idx];
+  let prod = null;
+  if(s.categoria === 'botella'){
+    prod = _data.productos.find(p => p.categoria==='botella' && p.capacidad === s.capacidad);
+  } else {
+    prod = _data.productos.find(p => p.categoria === s.categoria);
+  }
+  if(!prod){toast('Sin producto en catálogo','err');return;}
+  _resolverContexto = {sinMatch:s, prod};
+  document.getElementById('resolver-contexto').innerHTML = `
+    <div style="margin-bottom:4px"><strong>Pedido:</strong> PO ${s.pedido_po||'—'}</div>
+    <div style="margin-bottom:4px"><strong>Producto detectado:</strong> ${prod.nombre}</div>
+    <div style="margin-bottom:4px"><strong>Color del pedido:</strong> <span style="color:var(--amber);font-weight:700">${s.color||'(vacío)'}</span></div>
+    <div><strong>Motivo:</strong> <span style="color:var(--text2)">${s.motivo}</span></div>`;
+  document.getElementById('resolver-nuevo-nombre').value = s.color || '';
+  document.getElementById('resolver-nuevo-minimo').value = prod.categoria==='botella' ? 1500 : 500;
+  const variantesProd = _data.variantes.filter(v=>v.producto_id===prod.id);
+  const sel = document.getElementById('resolver-existente-select');
+  if(!variantesProd.length){
+    sel.innerHTML = '<option value="">(este producto no tiene colores en catálogo todavía)</option>';
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">— Elegir color del catálogo —</option>' +
+      variantesProd.map(v=>`<option value="${v.nombre}">${v.nombre}${v.pantone?' · '+v.pantone:''}</option>`).join('');
+  }
+  if(!s.color){
+    document.getElementById('resolver-opt-crear').style.display='none';
+  } else {
+    document.getElementById('resolver-opt-crear').style.display='';
+  }
+  document.getElementById('modal-resolver').classList.add('show');
+}
+
+function cerrarModalResolver(){
+  document.getElementById('modal-resolver').classList.remove('show');
+  _resolverContexto = null;
+}
+
+async function resolverCrearVariante(){
+  if(!_resolverContexto) return;
+  const {prod} = _resolverContexto;
+  const nombre = document.getElementById('resolver-nuevo-nombre').value.trim();
+  const minimo = parseInt(document.getElementById('resolver-nuevo-minimo').value) || 0;
+  if(!nombre){toast('Nombre vacío','err');return;}
+  try{
+    const yaExiste = _data.variantes.find(v=>v.producto_id===prod.id && v.nombre.toLowerCase()===nombre.toLowerCase());
+    if(yaExiste){toast('Ya existe ese color','err');return;}
+    const r = await fetch(SB_URL+'/rest/v1/inventario_variantes',{
+      method:'POST', headers:{...SB_H,'Prefer':'return=representation'},
+      body:JSON.stringify({producto_id:prod.id, nombre, minimo_reserva:minimo})
+    });
+    if(!r.ok)throw new Error(await r.text());
+    const nuevaVar = await r.json();
+    const varId = Array.isArray(nuevaVar)?nuevaVar[0].id:nuevaVar.id;
+    await fetch(SB_URL+'/rest/v1/inventario_stock',{
+      method:'POST', headers:SB_H,
+      body:JSON.stringify([
+        {producto_id:prod.id, variante_id:varId, ubicacion:'almacen', cantidad:0},
+        {producto_id:prod.id, variante_id:varId, ubicacion:'produccion', cantidad:0},
+      ])
+    });
+    toast('Color "'+nombre+'" agregado ✓','ok');
+    cerrarModalResolver();
+    await recargar();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function resolverAsignarExistente(){
+  if(!_resolverContexto) return;
+  const {sinMatch} = _resolverContexto;
+  const colorNuevo = document.getElementById('resolver-existente-select').value;
+  if(!colorNuevo){toast('Elige un color','err');return;}
+  const col = (
+    sinMatch.categoria === 'botella' ? 'color_botella' :
+    sinMatch.categoria === 'tapa' ? 'color_tapa' :
+    sinMatch.categoria === 'chupon' ? 'color_boquilla' : null
+  );
+  if(!col){toast('Esta categoría no requiere color','err');return;}
+  if(!confirm(`¿Cambiar el ${col} del pedido PO ${sinMatch.pedido_po} a "${colorNuevo}"?`)) return;
+  try{
+    const filter = `po=eq.${encodeURIComponent(sinMatch.pedido_po)}`;
+    const r = await fetch(SB_URL+'/rest/v1/pipeline_mf?'+filter,{
+      method:'PATCH', headers:SB_H,
+      body:JSON.stringify({[col]:colorNuevo})
+    });
+    if(!r.ok)throw new Error(await r.text());
+    toast('Pedido actualizado ✓','ok');
+    cerrarModalResolver();
+    await recargar();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+// ════════ EXPORTS CSV ════════
+function exportarAlertasCSV(){
+  if(!_data){toast('No hay datos','err');return;}
+  const rows = _data.requerimientos.filter(r=>r.alerta).map(r=>({
+    tipo_alerta: r.alerta==='roja'?'CRÍTICA':'EN RIESGO',
+    producto: r.producto_nombre,
+    color: r.variante_nombre||'',
+    requerido_por_pedidos: r.requerido,
+    stock_almacen: Math.floor(r.stock_almacen),
+    stock_produccion: Math.floor(r.stock_produccion),
+    stock_total: Math.floor(r.stock_total),
+    restante_despues_pedidos: Math.floor(r.restante_despues_pedidos),
+    minimo_reserva: r.minimo,
+  }));
+  const ts = new Date().toISOString().slice(0,10);
+  exportarCSV(rows, null, `alertas-${ts}`);
+}
+
+function exportarPedidosCSV(){
+  if(!_data){toast('No hay datos','err');return;}
+  const rows = _data.pedidos.map(p=>({
+    po: p.po||'',
+    cliente: p.sub_cliente||p.cliente||'',
+    piezas: p.piezas||0,
+    capacidad: p.capacidad?p.capacidad+'ml':'',
+    color_botella: p.color_botella||'',
+    color_tapa: p.color_tapa||'',
+    color_chupon: p.color_boquilla||'',
+    estado: p.estado||'',
+    fecha_entrega: p.fecha_entrega ? new Date(p.fecha_entrega).toLocaleDateString('es-MX') : '',
+  }));
+  const ts = new Date().toISOString().slice(0,10);
+  exportarCSV(rows, null, `pedidos-pendientes-${ts}`);
+}
+
+function exportarInventarioCSV(){
+  if(!_data){toast('No hay datos','err');return;}
+  const rows = [];
+  _data.productos.forEach(prod=>{
+    if(prod.tiene_variantes){
+      _data.variantes.filter(v=>v.producto_id===prod.id).forEach(v=>{
+        const stkA = _data.stock.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion==='almacen');
+        const stkP = _data.stock.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion==='produccion');
+        rows.push({
+          categoria: prod.categoria,
+          producto: prod.nombre,
+          color: v.nombre,
+          pantone: v.pantone||'',
+          stock_almacen: Math.floor(stkA?.cantidad||0),
+          stock_produccion: Math.floor(stkP?.cantidad||0),
+          total: Math.floor((stkA?.cantidad||0)+(stkP?.cantidad||0)),
+          minimo_reserva: v.minimo_reserva||0,
+        });
+      });
+    } else {
+      const stkA = _data.stock.find(s=>s.producto_id===prod.id && !s.variante_id && s.ubicacion==='almacen');
+      const stkP = _data.stock.find(s=>s.producto_id===prod.id && !s.variante_id && s.ubicacion==='produccion');
+      rows.push({
+        categoria: prod.categoria,
+        producto: prod.nombre,
+        color: '',
+        pantone: '',
+        stock_almacen: Math.floor(stkA?.cantidad||0),
+        stock_produccion: Math.floor(stkP?.cantidad||0),
+        total: Math.floor((stkA?.cantidad||0)+(stkP?.cantidad||0)),
+        minimo_reserva: 0,
+      });
+    }
+  });
+  const ts = new Date().toISOString().slice(0,10);
+  exportarCSV(rows, null, `inventario-${ts}`);
+}
+
+function exportarSinMatchCSV(){
+  if(!_data){toast('No hay datos','err');return;}
+  const rows = (_data.sinMatch||[]).map(s=>({
+    po: s.pedido_po||'',
+    categoria: s.categoria||'',
+    capacidad: s.capacidad?s.capacidad+'ml':'',
+    color: s.color||'',
+    motivo: s.motivo||'',
+  }));
+  const ts = new Date().toISOString().slice(0,10);
+  exportarCSV(rows, null, `sin-match-${ts}`);
 }
 
 // ════════ EMAIL ALERTAS ════════

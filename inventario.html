@@ -129,24 +129,40 @@ tr:hover td{background:var(--bg3)}
 
     <div id="vista-almacen" class="vista">
       <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <input type="text" id="q-almacen" placeholder="🔍 Buscar producto, color, cantidad..." oninput="renderInventario()" style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          <button class="btn btn-ghost btn-sm" onclick="exportarInventarioCSV('almacen')">📥 Excel</button>
+        </div>
         <div id="lista-almacen"></div>
       </div>
     </div>
 
     <div id="vista-produccion" class="vista" style="display:none">
       <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <input type="text" id="q-produccion" placeholder="🔍 Buscar producto, color, cantidad..." oninput="renderInventario()" style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          <button class="btn btn-ghost btn-sm" onclick="exportarInventarioCSV('produccion')">📥 Excel</button>
+        </div>
         <div id="lista-produccion"></div>
       </div>
     </div>
 
     <div id="vista-alertas" class="vista" style="display:none">
       <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <input type="text" id="q-alertas" placeholder="🔍 Buscar producto, color..." oninput="renderAlertasTab()" style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          <button class="btn btn-ghost btn-sm" onclick="exportarAlertasCSV()">📥 Excel</button>
+        </div>
         <div id="lista-alertas-tab"></div>
       </div>
     </div>
 
     <div id="vista-historial" class="vista" style="display:none">
       <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <input type="text" id="q-historial" placeholder="🔍 Buscar tipo, producto, usuario, observación..." oninput="renderHistorialFiltrado()" style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          <button class="btn btn-ghost btn-sm" onclick="exportarHistorialCSV()">📥 Excel</button>
+        </div>
         <div id="lista-historial"></div>
       </div>
     </div>
@@ -286,6 +302,51 @@ tr:hover td{background:var(--bg3)}
   </div>
 </div>
 
+<!-- MODAL: RESOLVER MATCH -->
+<div id="modal-resolver" class="modal-overlay" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-title">🔧 Resolver match de pedido</div>
+    <div id="resolver-contexto" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px"></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Elige cómo resolver:</div>
+
+    <!-- Opción A: crear variante nueva en catálogo -->
+    <div id="resolver-opt-crear" style="border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="font-size:18px;line-height:1">🎨</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px">Agregar este color al catálogo</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Crea una nueva variante con este nombre. El pedido va a hacer match a partir de ahora.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="resolver-nuevo-nombre" type="text" style="flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none">
+            <input id="resolver-nuevo-minimo" type="number" placeholder="Mín. reserva" value="1500" min="0" step="100" style="width:120px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none">
+            <button class="btn btn-primary btn-sm" onclick="resolverCrearVariante()">Crear color</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opción B: asignar a variante existente -->
+    <div id="resolver-opt-existente" style="border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="font-size:18px;line-height:1">🔗</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px">Asignar a un color existente</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Cambia el color del pedido para que matchee con uno que ya existe en el catálogo (no toca el catálogo).</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="resolver-existente-select" style="flex:1;min-width:160px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none"></select>
+            <button class="btn btn-blue btn-sm" onclick="resolverAsignarExistente()">Asignar al pedido</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="inventario-utils.js"></script>
 <script src="inventario-alertas.js"></script>
 <script>
 const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
@@ -469,8 +530,19 @@ function renderAlertasTab(){
     el.innerHTML = '<div class="empty">Cargando...</div>';
     return;
   }
-  const alertas = data.requerimientos.filter(r=>r.alerta);
-  const sinMatch = data.sinMatch || [];
+  const q = (document.getElementById('q-alertas')?.value||'').toLowerCase().trim();
+  let alertas = data.requerimientos.filter(r=>r.alerta);
+  let sinMatch = data.sinMatch || [];
+  if(q){
+    alertas = alertas.filter(r=>{
+      const h = ((r.producto_nombre||'')+' '+(r.variante_nombre||'')+' '+r.requerido+' '+r.stock_total).toLowerCase();
+      return h.includes(q);
+    });
+    sinMatch = sinMatch.filter(s=>{
+      const h = ((s.pedido_po||'')+' '+s.categoria+' '+(s.color||'')+' '+(s.capacidad||'')+' '+(s.motivo||'')).toLowerCase();
+      return h.includes(q);
+    });
+  }
   let html = '';
   // Resumen arriba
   html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
@@ -531,21 +603,24 @@ function renderAlertasTab(){
     html += `<div style="font-size:12px;color:var(--text2);background:var(--bg3);padding:10px;border-radius:8px;margin-bottom:12px">
       Estos pedidos tienen items que no se pudieron mapear al inventario. Probablemente falta agregar el color al catálogo o el pedido viene sin color especificado.
     </div>`;
-    html += `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px">
+    html += `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:620px">
       <thead><tr style="border-bottom:2px solid var(--border2)">
         <th style="text-align:left;padding:8px;font-size:10px;text-transform:uppercase;color:var(--text2)">PO</th>
         <th style="text-align:left;padding:8px;font-size:10px;text-transform:uppercase;color:var(--text2)">Categoría</th>
         <th style="text-align:left;padding:8px;font-size:10px;text-transform:uppercase;color:var(--text2)">Capacidad</th>
         <th style="text-align:left;padding:8px;font-size:10px;text-transform:uppercase;color:var(--text2)">Color</th>
         <th style="text-align:left;padding:8px;font-size:10px;text-transform:uppercase;color:var(--text2)">Motivo</th>
+        <th style="text-align:right;padding:8px;font-size:10px;text-transform:uppercase;color:var(--text2)">Acción</th>
       </tr></thead><tbody>`;
-    sinMatch.forEach(s=>{
+    sinMatch.forEach((s,i)=>{
+      // Guardamos el índice global para que el modal recupere el objeto exacto
       html += `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:8px;font-family:'Space Mono',monospace;font-size:11px">${s.pedido_po||'—'}</td>
         <td style="padding:8px">${s.categoria}</td>
         <td style="padding:8px;font-family:'Space Mono',monospace;font-size:11px">${s.capacidad?s.capacidad+'ml':'—'}</td>
         <td style="padding:8px">${s.color||'—'}</td>
         <td style="padding:8px;font-size:11px;color:var(--text2)">${s.motivo}</td>
+        <td style="padding:8px;text-align:right"><button class="btn btn-xs" onclick="abrirModalResolverMatch(${i})">🔧 Resolver</button></td>
       </tr>`;
     });
     html += '</tbody></table></div>';
@@ -569,36 +644,53 @@ function renderInventario(){
 }
 
 function construirFilasInventario(ubicacion){
+  // Query del input correspondiente
+  const q = (document.getElementById('q-'+ubicacion)?.value||'').toLowerCase().trim();
   const filas = [];
   // Agrupar por categoría
   const cats = ['botella','tapa','chupon','liner','papel','liga','tag','corrugado'];
   cats.forEach(cat=>{
     const prodsCat = PRODUCTOS.filter(p=>p.categoria===cat);
     if(!prodsCat.length) return;
-    filas.push(`<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em">${tituloCat(cat)}</div>`);
+    const filasCat = [];
     prodsCat.forEach(prod=>{
       if(prod.tiene_variantes){
-        // Filas por variante
         const vars = VARIANTES.filter(v=>v.producto_id===prod.id);
         if(!vars.length){
-          filas.push(`<div class="product-row" style="opacity:0.4">
-            <div>${prod.nombre} <span style="font-size:11px;color:var(--text3)">(sin colores agregados)</span></div>
-            <div></div><div></div><div></div>
-            <div class="actions-cell"><button class="btn btn-xs" onclick="abrirModalVariantePrecargado('${prod.id}')">+ Agregar color</button></div>
-          </div>`);
+          if(!q || prod.nombre.toLowerCase().includes(q)){
+            filasCat.push(`<div class="product-row" style="opacity:0.4">
+              <div>${prod.nombre} <span style="font-size:11px;color:var(--text3)">(sin colores agregados)</span></div>
+              <div></div><div></div><div></div>
+              <div class="actions-cell"><button class="btn btn-xs" onclick="abrirModalVariantePrecargado('${prod.id}')">+ Agregar color</button></div>
+            </div>`);
+          }
         }
         vars.forEach(v=>{
           const stk = STOCK.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion===ubicacion);
           const cant = stk?.cantidad || 0;
           const min = v.minimo_reserva || 0;
-          filas.push(buildRow(prod, v, cant, min, ubicacion));
+          // Filtrar por query (busca en nombre producto, nombre variante, pantone y cantidad)
+          if(q){
+            const haystack = (prod.nombre+' '+v.nombre+' '+(v.pantone||'')+' '+cant).toLowerCase();
+            if(!haystack.includes(q)) return;
+          }
+          filasCat.push(buildRow(prod, v, cant, min, ubicacion));
         });
       } else {
         const stk = STOCK.find(s=>s.producto_id===prod.id && s.variante_id===null && s.ubicacion===ubicacion);
         const cant = stk?.cantidad || 0;
-        filas.push(buildRow(prod, null, cant, 0, ubicacion));
+        if(q){
+          const haystack = (prod.nombre+' '+cant).toLowerCase();
+          if(!haystack.includes(q)) return;
+        }
+        filasCat.push(buildRow(prod, null, cant, 0, ubicacion));
       }
     });
+    // Solo agregar título de categoría si hay filas que mostrar
+    if(filasCat.length){
+      filas.push(`<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em">${tituloCat(cat)}</div>`);
+      filas.push(...filasCat);
+    }
   });
   return filas;
 }
@@ -846,6 +938,113 @@ async function ajustarStock(prodId, varId, ubicacion, delta){
   }
 }
 
+// ════════ RESOLVER MATCH ════════
+let _resolverContexto = null; // {sinMatch obj, producto, ...}
+
+function abrirModalResolverMatch(idx){
+  const data = window._alertasData;
+  if(!data || !data.sinMatch[idx]){toast('Error: no hay datos','err');return;}
+  const s = data.sinMatch[idx];
+  // Encontrar producto correspondiente del catálogo
+  let prod = null;
+  if(s.categoria === 'botella'){
+    prod = PRODUCTOS.find(p => p.categoria==='botella' && p.capacidad === s.capacidad);
+  } else {
+    prod = PRODUCTOS.find(p => p.categoria === s.categoria);
+  }
+  if(!prod){
+    toast('No hay producto del tipo '+s.categoria+' en catálogo','err');
+    return;
+  }
+  _resolverContexto = {sinMatch:s, prod};
+  // Llenar contexto visible
+  const ctx = document.getElementById('resolver-contexto');
+  ctx.innerHTML = `
+    <div style="margin-bottom:4px"><strong>Pedido:</strong> PO ${s.pedido_po||'—'}</div>
+    <div style="margin-bottom:4px"><strong>Producto detectado:</strong> ${prod.nombre}</div>
+    <div style="margin-bottom:4px"><strong>Color del pedido:</strong> <span style="color:var(--amber);font-weight:700">${s.color||'(vacío)'}</span></div>
+    <div><strong>Motivo:</strong> <span style="color:var(--text2)">${s.motivo}</span></div>`;
+  // Llenar opción A: nombre sugerido = el color tal como viene
+  document.getElementById('resolver-nuevo-nombre').value = s.color || '';
+  document.getElementById('resolver-nuevo-minimo').value = prod.categoria==='botella' ? 1500 : 500;
+  // Llenar opción B: solo variantes existentes de este producto
+  const variantesProd = VARIANTES.filter(v=>v.producto_id===prod.id);
+  const sel = document.getElementById('resolver-existente-select');
+  if(!variantesProd.length){
+    sel.innerHTML = '<option value="">(este producto no tiene colores en catálogo todavía)</option>';
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">— Elegir color del catálogo —</option>' +
+      variantesProd.map(v=>`<option value="${v.nombre}">${v.nombre}${v.pantone?' · '+v.pantone:''}</option>`).join('');
+  }
+  // Si el pedido no tiene color, opción A no aplica (no hay nada que crear)
+  if(!s.color){
+    document.getElementById('resolver-opt-crear').style.display='none';
+  } else {
+    document.getElementById('resolver-opt-crear').style.display='';
+  }
+  document.getElementById('modal-resolver').classList.add('show');
+}
+
+// Opción A: crear variante nueva en el catálogo
+async function resolverCrearVariante(){
+  if(!_resolverContexto) return;
+  const {prod, sinMatch} = _resolverContexto;
+  const nombre = document.getElementById('resolver-nuevo-nombre').value.trim();
+  const minimo = parseInt(document.getElementById('resolver-nuevo-minimo').value) || 0;
+  if(!nombre){toast('Nombre vacío','err');return;}
+  try{
+    // Verificar que no exista ya
+    const yaExiste = VARIANTES.find(v=>v.producto_id===prod.id && v.nombre.toLowerCase()===nombre.toLowerCase());
+    if(yaExiste){
+      toast('Ya existe ese color en el catálogo','err');
+      return;
+    }
+    const nuevaVar = await sbPost('inventario_variantes',{
+      producto_id: prod.id, nombre, minimo_reserva: minimo
+    });
+    const varId = Array.isArray(nuevaVar)?nuevaVar[0].id:nuevaVar.id;
+    // Crear stock 0 en ambas ubicaciones
+    await sbPost('inventario_stock',[
+      {producto_id:prod.id, variante_id:varId, ubicacion:'almacen', cantidad:0},
+      {producto_id:prod.id, variante_id:varId, ubicacion:'produccion', cantidad:0},
+    ]);
+    toast('Color "'+nombre+'" agregado al catálogo ✓','ok');
+    cerrarModal();
+    await cargarInventario();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+// Opción B: cambiar el color del pedido para que matchee con uno existente
+async function resolverAsignarExistente(){
+  if(!_resolverContexto) return;
+  const {prod, sinMatch} = _resolverContexto;
+  const colorNuevo = document.getElementById('resolver-existente-select').value;
+  if(!colorNuevo){toast('Elige un color','err');return;}
+  // Determinar qué columna del pipeline actualizar
+  const col = (
+    sinMatch.categoria === 'botella' ? 'color_botella' :
+    sinMatch.categoria === 'tapa' ? 'color_tapa' :
+    sinMatch.categoria === 'chupon' ? 'color_boquilla' :
+    null
+  );
+  if(!col){
+    toast('Esta categoría no requiere color en el pedido','err');
+    return;
+  }
+  if(!confirm(`¿Cambiar el ${col} del pedido PO ${sinMatch.pedido_po} a "${colorNuevo}"?`)) return;
+  try{
+    // Actualizar el pedido en pipeline_mf por po
+    const filter = `po=eq.${encodeURIComponent(sinMatch.pedido_po)}`;
+    const payload = {[col]: colorNuevo};
+    await sbPatch('pipeline_mf', payload, filter);
+    toast('Pedido actualizado ✓','ok');
+    cerrarModal();
+    await cargarInventario();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
 async function editarMinimo(varianteId, actual){
   const nuevo = prompt('Nuevo mínimo de reserva:', actual);
   if(nuevo===null) return;
@@ -862,33 +1061,142 @@ async function cargarHistorial(){
   const el = document.getElementById('lista-historial');
   el.innerHTML = '<div class="empty">Cargando...</div>';
   try{
-    const movs = await sbGet('inventario_movimientos','select=*,inventario_productos(nombre),inventario_variantes(nombre,pantone)&order=created_at.desc&limit=200');
-    if(!movs.length){el.innerHTML='<div class="empty">Sin movimientos registrados</div>';return;}
-    el.innerHTML = `<table>
-      <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Cantidad</th><th>Origen → Destino</th><th>Usuario</th><th>Observaciones</th></tr></thead>
-      <tbody>${movs.map(m=>{
-        const prodNombre = m.inventario_productos?.nombre || '—';
-        const varNombre = m.inventario_variantes?.nombre || '';
-        const tipoBadge = ({
-          'entrada':'<span class="badge badge-green">ENTRADA</span>',
-          'traspaso_a_produccion':'<span class="badge badge-blue">→ PROD</span>',
-          'traspaso_a_almacen':'<span class="badge badge-blue">→ ALM</span>',
-          'consumo_pedido':'<span class="badge badge-amber">CONSUMO</span>',
-          'salida_manual':'<span class="badge badge-red">SALIDA</span>',
-          'ajuste':'<span class="badge">AJUSTE</span>',
-        })[m.tipo] || m.tipo;
-        const fecha = new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-        return `<tr>
-          <td class="mono" style="font-size:11px">${fecha}</td>
-          <td>${tipoBadge}</td>
-          <td>${prodNombre}${varNombre?' · '+varNombre:''}${m.lote_numero?'<div style="font-size:10px;color:var(--text3)">Lote: '+m.lote_numero+'</div>':''}</td>
-          <td class="mono qty">${m.cantidad}</td>
-          <td style="font-size:11px;color:var(--text2)">${m.ubicacion_origen||'—'} → ${m.ubicacion_destino||'—'}</td>
-          <td style="font-size:11px">${m.usuario||'—'}</td>
-          <td style="font-size:11px;color:var(--text2)">${m.observaciones||''}</td>
-        </tr>`;
-      }).join('')}</tbody></table>`;
+    const movs = await sbGet('inventario_movimientos','select=*,inventario_productos(nombre),inventario_variantes(nombre,pantone)&order=created_at.desc&limit=500');
+    window._historialData = movs;
+    renderHistorialFiltrado();
   }catch(e){el.innerHTML='<div class="empty" style="color:var(--red)">Error: '+e.message+'</div>';}
+}
+
+function renderHistorialFiltrado(){
+  const el = document.getElementById('lista-historial');
+  const movs = window._historialData || [];
+  if(!movs.length){el.innerHTML='<div class="empty">Sin movimientos registrados</div>';return;}
+  const q = (document.getElementById('q-historial')?.value||'').toLowerCase().trim();
+  // Aplanar para hacer filtro
+  const filtrados = movs.filter(m=>{
+    if(!q) return true;
+    const prodNombre = m.inventario_productos?.nombre || '';
+    const varNombre = m.inventario_variantes?.nombre || '';
+    const haystack = (m.tipo+' '+prodNombre+' '+varNombre+' '+(m.cantidad||'')+' '+(m.usuario||'')+' '+(m.observaciones||'')+' '+(m.lote_numero||'')+' '+(m.ubicacion_origen||'')+' '+(m.ubicacion_destino||'')).toLowerCase();
+    return haystack.includes(q);
+  });
+  if(!filtrados.length){el.innerHTML='<div class="empty">Sin resultados para esa búsqueda</div>';return;}
+  el.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">${filtrados.length} movimiento(s)</div><table>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th style="text-align:right">Cantidad</th><th>Origen → Destino</th><th>Usuario</th><th>Observaciones</th></tr></thead>
+    <tbody>${filtrados.map(m=>{
+      const prodNombre = m.inventario_productos?.nombre || '—';
+      const varNombre = m.inventario_variantes?.nombre || '';
+      const tipoBadge = ({
+        'entrada':'<span class="badge badge-green">ENTRADA</span>',
+        'traspaso_a_produccion':'<span class="badge badge-blue">→ PROD</span>',
+        'traspaso_a_almacen':'<span class="badge badge-blue">→ ALM</span>',
+        'consumo_pedido':'<span class="badge badge-amber">CONSUMO</span>',
+        'salida_manual':'<span class="badge badge-red">SALIDA</span>',
+        'ajuste':'<span class="badge">AJUSTE</span>',
+      })[m.tipo] || m.tipo;
+      const fecha = new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<tr>
+        <td class="mono" style="font-size:11px">${fecha}</td>
+        <td>${tipoBadge}</td>
+        <td>${prodNombre}${varNombre?' · '+varNombre:''}${m.lote_numero?'<div style="font-size:10px;color:var(--text3)">Lote: '+m.lote_numero+'</div>':''}</td>
+        <td class="mono qty">${m.cantidad}</td>
+        <td style="font-size:11px;color:var(--text2)">${m.ubicacion_origen||'—'} → ${m.ubicacion_destino||'—'}</td>
+        <td style="font-size:11px">${m.usuario||'—'}</td>
+        <td style="font-size:11px;color:var(--text2)">${m.observaciones||''}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+// ════════ EXPORTS ════════
+function exportarInventarioCSV(ubicacion){
+  const rows = [];
+  PRODUCTOS.forEach(prod=>{
+    if(prod.tiene_variantes){
+      const vars = VARIANTES.filter(v=>v.producto_id===prod.id);
+      vars.forEach(v=>{
+        const stk = STOCK.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion===ubicacion);
+        rows.push({
+          categoria: prod.categoria,
+          producto: prod.nombre,
+          color: v.nombre,
+          pantone: v.pantone||'',
+          cantidad: Math.floor(stk?.cantidad||0),
+          minimo_reserva: v.minimo_reserva||0,
+          ubicacion: ubicacion,
+        });
+      });
+    } else {
+      const stk = STOCK.find(s=>s.producto_id===prod.id && !s.variante_id && s.ubicacion===ubicacion);
+      rows.push({
+        categoria: prod.categoria,
+        producto: prod.nombre,
+        color: '',
+        pantone: '',
+        cantidad: Math.floor(stk?.cantidad||0),
+        minimo_reserva: 0,
+        ubicacion: ubicacion,
+      });
+    }
+  });
+  const headers = [
+    {key:'categoria',label:'Categoría'},
+    {key:'producto',label:'Producto'},
+    {key:'color',label:'Color'},
+    {key:'pantone',label:'Pantone'},
+    {key:'cantidad',label:'Cantidad'},
+    {key:'minimo_reserva',label:'Mínimo reserva'},
+    {key:'ubicacion',label:'Ubicación'},
+  ];
+  const ts = new Date().toISOString().slice(0,10);
+  exportarCSV(rows, headers, `inventario-${ubicacion}-${ts}`);
+}
+
+function exportarAlertasCSV(){
+  const data = window._alertasData;
+  if(!data){toast('No hay datos','err');return;}
+  const rows = [];
+  data.requerimientos.filter(r=>r.alerta).forEach(r=>{
+    rows.push({
+      tipo_alerta: r.alerta==='roja'?'CRÍTICA':'EN RIESGO',
+      producto: r.producto_nombre,
+      color: r.variante_nombre||'',
+      requerido_por_pedidos: r.requerido,
+      stock_almacen: Math.floor(r.stock_almacen),
+      stock_produccion: Math.floor(r.stock_produccion),
+      stock_total: Math.floor(r.stock_total),
+      restante_despues_pedidos: Math.floor(r.restante_despues_pedidos),
+      minimo_reserva: r.minimo,
+    });
+  });
+  const ts = new Date().toISOString().slice(0,10);
+  exportarCSV(rows, null, `alertas-inventario-${ts}`);
+}
+
+function exportarHistorialCSV(){
+  const movs = window._historialData || [];
+  if(!movs.length){toast('Nada que exportar','err');return;}
+  const q = (document.getElementById('q-historial')?.value||'').toLowerCase().trim();
+  const filtrados = q ? movs.filter(m=>{
+    const prodNombre = m.inventario_productos?.nombre || '';
+    const varNombre = m.inventario_variantes?.nombre || '';
+    const haystack = (m.tipo+' '+prodNombre+' '+varNombre+' '+(m.cantidad||'')+' '+(m.usuario||'')+' '+(m.observaciones||'')+' '+(m.lote_numero||'')+' '+(m.ubicacion_origen||'')+' '+(m.ubicacion_destino||'')).toLowerCase();
+    return haystack.includes(q);
+  }) : movs;
+  const rows = filtrados.map(m=>({
+    fecha: new Date(m.created_at).toLocaleString('es-MX'),
+    tipo: m.tipo,
+    producto: m.inventario_productos?.nombre || '',
+    color: m.inventario_variantes?.nombre || '',
+    cantidad: m.cantidad,
+    origen: m.ubicacion_origen||'',
+    destino: m.ubicacion_destino||'',
+    lote_fecha: m.lote_fecha||'',
+    lote_numero: m.lote_numero||'',
+    usuario: m.usuario||'',
+    observaciones: m.observaciones||'',
+  }));
+  const ts = new Date().toISOString().slice(0,10);
+  exportarCSV(rows, null, `movimientos-inventario-${ts}`);
 }
 
 // ════════ INIT ════════
