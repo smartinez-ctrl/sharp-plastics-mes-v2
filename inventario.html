@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sharp Plastics — Inventario</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d10;--bg2:#111418;--bg3:#181c23;--bg4:#1e232d;--bg5:#252b38;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);--border3:rgba(255,255,255,0.18);--text:#e2e6f0;--text2:#7d8799;--text3:#454e60;--amber:#f5a623;--amber2:#ffc15e;--amber-bg:rgba(245,166,35,0.08);--amber-border:rgba(245,166,35,0.25);--green:#2dd4a0;--green-bg:rgba(45,212,160,0.08);--green-border:rgba(45,212,160,0.25);--blue:#4a9eff;--blue-bg:rgba(74,158,255,0.08);--blue-border:rgba(74,158,255,0.25);--red:#f87171;--red-bg:rgba(248,113,113,0.08);--red-border:rgba(248,113,113,0.25);--topbar:52px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{height:var(--topbar);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:fixed;top:0;left:0;right:0;z-index:100}
+.logo{font-family:"Space Mono",monospace;font-size:12px;color:var(--text2);letter-spacing:.1em}.logo b{color:var(--amber)}
+.tag{font-size:10px;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:4px;padding:2px 7px;font-weight:600}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:999px;padding:4px 14px 4px 5px;font-size:13px}
+.user-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+.btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;touch-action:manipulation}
+.btn:hover{background:var(--bg4)}
+.btn-primary{background:var(--amber);color:#0b0d10;border:none}
+.btn-primary:hover{background:var(--amber2)}
+.btn-ghost{background:transparent;border:1px solid var(--border)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn-green{background:var(--green);color:#0b0d10;border:none}
+.btn-blue{background:var(--blue);color:#fff;border:none}
+.btn-red{background:var(--red);color:#fff;border:none}
+.container{max-width:1280px;margin:0 auto;padding:calc(var(--topbar) + 20px) 20px 40px}
+.section-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);margin-bottom:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+input,select,textarea{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;font-family:inherit;width:100%;outline:none}
+input:focus,select:focus{border-color:var(--blue)}
+label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:5px}
+.field{margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border)}
+tr:hover td{background:var(--bg3)}
+.mono{font-family:"Space Mono",monospace}
+.badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px;display:inline-block}
+.badge-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.badge-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.badge-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.tabs{display:flex;gap:4px;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:18px;width:fit-content}
+.tab{padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text2);touch-action:manipulation}
+.tab.active{background:var(--bg5);color:var(--text)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:18px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg3);color:var(--text);padding:11px 22px;border-radius:10px;font-weight:600;font-size:13px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.4);border:1px solid var(--border2)}
+.toast.ok{border-color:var(--green-border);color:var(--green)}
+.toast.err{border-color:var(--red-border);color:var(--red)}
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
+.screen{display:none}
+.screen.active{display:block}
+.product-row{display:grid;grid-template-columns:1fr 100px 100px 100px 140px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.product-row.alert-red{background:var(--red-bg)}
+.product-row.alert-amber{background:var(--amber-bg)}
+.variant-name{font-weight:600}
+.qty{font-family:"Space Mono",monospace;text-align:right;font-weight:600}
+.qty.zero{color:var(--text3)}
+.qty.low{color:var(--amber)}
+.qty.critical{color:var(--red)}
+.actions-cell{display:flex;gap:4px;justify-content:flex-end}
+.qty-input{width:90px;text-align:right;font-family:"Space Mono",monospace}
+@media (max-width:680px){
+  .product-row{grid-template-columns:1fr 70px 70px 70px;font-size:12px}
+  .product-row .actions-cell{grid-column:1/-1;justify-content:flex-start;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .container{padding:calc(var(--topbar) + 14px) 12px 30px}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">SHARP <b>PLASTICS</b></div>
+    <div class="tag">INVENTARIO</div>
+  </div>
+  <div class="topbar-right">
+    <div id="user-pill" class="user-pill" style="display:none"></div>
+    <button class="btn btn-ghost btn-sm" onclick="cerrarSesion()">Salir</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div class="container" style="max-width:480px;padding-top:80px">
+    <div class="card" style="padding:32px;text-align:center">
+      <div style="font-size:20px;font-weight:700;margin-bottom:6px">Inventario</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:24px">Selecciona tu usuario</div>
+      <div id="users-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+      <div id="pin-section" style="display:none;margin-top:20px">
+        <label>PIN</label>
+        <input id="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" style="text-align:center;font-size:22px;letter-spacing:.4em;font-family:'Space Mono',monospace">
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn btn-ghost" style="flex:1" onclick="cancelarLogin()">← Volver</button>
+          <button class="btn btn-primary" style="flex:1" onclick="loginConPin()">Entrar</button>
+        </div>
+        <div id="login-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="screen-main" class="screen">
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('almacen')">📦 Almacén</div>
+      <div class="tab" onclick="switchTab('produccion')">🏭 Producción</div>
+      <div class="tab" onclick="switchTab('historial')">📜 Historial</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+      <button class="btn btn-primary" onclick="abrirModal('entrada')">+ Entrada de producto</button>
+      <button class="btn btn-blue" onclick="abrirModal('traspaso')">⇄ Traspaso</button>
+      <button class="btn" onclick="abrirModal('salida')">− Salida manual</button>
+      <button class="btn btn-ghost" onclick="abrirModal('variante')">🎨 Agregar color/variante</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost btn-sm" onclick="cargarInventario()">↻ Actualizar</button>
+    </div>
+
+    <div id="vista-almacen" class="vista">
+      <div class="card">
+        <div id="lista-almacen"></div>
+      </div>
+    </div>
+
+    <div id="vista-produccion" class="vista" style="display:none">
+      <div class="card">
+        <div id="lista-produccion"></div>
+      </div>
+    </div>
+
+    <div id="vista-historial" class="vista" style="display:none">
+      <div class="card">
+        <div id="lista-historial"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ENTRADA -->
+<div id="modal-entrada" class="modal-overlay" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal">
+    <div class="modal-title">+ Entrada de producto al almacén</div>
+    <div class="field">
+      <label>Producto</label>
+      <select id="ent-producto" onchange="cargarVariantesProducto('ent')"></select>
+    </div>
+    <div class="field" id="ent-variante-field" style="display:none">
+      <label>Color / Variante</label>
+      <select id="ent-variante"></select>
+    </div>
+    <div class="field">
+      <label>Cantidad</label>
+      <input id="ent-cantidad" type="number" min="1" step="1" placeholder="Ej. 1500">
+    </div>
+    <div class="field">
+      <label>Fecha de producción del lote</label>
+      <input id="ent-fecha" type="date">
+    </div>
+    <div class="field">
+      <label>Número de lote</label>
+      <input id="ent-lote" type="text" placeholder="Ej. L240515-A">
+    </div>
+    <div class="field">
+      <label>Observaciones (opcional)</label>
+      <input id="ent-obs" type="text">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEntrada()">Registrar entrada</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: TRASPASO -->
+<div id="modal-traspaso" class="modal-overlay" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal">
+    <div class="modal-title">⇄ Traspaso entre ubicaciones</div>
+    <div class="field">
+      <label>Origen → Destino</label>
+      <select id="tra-direccion">
+        <option value="almacen_a_produccion">Almacén → Producción</option>
+        <option value="produccion_a_almacen">Producción → Almacén</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Producto</label>
+      <select id="tra-producto" onchange="cargarVariantesProducto('tra')"></select>
+    </div>
+    <div class="field" id="tra-variante-field" style="display:none">
+      <label>Color / Variante</label>
+      <select id="tra-variante"></select>
+    </div>
+    <div class="field">
+      <label>Cantidad <span id="tra-disponible" style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0"></span></label>
+      <input id="tra-cantidad" type="number" min="1" step="1">
+    </div>
+    <div class="field">
+      <label>Observaciones (opcional)</label>
+      <input id="tra-obs" type="text" placeholder="Ej. Pedido Plant Party PO 851...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-blue" onclick="guardarTraspaso()">Hacer traspaso</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SALIDA -->
+<div id="modal-salida" class="modal-overlay" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal">
+    <div class="modal-title">− Salida manual</div>
+    <div style="font-size:12px;color:var(--text2);background:var(--bg3);padding:10px;border-radius:8px;margin-bottom:14px">
+      Usa esto para descartes, ajustes de inventario, mermas físicas no relacionadas a pedidos, etc.
+    </div>
+    <div class="field">
+      <label>Ubicación</label>
+      <select id="sal-ubicacion">
+        <option value="almacen">Almacén</option>
+        <option value="produccion">Producción</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Producto</label>
+      <select id="sal-producto" onchange="cargarVariantesProducto('sal')"></select>
+    </div>
+    <div class="field" id="sal-variante-field" style="display:none">
+      <label>Color / Variante</label>
+      <select id="sal-variante"></select>
+    </div>
+    <div class="field">
+      <label>Cantidad</label>
+      <input id="sal-cantidad" type="number" min="1" step="1">
+    </div>
+    <div class="field">
+      <label>Motivo</label>
+      <input id="sal-motivo" type="text" placeholder="Ej. Descarte por defecto, ajuste de inventario...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-red" onclick="guardarSalida()">Registrar salida</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: VARIANTE NUEVA -->
+<div id="modal-variante" class="modal-overlay" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal">
+    <div class="modal-title">🎨 Agregar color / variante</div>
+    <div class="field">
+      <label>Producto</label>
+      <select id="var-producto"></select>
+    </div>
+    <div class="field">
+      <label>Nombre del color / variante</label>
+      <input id="var-nombre" type="text" placeholder="Ej. Green Plant Party, Black Eastside">
+    </div>
+    <div class="field">
+      <label>Código Pantone (opcional)</label>
+      <input id="var-pantone" type="text" placeholder="Ej. 554c">
+    </div>
+    <div class="field">
+      <label>Mínimo de reserva (alertas)</label>
+      <input id="var-minimo" type="number" min="0" step="100" value="1500">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarVariante()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY0NTE0NDcsImV4cCI6MjA1MjAyNzQ0N30.kE4OKf94IZA7OFCKLO00qYDU-pBQT4nlGyZNFkbQS8I';
+const SB_H = {apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
+async function sbGet(t,f){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+(f||''),{headers:SB_H});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbPost(t,d){const r=await fetch(SB_URL+'/rest/v1/'+t,{method:'POST',headers:{...SB_H,'Prefer':'return=representation'},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());try{return r.json();}catch{return null;}}
+async function sbPatch(t,d,f){const r=await fetch(SB_URL+'/rest/v1/'+t+'?'+f,{method:'PATCH',headers:{...SB_H,'Prefer':'return=representation'},body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());try{return r.json();}catch{return [];}}
+
+let USER = null;
+let PRODUCTOS = [];
+let VARIANTES = [];
+let STOCK = [];
+let TAB_ACTIVA = 'almacen';
+let _selectedUser = null;
+
+function toast(msg, type){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:'');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+}
+
+// ════════ LOGIN ════════
+async function cargarUsuarios(){
+  try{
+    const rows = await sbGet('usuarios','activo=eq.true&rol=in.(almacen,master,supervisor)&order=nombre.asc');
+    const grid = document.getElementById('users-grid');
+    if(!rows.length){grid.innerHTML='<div class="empty">No hay usuarios con acceso a inventario</div>';return;}
+    grid.innerHTML = rows.map(u=>{
+      const initials = (u.nombre||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+      const color = u.color||'#7d8799';
+      return `<div onclick='seleccionarUsuario(${JSON.stringify(u)})' style="cursor:pointer;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;text-align:center;transition:all .15s" onmouseover="this.style.borderColor='${color}'" onmouseout="this.style.borderColor='var(--border2)'">
+        <div class="user-av" style="background:${color}33;color:${color};margin:0 auto 6px;width:42px;height:42px;font-size:13px">${initials}</div>
+        <div style="font-weight:600;font-size:13px">${u.nombre}</div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase">${u.rol}</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    document.getElementById('users-grid').innerHTML='<div class="empty" style="color:var(--red)">Error: '+e.message+'</div>';
+  }
+}
+
+function seleccionarUsuario(u){
+  _selectedUser = u;
+  document.getElementById('users-grid').style.display='none';
+  document.getElementById('pin-section').style.display='block';
+  setTimeout(()=>document.getElementById('pin-input').focus(),100);
+}
+
+function cancelarLogin(){
+  _selectedUser=null;
+  document.getElementById('pin-section').style.display='none';
+  document.getElementById('users-grid').style.display='grid';
+  document.getElementById('pin-input').value='';
+  document.getElementById('login-error').style.display='none';
+}
+
+async function loginConPin(){
+  const pin = document.getElementById('pin-input').value;
+  const err = document.getElementById('login-error');
+  err.style.display='none';
+  if(!pin){err.textContent='Ingresa tu PIN';err.style.display='block';return;}
+  if(String(_selectedUser.pin) !== String(pin)){
+    err.textContent='PIN incorrecto';err.style.display='block';
+    document.getElementById('pin-input').value='';
+    return;
+  }
+  USER = _selectedUser;
+  sessionStorage.setItem('inv_user', JSON.stringify(USER));
+  mostrarMain();
+}
+
+function cerrarSesion(){
+  sessionStorage.removeItem('inv_user');
+  USER=null;
+  showScreen('login');
+  cancelarLogin();
+}
+
+function mostrarMain(){
+  const pill = document.getElementById('user-pill');
+  const initials = (USER.nombre||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  pill.innerHTML = `<div class="user-av" style="background:${(USER.color||'#7d8799')}33;color:${USER.color||'#7d8799'}">${initials}</div><span>${USER.nombre}</span>`;
+  pill.style.display='flex';
+  showScreen('main');
+  cargarInventario();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && document.getElementById('pin-section').style.display==='block'){
+    loginConPin();
+  }
+});
+
+// ════════ INVENTARIO ════════
+async function cargarInventario(){
+  try{
+    const [productos, variantes, stock] = await Promise.all([
+      sbGet('inventario_productos','order=categoria,capacidad,nombre'),
+      sbGet('inventario_variantes','activo=eq.true&order=nombre'),
+      sbGet('inventario_stock','select=*,inventario_productos(*),inventario_variantes(*)'),
+    ]);
+    PRODUCTOS = productos;
+    VARIANTES = variantes;
+    STOCK = stock;
+    renderInventario();
+    poblarSelectsProducto();
+  }catch(e){
+    toast('Error: '+e.message,'err');
+  }
+}
+
+function renderInventario(){
+  ['almacen','produccion'].forEach(ub=>{
+    const el = document.getElementById('lista-'+ub);
+    const filas = construirFilasInventario(ub);
+    if(!filas.length){el.innerHTML='<div class="empty">Sin productos cargados</div>';return;}
+    el.innerHTML = `<div class="product-row" style="font-weight:700;font-size:11px;text-transform:uppercase;color:var(--text2);border-bottom:2px solid var(--border2)">
+      <div>Producto</div>
+      <div style="text-align:right">Cantidad</div>
+      <div style="text-align:right">Mínimo</div>
+      <div style="text-align:right">Estado</div>
+      <div></div>
+    </div>` + filas.join('');
+  });
+}
+
+function construirFilasInventario(ubicacion){
+  const filas = [];
+  // Agrupar por categoría
+  const cats = ['botella','tapa','chupon','liner','papel','liga','tag','corrugado'];
+  cats.forEach(cat=>{
+    const prodsCat = PRODUCTOS.filter(p=>p.categoria===cat);
+    if(!prodsCat.length) return;
+    filas.push(`<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em">${tituloCat(cat)}</div>`);
+    prodsCat.forEach(prod=>{
+      if(prod.tiene_variantes){
+        // Filas por variante
+        const vars = VARIANTES.filter(v=>v.producto_id===prod.id);
+        if(!vars.length){
+          filas.push(`<div class="product-row" style="opacity:0.4">
+            <div>${prod.nombre} <span style="font-size:11px;color:var(--text3)">(sin colores agregados)</span></div>
+            <div></div><div></div><div></div>
+            <div class="actions-cell"><button class="btn btn-xs" onclick="abrirModalVariantePrecargado('${prod.id}')">+ Agregar color</button></div>
+          </div>`);
+        }
+        vars.forEach(v=>{
+          const stk = STOCK.find(s=>s.producto_id===prod.id && s.variante_id===v.id && s.ubicacion===ubicacion);
+          const cant = stk?.cantidad || 0;
+          const min = v.minimo_reserva || 0;
+          filas.push(buildRow(prod, v, cant, min, ubicacion));
+        });
+      } else {
+        const stk = STOCK.find(s=>s.producto_id===prod.id && s.variante_id===null && s.ubicacion===ubicacion);
+        const cant = stk?.cantidad || 0;
+        filas.push(buildRow(prod, null, cant, 0, ubicacion));
+      }
+    });
+  });
+  return filas;
+}
+
+function tituloCat(cat){
+  return {botella:'Botellas',tapa:'Tapas',chupon:'Chupones',liner:'Liners',papel:'Papel empaque',liga:'Ligas',tag:'Tags',corrugado:'Corrugado'}[cat]||cat;
+}
+
+function buildRow(prod, variante, cantidad, minimo, ubicacion){
+  let estadoClase='', estadoBadge='';
+  if(minimo > 0){
+    if(cantidad === 0){estadoClase='critical';estadoBadge='<span class="badge badge-red">SIN STOCK</span>';}
+    else if(cantidad < minimo){estadoClase='low';estadoBadge='<span class="badge badge-amber">EN RIESGO</span>';}
+    else estadoBadge='<span class="badge badge-green">OK</span>';
+  } else {
+    estadoBadge = cantidad>0 ? '<span class="badge badge-green">OK</span>' : '<span class="badge badge-red">SIN STOCK</span>';
+  }
+  const nombre = variante ? `<span class="variant-name">${variante.nombre}</span> <span style="font-size:11px;color:var(--text3)">${variante.pantone?'· '+variante.pantone:''}</span>` : prod.nombre;
+  const qtyClass = cantidad===0 ? 'zero' : estadoClase;
+  return `<div class="product-row ${minimo>0&&cantidad<minimo?'alert-amber':''}${cantidad===0?'':''}">
+    <div>${nombre}</div>
+    <div class="qty ${qtyClass}">${Math.floor(cantidad).toLocaleString()}</div>
+    <div class="qty" style="color:var(--text3)">${minimo>0?minimo.toLocaleString():'—'}</div>
+    <div style="text-align:right">${estadoBadge}</div>
+    <div class="actions-cell">
+      ${variante?`<button class="btn btn-xs btn-ghost" onclick="editarMinimo('${variante.id}',${minimo})">⚙</button>`:''}
+    </div>
+  </div>`;
+}
+
+function switchTab(name){
+  TAB_ACTIVA = name;
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active', t.textContent.toLowerCase().includes(name.toLowerCase()) || (name==='almacen'&&i===0) || (name==='produccion'&&i===1) || (name==='historial'&&i===2));
+  });
+  // Mejor: usar dataset directo
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const tabs={'almacen':0,'produccion':1,'historial':2};
+  document.querySelectorAll('.tab')[tabs[name]].classList.add('active');
+  document.querySelectorAll('.vista').forEach(v=>v.style.display='none');
+  document.getElementById('vista-'+name).style.display='block';
+  if(name==='historial') cargarHistorial();
+}
+
+// ════════ MODALES ════════
+function abrirModal(tipo){
+  document.getElementById('modal-'+tipo).classList.add('show');
+  if(tipo==='entrada'){
+    document.getElementById('ent-fecha').valueAsDate = new Date();
+  }
+  if(tipo==='traspaso' || tipo==='salida'){
+    actualizarDisponible(tipo==='traspaso'?'tra':'sal');
+  }
+}
+
+function cerrarModal(){
+  document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('show'));
+  // Reset campos
+  document.querySelectorAll('.modal input, .modal select, .modal textarea').forEach(el=>{
+    if(el.type==='date') el.valueAsDate=new Date();
+    else if(el.tagName==='SELECT') el.selectedIndex=0;
+    else el.value='';
+  });
+  document.querySelectorAll('[id$="-variante-field"]').forEach(f=>f.style.display='none');
+}
+
+function poblarSelectsProducto(){
+  const opts = PRODUCTOS.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  ['ent','tra','sal','var'].forEach(prefix=>{
+    const sel = document.getElementById(prefix+'-producto');
+    if(sel) sel.innerHTML='<option value="">— Selecciona —</option>'+opts;
+  });
+}
+
+function cargarVariantesProducto(prefix){
+  const prodId = document.getElementById(prefix+'-producto').value;
+  const field = document.getElementById(prefix+'-variante-field');
+  if(!prodId){if(field)field.style.display='none';return;}
+  const prod = PRODUCTOS.find(p=>p.id===prodId);
+  if(!prod.tiene_variantes){
+    if(field) field.style.display='none';
+    actualizarDisponible(prefix);
+    return;
+  }
+  const vars = VARIANTES.filter(v=>v.producto_id===prodId);
+  if(field){
+    field.style.display='block';
+    document.getElementById(prefix+'-variante').innerHTML = vars.length
+      ? '<option value="">— Selecciona color —</option>'+vars.map(v=>`<option value="${v.id}">${v.nombre}${v.pantone?' · '+v.pantone:''}</option>`).join('')
+      : '<option value="">⚠ No hay colores. Agrega uno primero.</option>';
+  }
+  // Listener al cambiar variante
+  const varSel = document.getElementById(prefix+'-variante');
+  if(varSel) varSel.onchange = ()=>actualizarDisponible(prefix);
+  actualizarDisponible(prefix);
+}
+
+function actualizarDisponible(prefix){
+  if(prefix!=='tra' && prefix!=='sal') return;
+  const prodId = document.getElementById(prefix+'-producto').value;
+  const varId = document.getElementById(prefix+'-variante')?.value || null;
+  let ubicacion;
+  if(prefix==='tra'){
+    const dir = document.getElementById('tra-direccion').value;
+    ubicacion = dir==='almacen_a_produccion' ? 'almacen' : 'produccion';
+  } else {
+    ubicacion = document.getElementById('sal-ubicacion').value;
+  }
+  const stk = STOCK.find(s=>s.producto_id===prodId && (s.variante_id||null)===(varId||null) && s.ubicacion===ubicacion);
+  const disp = stk?.cantidad || 0;
+  const lbl = document.getElementById(prefix+'-disponible');
+  if(lbl) lbl.textContent = `· disponible en ${ubicacion}: ${Math.floor(disp).toLocaleString()}`;
+}
+
+// Listeners para actualizar disponible al cambiar dirección/ubicación
+document.addEventListener('change', e=>{
+  if(e.target.id==='tra-direccion') actualizarDisponible('tra');
+  if(e.target.id==='sal-ubicacion') actualizarDisponible('sal');
+});
+
+function abrirModalVariantePrecargado(prodId){
+  abrirModal('variante');
+  document.getElementById('var-producto').value = prodId;
+}
+
+// ════════ ACCIONES ════════
+async function guardarEntrada(){
+  const prodId = document.getElementById('ent-producto').value;
+  const prod = PRODUCTOS.find(p=>p.id===prodId);
+  if(!prod){toast('Selecciona producto','err');return;}
+  const varId = prod.tiene_variantes ? document.getElementById('ent-variante').value : null;
+  if(prod.tiene_variantes && !varId){toast('Selecciona color','err');return;}
+  const cant = parseInt(document.getElementById('ent-cantidad').value);
+  if(!cant || cant<=0){toast('Cantidad inválida','err');return;}
+  const fecha = document.getElementById('ent-fecha').value;
+  const lote = document.getElementById('ent-lote').value.trim();
+  if(!fecha || !lote){toast('Fecha y lote son obligatorios','err');return;}
+  try{
+    // Registrar movimiento
+    await sbPost('inventario_movimientos',{
+      tipo:'entrada', producto_id:prodId, variante_id:varId, cantidad:cant,
+      ubicacion_origen:'externo', ubicacion_destino:'almacen',
+      lote_fecha:fecha, lote_numero:lote,
+      usuario:USER.nombre, observaciones:document.getElementById('ent-obs').value.trim()||null
+    });
+    // Actualizar stock
+    await ajustarStock(prodId, varId, 'almacen', cant);
+    toast('Entrada registrada ✓','ok');
+    cerrarModal();
+    await cargarInventario();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function guardarTraspaso(){
+  const prodId = document.getElementById('tra-producto').value;
+  const prod = PRODUCTOS.find(p=>p.id===prodId);
+  if(!prod){toast('Selecciona producto','err');return;}
+  const varId = prod.tiene_variantes ? document.getElementById('tra-variante').value : null;
+  if(prod.tiene_variantes && !varId){toast('Selecciona color','err');return;}
+  const cant = parseInt(document.getElementById('tra-cantidad').value);
+  if(!cant || cant<=0){toast('Cantidad inválida','err');return;}
+  const dir = document.getElementById('tra-direccion').value;
+  const origen = dir==='almacen_a_produccion'?'almacen':'produccion';
+  const destino = dir==='almacen_a_produccion'?'produccion':'almacen';
+  // Validar stock disponible
+  const stk = STOCK.find(s=>s.producto_id===prodId && (s.variante_id||null)===(varId||null) && s.ubicacion===origen);
+  if(!stk || stk.cantidad < cant){
+    toast(`No hay suficiente en ${origen}. Disponible: ${stk?.cantidad||0}`,'err');return;
+  }
+  try{
+    await sbPost('inventario_movimientos',{
+      tipo: dir==='almacen_a_produccion'?'traspaso_a_produccion':'traspaso_a_almacen',
+      producto_id:prodId, variante_id:varId, cantidad:cant,
+      ubicacion_origen:origen, ubicacion_destino:destino,
+      usuario:USER.nombre, observaciones:document.getElementById('tra-obs').value.trim()||null
+    });
+    await ajustarStock(prodId, varId, origen, -cant);
+    await ajustarStock(prodId, varId, destino, cant);
+    toast('Traspaso realizado ✓','ok');
+    cerrarModal();
+    await cargarInventario();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function guardarSalida(){
+  const prodId = document.getElementById('sal-producto').value;
+  const prod = PRODUCTOS.find(p=>p.id===prodId);
+  if(!prod){toast('Selecciona producto','err');return;}
+  const varId = prod.tiene_variantes ? document.getElementById('sal-variante').value : null;
+  if(prod.tiene_variantes && !varId){toast('Selecciona color','err');return;}
+  const cant = parseInt(document.getElementById('sal-cantidad').value);
+  if(!cant || cant<=0){toast('Cantidad inválida','err');return;}
+  const ub = document.getElementById('sal-ubicacion').value;
+  const motivo = document.getElementById('sal-motivo').value.trim();
+  if(!motivo){toast('Motivo es obligatorio','err');return;}
+  const stk = STOCK.find(s=>s.producto_id===prodId && (s.variante_id||null)===(varId||null) && s.ubicacion===ub);
+  if(!stk || stk.cantidad < cant){
+    toast(`No hay suficiente en ${ub}. Disponible: ${stk?.cantidad||0}`,'err');return;
+  }
+  try{
+    await sbPost('inventario_movimientos',{
+      tipo:'salida_manual', producto_id:prodId, variante_id:varId, cantidad:cant,
+      ubicacion_origen:ub, ubicacion_destino:'consumido',
+      usuario:USER.nombre, observaciones:motivo
+    });
+    await ajustarStock(prodId, varId, ub, -cant);
+    toast('Salida registrada ✓','ok');
+    cerrarModal();
+    await cargarInventario();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function guardarVariante(){
+  const prodId = document.getElementById('var-producto').value;
+  if(!prodId){toast('Selecciona producto','err');return;}
+  const nombre = document.getElementById('var-nombre').value.trim();
+  if(!nombre){toast('Nombre obligatorio','err');return;}
+  const pantone = document.getElementById('var-pantone').value.trim()||null;
+  const minimo = parseInt(document.getElementById('var-minimo').value)||0;
+  try{
+    const nuevaVar = await sbPost('inventario_variantes',{
+      producto_id:prodId, nombre, pantone, minimo_reserva:minimo
+    });
+    const varId = Array.isArray(nuevaVar)?nuevaVar[0].id:nuevaVar.id;
+    // Crear filas de stock en 0 para ambas ubicaciones
+    await sbPost('inventario_stock',[
+      {producto_id:prodId, variante_id:varId, ubicacion:'almacen', cantidad:0},
+      {producto_id:prodId, variante_id:varId, ubicacion:'produccion', cantidad:0},
+    ]);
+    toast('Color agregado ✓','ok');
+    cerrarModal();
+    await cargarInventario();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function ajustarStock(prodId, varId, ubicacion, delta){
+  // Buscar fila existente
+  const filter = `producto_id=eq.${prodId}&ubicacion=eq.${ubicacion}&${varId?'variante_id=eq.'+varId:'variante_id=is.null'}`;
+  const existentes = await sbGet('inventario_stock',filter);
+  if(existentes && existentes[0]){
+    const nuevaCant = (existentes[0].cantidad||0) + delta;
+    if(nuevaCant<0) throw new Error('Stock no puede ser negativo');
+    await sbPatch('inventario_stock',{cantidad:nuevaCant},'id=eq.'+existentes[0].id);
+  } else {
+    // No existe → crear si delta positivo
+    if(delta<0) throw new Error('No hay stock de este item');
+    await sbPost('inventario_stock',{producto_id:prodId, variante_id:varId, ubicacion, cantidad:delta});
+  }
+}
+
+async function editarMinimo(varianteId, actual){
+  const nuevo = prompt('Nuevo mínimo de reserva:', actual);
+  if(nuevo===null) return;
+  const n = parseInt(nuevo);
+  if(isNaN(n)||n<0){toast('Valor inválido','err');return;}
+  try{
+    await sbPatch('inventario_variantes',{minimo_reserva:n},'id=eq.'+varianteId);
+    toast('Mínimo actualizado ✓','ok');
+    await cargarInventario();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+async function cargarHistorial(){
+  const el = document.getElementById('lista-historial');
+  el.innerHTML = '<div class="empty">Cargando...</div>';
+  try{
+    const movs = await sbGet('inventario_movimientos','select=*,inventario_productos(nombre),inventario_variantes(nombre,pantone)&order=created_at.desc&limit=200');
+    if(!movs.length){el.innerHTML='<div class="empty">Sin movimientos registrados</div>';return;}
+    el.innerHTML = `<table>
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Cantidad</th><th>Origen → Destino</th><th>Usuario</th><th>Observaciones</th></tr></thead>
+      <tbody>${movs.map(m=>{
+        const prodNombre = m.inventario_productos?.nombre || '—';
+        const varNombre = m.inventario_variantes?.nombre || '';
+        const tipoBadge = ({
+          'entrada':'<span class="badge badge-green">ENTRADA</span>',
+          'traspaso_a_produccion':'<span class="badge badge-blue">→ PROD</span>',
+          'traspaso_a_almacen':'<span class="badge badge-blue">→ ALM</span>',
+          'consumo_pedido':'<span class="badge badge-amber">CONSUMO</span>',
+          'salida_manual':'<span class="badge badge-red">SALIDA</span>',
+          'ajuste':'<span class="badge">AJUSTE</span>',
+        })[m.tipo] || m.tipo;
+        const fecha = new Date(m.created_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+        return `<tr>
+          <td class="mono" style="font-size:11px">${fecha}</td>
+          <td>${tipoBadge}</td>
+          <td>${prodNombre}${varNombre?' · '+varNombre:''}${m.lote_numero?'<div style="font-size:10px;color:var(--text3)">Lote: '+m.lote_numero+'</div>':''}</td>
+          <td class="mono qty">${m.cantidad}</td>
+          <td style="font-size:11px;color:var(--text2)">${m.ubicacion_origen||'—'} → ${m.ubicacion_destino||'—'}</td>
+          <td style="font-size:11px">${m.usuario||'—'}</td>
+          <td style="font-size:11px;color:var(--text2)">${m.observaciones||''}</td>
+        </tr>`;
+      }).join('')}</tbody></table>`;
+  }catch(e){el.innerHTML='<div class="empty" style="color:var(--red)">Error: '+e.message+'</div>';}
+}
+
+// ════════ INIT ════════
+(async ()=>{
+  const stored = sessionStorage.getItem('inv_user');
+  if(stored){
+    try{
+      USER = JSON.parse(stored);
+      mostrarMain();
+      return;
+    }catch{}
+  }
+  cargarUsuarios();
+})();
+</script>
+</body>
+</html>
