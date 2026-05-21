@@ -787,6 +787,56 @@ async function enviarReporteCompleto(pipelineId, btn){
   }
 }
 
+// Normaliza el nombre de un color a formato consistente para inventario y matching.
+// Reglas (opción B - sin prefijo PMS):
+//   - Colores estándar (black/white/clear/gray) → MAYÚSCULA: 'BLACK', 'WHITE', 'CLEAR', 'GRAY'
+//   - Códigos Pantone solos (130 C, 130c, Pantone 130C, etc) → '130C' (sin espacios, C mayúscula)
+//   - Compuestos (REI BLUE PMS 4142 C) → 'REI BLUE (4142C)'
+//   - Vacío o null → ''
+function normalizarColor(raw){
+  if(!raw) return '';
+  let s = String(raw).trim();
+  if(!s || s === '—' || s === '-') return '';
+  // Quitar prefijos "Pantone" y "PMS" para procesar
+  const limpio = s.replace(/\b(pantone|pms)\b/gi, '').replace(/\s+/g,' ').trim();
+
+  // Detectar código PMS al final (ej: "130C", "130 C", "130c", "4142 C")
+  // Regex captura un número (3-4 dígitos opcional) seguido de espacio opcional y "C"
+  const pmsMatch = limpio.match(/^(.*?)\s*(\d{2,4})\s*[cC]\s*$/);
+
+  if(pmsMatch){
+    const prefix = pmsMatch[1].trim();
+    const num = pmsMatch[2];
+    const codigo = num + 'C';
+    if(!prefix){
+      return codigo; // Solo es código PMS: "130C"
+    }
+    // Compuesto: "REI BLUE (4142C)"
+    return prefix.toUpperCase() + ' (' + codigo + ')';
+  }
+
+  // No es código PMS: ver si es color estándar
+  const lower = limpio.toLowerCase();
+  const estandar = {
+    'black':'BLACK','negro':'BLACK','negra':'BLACK',
+    'white':'WHITE','blanco':'WHITE','blanca':'WHITE',
+    'clear':'CLEAR','natural':'CLEAR','transparente':'CLEAR','translucido':'CLEAR',
+    'gray':'GRAY','grey':'GRAY','gris':'GRAY',
+    'red':'RED','rojo':'RED','roja':'RED',
+    'blue':'BLUE','azul':'BLUE',
+    'green':'GREEN','verde':'GREEN',
+    'yellow':'YELLOW','amarillo':'YELLOW',
+    'orange':'ORANGE','naranja':'ORANGE',
+    'pink':'PINK','rosa':'PINK',
+    'purple':'PURPLE','morado':'PURPLE','violeta':'PURPLE',
+    'brown':'BROWN','café':'BROWN','marron':'BROWN',
+  };
+  if(estandar[lower]) return estandar[lower];
+
+  // Si no matchea nada conocido, regresar tal cual pero en MAYÚSCULA
+  return limpio.toUpperCase();
+}
+
 // Chip visual del color de botella (swatch + nombre)
 function colorBotellaChip(color){
   const c=(color||'').trim();
@@ -1426,6 +1476,10 @@ async function procesarPDFs(){
     if(!extracted.tintas_info)extracted.tintas_info=[];
     while(extracted.tintas_info.length<numColNorm)extracted.tintas_info.push({nombre:'',pantone:''});
     extracted.tintas_info=extracted.tintas_info.slice(0,numColNorm);
+    // Normalizar colores extraídos del PDF a formato consistente para inventario
+    if(extracted.color_botella) extracted.color_botella = normalizarColor(extracted.color_botella);
+    if(extracted.color_tapa) extracted.color_tapa = normalizarColor(extracted.color_tapa);
+    if(extracted.color_boquilla) extracted.color_boquilla = normalizarColor(extracted.color_boquilla);
     window._importedData=extracted;
     // Calcular venta automáticamente con defaults: stock2500 con color
     const piezas=extracted.piezas||0;
