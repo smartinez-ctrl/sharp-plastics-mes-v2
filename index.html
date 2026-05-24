@@ -3074,7 +3074,7 @@ function setAprobacionStatus(state, msg){
   }
 }
 
-async function comprimirFoto(dataUrl, maxW=600){
+async function comprimirFoto(dataUrl, maxW=1200){
   if(!dataUrl)return null;
   return new Promise(res=>{
     const img=new Image();
@@ -3082,8 +3082,12 @@ async function comprimirFoto(dataUrl, maxW=600){
       const scale=Math.min(1,maxW/img.width);
       const c=document.createElement('canvas');
       c.width=img.width*scale; c.height=img.height*scale;
-      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-      res(c.toDataURL('image/jpeg',0.72));
+      const ctx=c.getContext('2d');
+      // Mejor calidad de resize: smoothing alto
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality='high';
+      ctx.drawImage(img,0,0,c.width,c.height);
+      res(c.toDataURL('image/jpeg',0.88));
     };
     img.src=dataUrl;
   });
@@ -4356,23 +4360,36 @@ function generarPDF(){
   const xhatch=document.getElementById('cierreXhatch')?.value||'—';
   const agua=document.getElementById('cierreAgua')?.value||'—';
   const fecha=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  let qaRows='';let tot=0,pass=0;
-  // Usar QA_ITEMS_EN para el PDF cliente, mapeando las respuestas del español
+  // Construir QA en 3 columnas (una por sección): BLOW MOLDING | PRINTING | ASSEMBLY
+  // Esto hace que todo el QA quepa en menos espacio vertical y junto con las fotos
+  // entre todo en 1 hoja.
+  let tot=0,pass=0;
   const seccionesES=Object.keys(QA_ITEMS);
   const seccionesEN=Object.keys(QA_ITEMS_EN);
+  const colHtml=[]; // 1 HTML por columna
   seccionesES.forEach((sec,si)=>{
     const itemsES=QA_ITEMS[sec];
     const itemsEN=QA_ITEMS_EN[seccionesEN[si]]||itemsES;
     const secEN=seccionesEN[si]||sec;
-    qaRows+=`<tr><td colspan="2" style="background:#f0f4f8;font-weight:700;font-size:11px;color:#374151;padding:6px 10px;text-transform:uppercase">${secEN}</td></tr>`;
+    let col='<div style="background:#f0f4f8;font-weight:700;font-size:9px;color:#374151;padding:4px 8px;text-transform:uppercase;letter-spacing:.05em;border-radius:4px 4px 0 0">'+secEN+'</div>';
     itemsES.forEach((itemES,ii)=>{
       const itemEN=itemsEN[ii]||itemES;
       tot++;const v=S.qa[itemES]||'';if(v==='P')pass++;
-      const color=v==='P'?'#16a34a':v==='NC'?'#dc2626':'#6b7280';
-      const label=v==='P'?'✓ Approved':v==='NC'?'✗ Non-conforming':v==='NA'?'N/A':'Pending';
-      qaRows+=`<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:12px">${itemEN}</td><td style="padding:6px 10px;font-size:12px;font-weight:600;color:${color};text-align:right">${label}</td></tr>`;
+      const color=v==='P'?'#16a34a':v==='NC'?'#dc2626':'#9ca3af';
+      const icon=v==='P'?'✓':v==='NC'?'✗':'—';
+      col+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 8px;border-bottom:1px solid #f3f4f6;font-size:9.5px">
+        <span style="color:#374151">${itemEN}</span>
+        <span style="color:${color};font-weight:700;margin-left:6px">${icon}</span>
+      </div>`;
     });
+    colHtml.push(col);
   });
+  // Renderizar como un <td> por columna en una tabla de 3 columnas
+  const qaRows = `<tr style="vertical-align:top">
+    <td style="width:33%;padding:0 4px 0 0">${colHtml[0]||''}</td>
+    <td style="width:34%;padding:0 4px">${colHtml[1]||''}</td>
+    <td style="width:33%;padding:0 0 0 4px">${colHtml[2]||''}</td>
+  </tr>`;
   let tintasRows='';let costoTotal=0;
   S.tintas.forEach((t,i)=>{
     const col=S.orden.colores[i]||{nombre:'Color '+(i+1)};
@@ -4391,33 +4408,29 @@ function generarPDF(){
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>QA — ${S.orden.op||'Orden'}</title>
   <style>
     *{box-sizing:border-box}
-    body{font-family:Arial,sans-serif;color:#111;margin:0;padding:20px;background:#fff;font-size:12px}
-    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #111;padding-bottom:12px;margin-bottom:16px}
-    .company{font-size:20px;font-weight:800;letter-spacing:-.5px}
+    body{font-family:Arial,sans-serif;color:#111;margin:0;padding:10mm;background:#fff;font-size:11px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:8px}
+    .company{font-size:17px;font-weight:800;letter-spacing:-.5px}
     .company span{color:#f59e0b}
-    .subtitle{font-size:11px;color:#6b7280;margin-top:2px}
-    .info-table{width:100%;border-collapse:collapse;margin-bottom:16px}
-    .info-table td{padding:5px 8px;border:1px solid #e5e7eb;vertical-align:top}
-    .info-table .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;display:block;margin-bottom:1px}
-    .info-table .val{font-size:13px;font-weight:700}
-    .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #111;padding-bottom:4px;margin:14px 0 8px;color:#374151;page-break-after:avoid;break-after:avoid}
+    .subtitle{font-size:10px;color:#6b7280;margin-top:1px}
+    .info-table{width:100%;border-collapse:collapse;margin-bottom:8px}
+    .info-table td{padding:3px 6px;border:1px solid #e5e7eb;vertical-align:top}
+    .info-table .lbl{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;display:block;margin-bottom:0}
+    .info-table .val{font-size:11px;font-weight:700}
+    .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-bottom:1.5px solid #111;padding-bottom:2px;margin:8px 0 4px;color:#374151;page-break-after:avoid;break-after:avoid}
     .fotos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
     .foto-item{page-break-inside:avoid;break-inside:avoid}
     .foto-item img{width:100%;border-radius:6px;border:1px solid #e5e7eb;display:block}
     .foto-label{font-size:9px;color:#6b7280;text-align:center;margin-top:3px}
-    table.qa{width:100%;border-collapse:collapse}
-    table.qa td,table.qa th{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:11px}
-    table.qa tr{page-break-inside:avoid;break-inside:avoid}
-    table.qa .sec-header{background:#f0f4f8;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#374151;padding:5px 8px;page-break-after:avoid;break-after:avoid}
-    .footer{margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px;page-break-inside:avoid;break-inside:avoid}
-    .sign-box{border-top:2px solid #111;padding-top:6px;font-size:10px;color:#6b7280}
-    .fotos-section{page-break-inside:avoid;break-inside:avoid}
-    .fotos-block{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+    /* Tabla QA: contenedor de 3 columnas lado a lado, sin bordes propios — cada columna lleva su estilo */
+    table.qa{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:6px}
+    table.qa td{vertical-align:top}
+    .footer{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:14px;page-break-inside:avoid;break-inside:avoid;font-size:10px}
+    .sign-box{border-top:1.5px solid #111;padding-top:4px;font-size:9.5px;color:#6b7280}
     @media print{
-      body{margin:0;padding:12px}
-      @page{margin:10mm}
+      body{margin:0;padding:8mm}
+      @page{margin:6mm;size:letter}
       img{max-width:100%;page-break-inside:avoid;break-inside:avoid}
-      tr,td,th{page-break-inside:avoid;break-inside:avoid}
       .header{page-break-after:avoid;break-after:avoid}
     }
   </style></head><body>
@@ -4455,39 +4468,36 @@ function generarPDF(){
     <tbody>${qaRows}</tbody>
   </table>
 
-  <!-- 4. FOTOS DE APROBACIÓN -->
+  <!-- 4. FOTOS DE APROBACIÓN (compactas, mismo grid, sin salto de página) -->
   ${(()=>{
     const tieneColor=S.fotosColor&&S.fotosColor.some(f=>f);
     const tieneBotellas=S.fotos&&S.fotos.some(f=>f);
     if(!tieneColor&&!tieneBotellas)return '';
     const labels=['Front','Back','Left side','Right side'];
     const labelsColor=['Color 1','Color 2','Color 3','Color 4'];
-    const buildRows=(arr,labs)=>{
-      let rows='';
-      for(let i=0;i<arr.length;i+=2){
-        const a=arr[i],b=arr[i+1];
-        const labA=labs[i]||'',labB=labs[i+1]||'';
-        rows+=`<tr style="page-break-inside:avoid;break-inside:avoid">
-          <td style="width:50%;padding:4px 6px 10px 0;vertical-align:top">
-            ${a?`<img src="${a}" style="width:100%;max-height:115mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:3px">${labA}</div>`:''}
-          </td>
-          <td style="width:50%;padding:4px 0 10px 6px;vertical-align:top">
-            ${b?`<img src="${b}" style="width:100%;max-height:115mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:3px">${labB}</div>`:''}
-          </td>
-        </tr>`;
-      }
-      return rows;
+    // Grid de 4 columnas, foto compacta (altura ~38mm) — cabe todo en la misma hoja
+    const buildGrid=(arr,labs)=>{
+      const tds=[];
+      arr.forEach((src,i)=>{
+        if(!src)return;
+        tds.push(`<td style="width:25%;padding:3px;vertical-align:top">
+          <img src="${src}" style="width:100%;height:38mm;object-fit:contain;border-radius:5px;border:1px solid #e5e7eb;display:block;background:#fafafa">
+          <div style="font-size:8.5px;color:#6b7280;text-align:center;margin-top:2px">${labs[i]||''}</div>
+        </td>`);
+      });
+      // Rellenar hasta múltiplo de 4 con celdas vacías para mantener simetría
+      while(tds.length % 4 !== 0 && tds.length > 0) tds.push('<td style="width:25%"></td>');
+      return tds.length ? `<table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:6px"><tr>${tds.join('')}</tr></table>` : '';
     };
-    let html=`<div style="page-break-before:always;break-before:page">`;
+    let html='';
     if(tieneColor){
-      html+=`<div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Color Validation</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;table-layout:fixed"><tbody>${buildRows(S.fotosColor,labelsColor)}</tbody></table>`;
+      html+=`<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#374151;border-bottom:1px solid #d1d5db;padding-bottom:2px;margin:10px 0 4px">Color Validation</div>`;
+      html+=buildGrid(S.fotosColor,labelsColor);
     }
     if(tieneBotellas){
-      html+=`<div class="section-title" style="${tieneColor?'':'margin-top:0;'}page-break-after:avoid;break-after:avoid">Approval Photos</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed"><tbody>${buildRows(S.fotos,labels)}</tbody></table>`;
+      html+=`<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#374151;border-bottom:1px solid #d1d5db;padding-bottom:2px;margin:8px 0 4px">Approval Photos</div>`;
+      html+=buildGrid(S.fotos,labels);
     }
-    html+=`</div>`;
     return html;
   })()}
 
