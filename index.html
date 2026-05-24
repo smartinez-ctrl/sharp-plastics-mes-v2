@@ -4379,7 +4379,8 @@ function actualizarConsumo(){
 function generarPDF(){
   const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
   const merma=Object.values(S.merma.prod||{}).reduce((a,b)=>a+b,0);
-  const firma=document.getElementById('cierre-firma')?.value||'—';
+  // Default 'Edgar' en PDF cliente si no se seleccionó nadie en cierre-firma
+  const firma=document.getElementById('cierre-firma')?.value||'Edgar';
   const obs=document.getElementById('cierre-obs')?.value||'';
   const xhatch=document.getElementById('cierreXhatch')?.value||'—';
   const agua=document.getElementById('cierreAgua')?.value||'—';
@@ -4453,8 +4454,8 @@ function generarPDF(){
     .foto-label{font-size:9px;color:#6b7280;text-align:center;margin-top:3px}
     table.qa{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:6px;page-break-inside:avoid;break-inside:avoid}
     table.qa td{vertical-align:top}
-    .footer{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:18px;page-break-inside:avoid;break-inside:avoid;font-size:11px}
-    .sign-box{border-top:2px solid #111;padding-top:6px;font-size:10px;color:#6b7280}
+    .footer{margin-top:8px;page-break-inside:avoid;break-inside:avoid;font-size:11px}
+    .sign-box{border-top:2px solid #111;padding-top:6px;font-size:11px;color:#374151;display:inline-block;min-width:240px}
     @media print{
       body{margin:0;padding:10mm}
       @page{margin:8mm;size:letter}
@@ -4511,11 +4512,11 @@ function generarPDF(){
         const a=arr[i],b=arr[i+1];
         const labA=labs[i]||'',labB=labs[i+1]||'';
         rows+=`<tr style="page-break-inside:avoid;break-inside:avoid">
-          <td style="width:50%;padding:4px 6px 10px 0;vertical-align:top">
-            ${a?`<img src="${a}" style="width:100%;max-height:115mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:3px">${labA}</div>`:''}
+          <td style="width:50%;padding:3px 5px 6px 0;vertical-align:top">
+            ${a?`<img src="${a}" style="width:100%;max-height:95mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:2px">${labA}</div>`:''}
           </td>
-          <td style="width:50%;padding:4px 0 10px 6px;vertical-align:top">
-            ${b?`<img src="${b}" style="width:100%;max-height:115mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:3px">${labB}</div>`:''}
+          <td style="width:50%;padding:3px 0 6px 5px;vertical-align:top">
+            ${b?`<img src="${b}" style="width:100%;max-height:95mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:2px">${labB}</div>`:''}
           </td>
         </tr>`;
       }
@@ -4537,8 +4538,7 @@ function generarPDF(){
   <!-- observaciones no van en PDF cliente -->
 
   <div class="footer">
-    <div class="sign-box">Released by: <strong>${firma}</strong></div>
-    <div class="sign-box">Firma: ________________</div>
+    <div class="sign-box" style="grid-column:1/-1;text-align:center">Released by: <strong>${firma}</strong></div>
   </div>
   </body></html>`;
   const w=window.open('','_blank','width=800,height=900');
