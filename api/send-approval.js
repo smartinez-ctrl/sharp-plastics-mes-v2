@@ -63,7 +63,7 @@ export default async function handler(req, res) {
   ${fotosHTML}
   <div style="padding:24px 32px;text-align:center">
     <a href="${approveUrl}" style="display:inline-block;background:#16a34a;color:#fff;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;text-decoration:none">✅ Aprobar y liberar producción</a>
-    <p style="font-size:11px;color:#9ca3af;margin:12px 0 0">Link de un solo uso · expira en 48 horas</p>
+    <p style="font-size:11px;color:#9ca3af;margin:12px 0 0">Link de un solo uso</p>
   </div>
   <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:12px 32px;text-align:center">
     <p style="font-size:11px;color:#9ca3af;margin:0">Sharp Plastics MES · Sistema de ejecución de manufactura</p>

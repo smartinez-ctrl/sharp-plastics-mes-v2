@@ -47,16 +47,10 @@ export default async function handler(req, res) {
     return res.status(403).send(htmlPage('Token inválido', '🔒', 'El link de aprobación no coincide.', '#ef4444', 'Puede haber expirado o ya fue usado.'));
   }
 
-  // Verificar que no haya expirado (48 horas)
-  if (orden.aprobacion_enviada_at) {
-    const sent = new Date(orden.aprobacion_enviada_at);
-    const now = new Date();
-    const hours = (now - sent) / 1000 / 3600;
-    if (hours > 48) {
-      res.setHeader('Content-Type', 'text/html');
-      return res.status(410).send(htmlPage('Link expirado', '⏰', 'Este link de aprobación expiró (48 horas).', '#f59e0b', 'El operador debe enviar una nueva solicitud.'));
-    }
-  }
+  // Antes había expiración de 48 horas pero generaba muchos falsos positivos
+  // (Sam tarda en aprobar, los links caducaban). Los links son de un solo uso
+  // y solo se generan al enviar aprobación, así que no representan riesgo de
+  // exposición. Mantenemos validación de token pero sin expiración temporal.
 
   // Ya aprobado anteriormente
   if (orden.aprobacion_estado === 'aprobado') {
