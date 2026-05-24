@@ -3780,6 +3780,18 @@ function handleEmpaquesDrop(i,event){
 
 function renderQA(){
   const el=document.getElementById('qa-checklist');if(!el)return;
+  // Pre-llenar: items del QA sin valor → 'P' (OK); crosshatch y prueba de agua
+  // sin valor → 'Aprobado ✓'. Solo aplica a los vacíos, no toca lo que el
+  // operador haya marcado distinto.
+  Object.values(QA_ITEMS).forEach(items=>{
+    items.forEach(item=>{
+      if(!S.qa[item]) S.qa[item]='P';
+    });
+  });
+  const cx=document.getElementById('cierreXhatch');
+  if(cx && !cx.value) cx.value='Aprobado ✓';
+  const ca=document.getElementById('cierreAgua');
+  if(ca && !ca.value) ca.value='Aprobado ✓';
   let total=0,passed=0,html='';
   Object.entries(QA_ITEMS).forEach(([section,items])=>{
     html+=`<div class="qa-section-title">${section}</div>`;
