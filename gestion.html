@@ -2131,10 +2131,7 @@ function exportarCobrosExcel(){
   const todos=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado');
   if(!todos.length){toast('Sin pedidos completados','err');return;}
 
-  // SheetJS CDN
-  const script=document.createElement('script');
-  script.src='https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
-  script.onload=function(){
+  const generar = function(){
     const rows=[['Pedido','No. OC','Fecha Entrega','Piezas','Total Venta','Fecha Cobro','Estado Cobro']];
     todos.forEach(p=>{
       const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX'):'—';
@@ -2149,15 +2146,12 @@ function exportarCobrosExcel(){
         p.cobrado?'Cobrado':'Pendiente',
       ]);
     });
-    // Totales
     rows.push([]);
     rows.push(['TOTAL PENDIENTE','','','',PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&!p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0),'','']);
     rows.push(['TOTAL COBRADO','','','',PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0),'','']);
 
     const ws=XLSX.utils.aoa_to_sheet(rows);
-    // Ancho de columnas
     ws['!cols']=[{wch:30},{wch:15},{wch:15},{wch:10},{wch:15},{wch:15},{wch:15}];
-    // Formato moneda en columna E (índice 4)
     for(let i=2;i<=rows.length;i++){
       const cell=ws[XLSX.utils.encode_cell({r:i-1,c:4})];
       if(cell&&typeof cell.v==='number') cell.z='$#,##0.00';
@@ -2168,8 +2162,59 @@ function exportarCobrosExcel(){
     XLSX.writeFile(wb,'Sharp-Plastics-Cobros-'+fecha+'.xlsx');
     toast('Excel exportado ✓','ok');
   };
-  if(window.XLSX){script.onload();}
-  else document.head.appendChild(script);
+
+  if(window.XLSX){ generar(); return; }
+  // Cargar SheetJS desde cdnjs (CDN confiable). El antiguo cdn.sheetjs.com
+  // ahora regresa 403 — bug histórico que dejaba el botón sin acción visible.
+  toast('Cargando librería...');
+  const script=document.createElement('script');
+  script.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  script.onload=generar;
+  script.onerror=function(){
+    toast('No se pudo cargar la librería de Excel. Intentando CSV...','err');
+    // Fallback: exportar como CSV puro que Excel también abre directo
+    exportarCobrosCSVFallback(todos);
+  };
+  document.head.appendChild(script);
+}
+
+// Fallback CSV si SheetJS no puede cargarse por cualquier razón (red bloqueada,
+// CDN caído, etc.). Excel/Numbers/Google Sheets abren CSV con UTF-8 BOM directo.
+function exportarCobrosCSVFallback(todos){
+  const esc = (v)=>{
+    if(v==null) return '';
+    let s = String(v);
+    if(/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g,'""') + '"';
+    return s;
+  };
+  const lines = ['Pedido,No. OC,Fecha Entrega,Piezas,Total Venta,Fecha Cobro,Estado Cobro'];
+  todos.forEach(p=>{
+    const fEnt = p.fecha_entrega ? new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX') : '—';
+    const fCob = p.fecha_cobro ? new Date(p.fecha_cobro+'T12:00:00').toLocaleDateString('es-MX') : '—';
+    lines.push([
+      esc(p.sub_cliente||p.cliente||'—'),
+      esc(p.po||'—'),
+      esc(fEnt),
+      p.piezas||0,
+      p.venta_total||0,
+      esc(p.cobrado?fCob:'—'),
+      esc(p.cobrado?'Cobrado':'Pendiente'),
+    ].join(','));
+  });
+  lines.push('');
+  const totalPend = PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&!p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0);
+  const totalCob = PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0);
+  lines.push(`TOTAL PENDIENTE,,,,${totalPend},,`);
+  lines.push(`TOTAL COBRADO,,,,${totalCob},,`);
+  const blob = new Blob(['\ufeff'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Sharp-Plastics-Cobros-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
+  toast('Cobros exportados como CSV ✓','ok');
 }
 
 function exportarPipelineExcel(){
