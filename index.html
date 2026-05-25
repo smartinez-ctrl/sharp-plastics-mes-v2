@@ -1299,6 +1299,9 @@ async function renderDashboard(){
     const rows=await sbGet('pipeline_mf','order=orden_posicion.asc,created_at.asc');
     const activos=rows.filter(p=>p.estado==='Pendiente'||p.estado==='En ajuste'||p.estado==='En producción');
     const completados=rows.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&!p.oculto);
+    // Ocultos: solo se muestran a master/supervisor en una sección colapsable
+    // separada (los operadores no los ven, evita confusión con los que ya ocultaron)
+    const ocultos=rows.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&p.oculto);
     window._dashRows=activos;
 
     // Detección de edición concurrente: traer updated_at de las órdenes
@@ -1409,6 +1412,25 @@ async function renderDashboard(){
       </div>`;
       }).join('');
     }
+    // Bloque de Pedidos ocultos — solo visible para master/supervisor.
+    // Empieza colapsado para no atorrar la UI; click en el botón para expandir.
+    if(ocultos.length && S.user && (S.user.role==='master' || S.user.role==='supervisor')){
+      html+=`<div style="margin-top:18px">
+        <button class="btn btn-ghost btn-sm" id="btn-toggle-ocultos" style="width:100%;justify-content:center" onclick="toggleOcultos()">🙈 Ver ${ocultos.length} pedido${ocultos.length===1?'':'s'} oculto${ocultos.length===1?'':'s'}</button>
+        <div id="ocultos-lista" style="display:none;margin-top:10px">
+          ${ocultos.map(p=>`<div class="card" style="opacity:0.6;margin-bottom:8px;border:1px dashed var(--border2)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div>
+                <div style="font-size:13px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
+                <div style="font-size:11px;color:var(--text2);margin-top:2px">${p.po} · ${(p.piezas||0).toLocaleString()} pzas</div>
+              </div>
+              <div class="badge" style="background:var(--bg5);color:var(--text2)">OCULTO</div>
+            </div>
+            <button class="btn btn-sm" style="width:100%;background:var(--amber);color:#0b0d10;border:none;touch-action:manipulation" onclick="restaurarOculto('${p.id}','${(p.po||'').replace(/'/g,"\\'")}')">↩ Restaurar al menú</button>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }
     el.innerHTML=html;
     // Si había un query previo, re-aplicarlo
     if(document.getElementById('dash-search')?.value) filtrarDashboard();
@@ -1518,6 +1540,40 @@ async function ocultarCompletadoProd(pipelineId){
       body:JSON.stringify({oculto:true})
     });
     toast('🙈 Oculto — visible en pipeline de gestión');
+    renderDashboard();
+  }catch(e){toast('Error: '+e.message,'err');}
+}
+
+// Expande/colapsa la sección de pedidos ocultos en el dashboard
+function toggleOcultos(){
+  const lista=document.getElementById('ocultos-lista');
+  const btn=document.getElementById('btn-toggle-ocultos');
+  if(!lista||!btn)return;
+  if(lista.style.display==='none'){
+    lista.style.display='';
+    btn.innerHTML=btn.innerHTML.replace('🙈 Ver','− Ocultar');
+  } else {
+    lista.style.display='none';
+    btn.innerHTML=btn.innerHTML.replace('− Ocultar','🙈 Ver');
+  }
+}
+
+// Restaurar un pedido oculto. Solo el botón se renderiza para master/supervisor,
+// pero igual validamos el rol antes de actuar.
+async function restaurarOculto(pipelineId, po){
+  if(!S.user || (S.user.role!=='master' && S.user.role!=='supervisor')){
+    toast('Solo master o supervisor pueden restaurar','err');
+    return;
+  }
+  if(!confirm(`¿Restaurar el pedido PO ${po}? Volverá a aparecer en Completados.`)) return;
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId,{
+      method:'PATCH',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({oculto:false})
+    });
+    if(!r.ok)throw new Error(await r.text());
+    toast('↩ Restaurado ✓','ok');
     renderDashboard();
   }catch(e){toast('Error: '+e.message,'err');}
 }
