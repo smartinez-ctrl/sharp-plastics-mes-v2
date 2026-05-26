@@ -1272,6 +1272,17 @@ function filtrarDashboard(){
     const btn = document.getElementById('dash-toggle-resto');
     if(btn) btn.style.display='';
   }
+  // Lo mismo para la lista de pedidos ocultos: si está colapsada y hay query,
+  // expandirla automáticamente para que los matches sean visibles
+  const ocultosLista = document.getElementById('ocultos-lista');
+  const btnOcultos = document.getElementById('btn-toggle-ocultos');
+  if(q && ocultosLista && ocultosLista.style.display==='none'){
+    ocultosLista.style.display='';
+    if(btnOcultos) btnOcultos.innerHTML = btnOcultos.innerHTML.replace('🙈 Ver','− Ocultar');
+  } else if(!q && ocultosLista && ocultosLista.style.display!=='none'){
+    ocultosLista.style.display='none';
+    if(btnOcultos) btnOcultos.innerHTML = btnOcultos.innerHTML.replace('− Ocultar','🙈 Ver');
+  }
   // Mostrar/ocultar cards según el query
   const cards = document.querySelectorAll('#dash-pedidos .dash-card');
   let matches = 0;
@@ -1415,19 +1426,22 @@ async function renderDashboard(){
     // Bloque de Pedidos ocultos — solo visible para master/supervisor.
     // Empieza colapsado para no atorrar la UI; click en el botón para expandir.
     if(ocultos.length && S.user && (S.user.role==='master' || S.user.role==='supervisor')){
-      html+=`<div style="margin-top:18px">
+      html+=`<div style="margin-top:18px" id="ocultos-wrapper">
         <button class="btn btn-ghost btn-sm" id="btn-toggle-ocultos" style="width:100%;justify-content:center" onclick="toggleOcultos()">🙈 Ver ${ocultos.length} pedido${ocultos.length===1?'':'s'} oculto${ocultos.length===1?'':'s'}</button>
         <div id="ocultos-lista" style="display:none;margin-top:10px">
-          ${ocultos.map(p=>`<div class="card" style="opacity:0.6;margin-bottom:8px;border:1px dashed var(--border2)">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <div>
-                <div style="font-size:13px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
-                <div style="font-size:11px;color:var(--text2);margin-top:2px">${p.po} · ${(p.piezas||0).toLocaleString()} pzas</div>
+          ${ocultos.map(p=>{
+            const searchBlob = ((p.po||'')+' '+(p.sub_cliente||'')+' '+(p.cliente||'')+' '+(p.capacidad||'')+' '+(p.color_botella||'')+' '+(p.color_tapa||'')+' '+(p.color_boquilla||'')+' '+(p.estado||'')+' '+(p.piezas||'')).toLowerCase();
+            return `<div class="card dash-card" data-search="${searchBlob.replace(/"/g,'&quot;')}" style="opacity:0.6;margin-bottom:8px;border:1px dashed var(--border2)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div>
+                  <div style="font-size:13px;font-weight:600">${p.sub_cliente||p.cliente} — ${p.capacidad}ml</div>
+                  <div style="font-size:11px;color:var(--text2);margin-top:2px">${p.po} · ${(p.piezas||0).toLocaleString()} pzas</div>
+                </div>
+                <div class="badge" style="background:var(--bg5);color:var(--text2)">OCULTO</div>
               </div>
-              <div class="badge" style="background:var(--bg5);color:var(--text2)">OCULTO</div>
-            </div>
-            <button class="btn btn-sm" style="width:100%;background:var(--amber);color:#0b0d10;border:none;touch-action:manipulation" onclick="restaurarOculto('${p.id}','${(p.po||'').replace(/'/g,"\\'")}')">↩ Restaurar al menú</button>
-          </div>`).join('')}
+              <button class="btn btn-sm" style="width:100%;background:var(--amber);color:#0b0d10;border:none;touch-action:manipulation" onclick="restaurarOculto('${p.id}','${(p.po||'').replace(/'/g,"\\'")}')">↩ Restaurar al menú</button>
+            </div>`;
+          }).join('')}
         </div>
       </div>`;
     }
