@@ -1758,9 +1758,91 @@ async function abrirEditarCompletado(pipelineId){
         <textarea oninput="guardarCampoOrden('${oid}','observaciones',this.value,'text')" 
           style="width:100%;min-height:80px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px;box-sizing:border-box">${o.observaciones||''}</textarea>
       </div>`)+
+      sec('📷 Fotos de aprobación', buildFotosAprobacionEditor(o)) +
       '<div style="font-size:10px;color:var(--text3);text-align:center;padding-bottom:8px">Los cambios se guardan automáticamente ✓</div>';
 
   }catch(e){body.innerHTML='<div style="color:var(--red);padding:16px">Error: '+e.message+'</div>';}
+}
+
+// Construir el editor de fotos: 4 slots con thumbnail (si existe) + botón
+// "Cambiar" que abre el file picker y reemplaza la foto en Storage + DB.
+function buildFotosAprobacionEditor(o){
+  const labels=['Frente','Reverso','Lado izquierdo','Lado derecho'];
+  const urls=Array.isArray(o.foto_urls)?o.foto_urls.slice():[];
+  while(urls.length<4)urls.push(null);
+  // Guardar oid en window para que cambiarFotoAprobacion lo recupere
+  window._editFotosOid = o.id;
+  window._editFotosUrls = urls.slice();
+  let html='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">';
+  for(let i=0;i<4;i++){
+    const url=urls[i];
+    html+=`<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;padding:8px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-align:center">${labels[i]}</div>
+      <div id="thumb-foto-${i}" style="width:100%;aspect-ratio:1;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;overflow:hidden">
+        ${url?`<img src="${url}" style="width:100%;height:100%;object-fit:cover">`:`<span style="color:var(--text3);font-size:11px">Sin foto</span>`}
+      </div>
+      <input type="file" id="file-foto-${i}" accept="image/*" capture="environment" style="display:none" onchange="cambiarFotoAprobacion(${i},this.files[0])">
+      <button class="btn btn-xs" style="width:100%;background:var(--amber);color:#0b0d10;border:none;touch-action:manipulation" onclick="document.getElementById('file-foto-${i}').click()">📷 Cambiar foto</button>
+    </div>`;
+  }
+  html+='</div>';
+  return html;
+}
+
+// Reemplaza una foto de aprobación: comprime, sube a Storage con timestamp
+// nuevo, actualiza foto_urls en DB. La URL vieja queda huérfana pero se
+// puede limpiar después si hace falta.
+async function cambiarFotoAprobacion(idx, file){
+  if(!file)return;
+  const oid = window._editFotosOid;
+  if(!oid){toast('Error: sin orden','err');return;}
+  const labels=['Frente','Reverso','Lado-izquierdo','Lado-derecho'];
+  // Mostrar loading
+  const thumb = document.getElementById('thumb-foto-'+idx);
+  if(thumb) thumb.innerHTML='<span style="color:var(--text3);font-size:11px">Subiendo...</span>';
+  try{
+    // Leer archivo como dataURL
+    const dataUrl = await new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result);
+      r.onerror=()=>rej(new Error('Error leyendo archivo'));
+      r.readAsDataURL(file);
+    });
+    // Comprimir (función ya existe en este archivo)
+    const comprimido = await comprimirFoto(dataUrl, 1200);
+    if(!comprimido)throw new Error('No se pudo comprimir');
+    // Convertir a Blob
+    const base64 = comprimido.replace(/^data:image\/\w+;base64,/, '');
+    const bytes = atob(base64);
+    const buf = new Uint8Array(bytes.length);
+    for(let i=0;i<bytes.length;i++)buf[i]=bytes.charCodeAt(i);
+    const blob = new Blob([buf], {type:'image/jpeg'});
+    // Subir con nombre nuevo (timestamp para que no se confunda con la anterior)
+    const filename = `${oid}/foto-${idx}-${labels[idx]}-${Date.now()}.jpg`;
+    const upRes = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${filename}`, {
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'image/jpeg','x-upsert':'true'},
+      body: blob
+    });
+    if(!upRes.ok)throw new Error('Error subiendo: '+await upRes.text());
+    const nuevaUrl = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
+    // Actualizar el array en window y en DB
+    const urls = window._editFotosUrls || [null,null,null,null];
+    urls[idx] = nuevaUrl;
+    window._editFotosUrls = urls;
+    const pat = await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+oid,{
+      method:'PATCH',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify({foto_urls: urls})
+    });
+    if(!pat.ok)throw new Error('Error guardando: '+await pat.text());
+    // Refrescar thumbnail
+    if(thumb) thumb.innerHTML = `<img src="${nuevaUrl}" style="width:100%;height:100%;object-fit:cover">`;
+    toast('✓ Foto '+labels[idx]+' actualizada','ok');
+  }catch(e){
+    if(thumb) thumb.innerHTML='<span style="color:var(--red);font-size:11px">Error</span>';
+    toast('Error: '+e.message,'err');
+  }
 }
 
 function fmtSeg2(s){
