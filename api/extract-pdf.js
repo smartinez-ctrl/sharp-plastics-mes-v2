@@ -17,6 +17,15 @@ export default async function handler(req, res) {
     const { po, mockup } = req.body;
     if (!po || !mockup) return res.status(400).json({ error: 'Faltan los PDFs' });
 
+    // Validar que la API key esté configurada antes de hacer la request
+    // (antes esto fallaba como 'authentication_error: x-api-key header is required'
+    // que es confuso porque parece bug del cliente cuando es config del server).
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({
+        error: 'Config faltante: ANTHROPIC_API_KEY no está configurada en Vercel. Pídele al admin que la agregue en Settings → Environment Variables.'
+      });
+    }
+
     const prompt = `Analiza estos dos PDFs de un pedido de botellas de plástico impresas y extrae la información en JSON exacto sin texto adicional ni backticks:
 {
   "sub_cliente": "nombre del sub-cliente bajo Ship To (primera línea solamente, ej: Peaked Sports, Wheel Wranglers, C/O Mountainflow)",
