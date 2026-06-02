@@ -248,11 +248,23 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
   <!-- Desglose por semana (cards con pedidos) -->
   <div id="cobros-semanas" style="margin-bottom:18px"></div>
   <div class="card" style="margin-bottom:16px">
-    <div class="card-title" style="margin-bottom:12px">⏳ Pendientes de cobro</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+      <div class="card-title" style="margin-bottom:0">⏳ Pendientes de cobro</div>
+      <div style="display:flex;gap:14px;align-items:center;font-size:13px">
+        <span style="color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.06em">Total por cobrar:</span>
+        <span id="cob-total-pendientes-inline" style="font-family:monospace;font-weight:700;color:var(--amber);font-size:16px">—</span>
+      </div>
+    </div>
     <div id="cobros-pendientes"><div class="loading">Cargando...</div></div>
   </div>
   <div class="card">
-    <div class="card-title" style="margin-bottom:12px">✅ Cobrados</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+      <div class="card-title" style="margin-bottom:0">✅ Cobrados</div>
+      <div style="display:flex;gap:14px;align-items:center;font-size:13px">
+        <span style="color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.06em">Total cobrado:</span>
+        <span id="cob-total-cobrados-inline" style="font-family:monospace;font-weight:700;color:var(--green);font-size:16px">—</span>
+      </div>
+    </div>
     <div id="cobros-pagados"><div class="loading">Cargando...</div></div>
   </div>
 </div>
@@ -2109,6 +2121,11 @@ function renderCobros(){
   document.getElementById('cob-cobrado-val').textContent = mxn(totalCob);
   document.getElementById('cob-sin-fact-val').textContent = mxn(totalSinFact);
   document.getElementById('cob-total-val').textContent = mxn(totalAll);
+  // Totales inline en los headers de cada bloque
+  const elTotPend = document.getElementById('cob-total-pendientes-inline');
+  if(elTotPend) elTotPend.textContent = mxn(totalPorCobrar + totalSinFact);
+  const elTotCob = document.getElementById('cob-total-cobrados-inline');
+  if(elTotCob) elTotCob.textContent = mxn(totalCob);
 
   // ─── Cálculo de fecha esperada de cobro y categorización por semana ───
   // Hoy a las 00:00 (sin horas) para que los cálculos de días sean exactos
@@ -2206,7 +2223,10 @@ function renderCobros(){
       <div style="font-size:12px">${fCobEspHTML}</div>
       <div style="font-size:12px">${diasHTML}</div>
       <div>
-        <button class="btn btn-primary btn-xs" style="width:100%" onclick="toggleCobro('${p.id}',true)" ${!p.fecha_factura?'disabled title="Marca la fecha de factura primero" style="width:100%;opacity:0.4;cursor:not-allowed"':''}>💵 Cobrado</button>
+        ${p.fecha_factura
+          ? `<button class="btn btn-primary btn-xs" style="width:100%" onclick="toggleCobro('${p.id}',true)">💵 Cobrado</button>`
+          : `<button class="btn btn-ghost btn-xs" style="width:100%;opacity:0.5;cursor:not-allowed" onclick="alert('Marca primero la fecha de factura para poder cobrar este pedido')" title="Marca primero la fecha de factura">📄 Falta factura</button>`
+        }
       </div>
     </div>`;
   };
