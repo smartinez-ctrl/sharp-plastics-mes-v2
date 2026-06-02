@@ -225,16 +225,28 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
 
 <div id="page-cobros" class="page">
   <div class="ph-row">
-    <div><div class="page-title">Cobros</div><div class="page-sub">Seguimiento de pagos por pedido</div></div>
+    <div><div class="page-title">Cobros</div><div class="page-sub">Seguimiento de pagos por pedido (30 días post-factura)</div></div>
     <div class="page-actions">
       <button class="btn btn-secondary btn-sm" onclick="exportarCobrosExcel()">📊 Exportar Excel</button>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
-    <div class="stat-card"><div class="stat-val" id="cob-pendiente-val" style="color:var(--amber)">—</div><div class="stat-label">Por cobrar</div></div>
+  <!-- KPIs principales: por cobrar (facturados pendientes), cobrado, sin facturar, total -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px">
+    <div class="stat-card"><div class="stat-val" id="cob-pendiente-val" style="color:var(--amber)">—</div><div class="stat-label">Por cobrar (facturados)</div></div>
     <div class="stat-card"><div class="stat-val" id="cob-cobrado-val" style="color:var(--green)">—</div><div class="stat-label">Cobrado</div></div>
+    <div class="stat-card"><div class="stat-val" id="cob-sin-fact-val" style="color:var(--text2)">—</div><div class="stat-label">Sin facturar</div></div>
     <div class="stat-card"><div class="stat-val" id="cob-total-val" style="color:var(--text)">—</div><div class="stat-label">Total ventas</div></div>
   </div>
+  <!-- KPIs de vencimiento -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px">
+    <div class="stat-card" style="padding:10px"><div class="stat-val" id="cob-vencido-val" style="color:var(--red);font-size:18px">—</div><div class="stat-label" style="font-size:10px">🚨 Vencidos</div></div>
+    <div class="stat-card" style="padding:10px"><div class="stat-val" id="cob-sem0-val" style="color:var(--amber);font-size:18px">—</div><div class="stat-label" style="font-size:10px">Esta semana</div></div>
+    <div class="stat-card" style="padding:10px"><div class="stat-val" id="cob-sem1-val" style="color:var(--text);font-size:18px">—</div><div class="stat-label" style="font-size:10px">Próxima semana</div></div>
+    <div class="stat-card" style="padding:10px"><div class="stat-val" id="cob-sem2-val" style="color:var(--text);font-size:18px">—</div><div class="stat-label" style="font-size:10px">En 2 semanas</div></div>
+    <div class="stat-card" style="padding:10px"><div class="stat-val" id="cob-sem3-val" style="color:var(--text);font-size:18px">—</div><div class="stat-label" style="font-size:10px">+ 2 semanas</div></div>
+  </div>
+  <!-- Desglose por semana (cards con pedidos) -->
+  <div id="cobros-semanas" style="margin-bottom:18px"></div>
   <div class="card" style="margin-bottom:16px">
     <div class="card-title" style="margin-bottom:12px">⏳ Pendientes de cobro</div>
     <div id="cobros-pendientes"><div class="loading">Cargando...</div></div>
@@ -2081,131 +2093,243 @@ async function guardarCotizacion(){
 // PROYECCIÓN
 
 function renderCobros(){
-  // Solo pedidos completados o entregados
   const todos=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado');
   const pendientes=todos.filter(p=>!p.cobrado);
   const pagados=todos.filter(p=>p.cobrado);
-  const totalPend=pendientes.reduce((s,p)=>s+(p.venta_total||0),0);
-  const totalCob=pagados.reduce((s,p)=>s+(p.venta_total||0),0);
-  const totalAll=todos.reduce((s,p)=>s+(p.venta_total||0),0);
 
-  document.getElementById('cob-pendiente-val').textContent=mxn(totalPend);
-  document.getElementById('cob-cobrado-val').textContent=mxn(totalCob);
-  document.getElementById('cob-total-val').textContent=mxn(totalAll);
+  // "Por cobrar" ahora es SOLO lo facturado y aún no cobrado (lo que dijo Sam)
+  const facturadosNoCobrados = pendientes.filter(p=>p.fecha_factura);
+  const sinFactura = pendientes.filter(p=>!p.fecha_factura);
+  const totalPorCobrar = facturadosNoCobrados.reduce((s,p)=>s+(p.venta_total||0),0);
+  const totalCob = pagados.reduce((s,p)=>s+(p.venta_total||0),0);
+  const totalSinFact = sinFactura.reduce((s,p)=>s+(p.venta_total||0),0);
+  const totalAll = totalPorCobrar+totalCob+totalSinFact;
 
-  const rowHTML=(p,cobrado)=>{
-    const fecha=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-    const fechaCob=p.fecha_cobro?new Date(p.fecha_cobro+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-    return `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
+  document.getElementById('cob-pendiente-val').textContent = mxn(totalPorCobrar);
+  document.getElementById('cob-cobrado-val').textContent = mxn(totalCob);
+  document.getElementById('cob-sin-fact-val').textContent = mxn(totalSinFact);
+  document.getElementById('cob-total-val').textContent = mxn(totalAll);
+
+  // ─── Cálculo de fecha esperada de cobro y categorización por semana ───
+  // Hoy a las 00:00 (sin horas) para que los cálculos de días sean exactos
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // Para cada facturado pendiente, calcular días para pago y categoría
+  const conCalculo = facturadosNoCobrados.map(p=>{
+    const fFact = new Date(p.fecha_factura+'T12:00:00');
+    const fCobro = new Date(fFact);
+    fCobro.setDate(fCobro.getDate() + 30);
+    fCobro.setHours(0,0,0,0);
+    const dias = Math.ceil((fCobro - today) / (1000*60*60*24));
+    let categoria;
+    if(dias < 0) categoria = 'vencido';
+    else if(dias <= 6) categoria = 'sem0';      // esta semana (0-6 días)
+    else if(dias <= 13) categoria = 'sem1';     // próxima (7-13)
+    else if(dias <= 20) categoria = 'sem2';     // en 2 semanas (14-20)
+    else categoria = 'sem3';                    // más de 2 semanas
+    return {...p, _diasPago:dias, _fechaCobroEsperada:fCobro, _categoria:categoria};
+  });
+
+  // Conteos por categoría para KPIs
+  const cuentas = {vencido:0, sem0:0, sem1:0, sem2:0, sem3:0};
+  conCalculo.forEach(p=>cuentas[p._categoria]++);
+  document.getElementById('cob-vencido-val').textContent = cuentas.vencido;
+  document.getElementById('cob-sem0-val').textContent = cuentas.sem0;
+  document.getElementById('cob-sem1-val').textContent = cuentas.sem1;
+  document.getElementById('cob-sem2-val').textContent = cuentas.sem2;
+  document.getElementById('cob-sem3-val').textContent = cuentas.sem3;
+
+  // ─── Sección de desglose por semana (opción C: cards + lista) ───
+  const semanasOrden = [
+    {key:'vencido', titulo:'🚨 Vencidos', color:'var(--red)', borderColor:'var(--red-border)', bg:'var(--red-bg)'},
+    {key:'sem0', titulo:'⚠️ Vencen esta semana', color:'var(--amber)', borderColor:'var(--amber-border)', bg:'var(--amber-bg)'},
+    {key:'sem1', titulo:'📅 Próxima semana', color:'var(--text)', borderColor:'var(--border2)', bg:'var(--bg3)'},
+    {key:'sem2', titulo:'📅 En 2 semanas', color:'var(--text)', borderColor:'var(--border2)', bg:'var(--bg3)'},
+  ];
+  let htmlSemanas = '';
+  semanasOrden.forEach(s=>{
+    const items = conCalculo.filter(p=>p._categoria===s.key);
+    if(!items.length) return;
+    const totalSem = items.reduce((sum,p)=>sum+(p.venta_total||0),0);
+    htmlSemanas += `<div style="background:${s.bg};border:1px solid ${s.borderColor};border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700;color:${s.color}">${s.titulo} · ${items.length} pedido${items.length===1?'':'s'}</div>
+        <div style="font-family:monospace;font-weight:700;color:${s.color}">${mxn(totalSem)}</div>
+      </div>
+      ${items.map(p=>{
+        const dias = p._diasPago;
+        const diasTxt = dias < 0 ? `Vencido hace ${Math.abs(dias)}d` : dias === 0 ? 'Vence hoy' : `${dias} días`;
+        const fCobEsp = p._fechaCobroEsperada.toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px;border-top:1px solid var(--border)">
+          <div><strong>${p.sub_cliente||p.cliente||'—'}</strong> <span style="color:var(--text2);font-size:11px">· ${p.po||'—'}</span></div>
+          <div style="display:flex;gap:14px;align-items:center">
+            <div style="color:var(--text2);font-size:11px">${fCobEsp}</div>
+            <div style="font-weight:600;font-size:11px;color:${s.color}">${diasTxt}</div>
+            <div style="font-family:monospace;font-weight:700;min-width:90px;text-align:right">${mxn(p.venta_total||0)}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  });
+  document.getElementById('cobros-semanas').innerHTML = htmlSemanas;
+
+  // ─── Tabla detallada de pendientes ───
+  const rowPendiente = (p)=>{
+    const fEnt = p.fecha_entrega ? new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+    // fecha_factura editable con date picker
+    const fFactInput = `<input type="date" value="${p.fecha_factura||''}" onchange="setFechaFactura('${p.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;font-family:inherit;width:100%;cursor:pointer">`;
+    // Calcular fecha cobro esperada y días, con color
+    let fCobEspHTML = '<span style="color:var(--text3)">—</span>';
+    let diasHTML = '<span style="color:var(--text3)">—</span>';
+    if(p.fecha_factura){
+      const fFact = new Date(p.fecha_factura+'T12:00:00');
+      const fCobro = new Date(fFact); fCobro.setDate(fCobro.getDate()+30); fCobro.setHours(0,0,0,0);
+      const dias = Math.ceil((fCobro - today)/(1000*60*60*24));
+      let color, txt;
+      if(dias < 0){color='var(--red)'; txt=`Vencido hace ${Math.abs(dias)}d`;}
+      else if(dias <= 5){color='#fb923c'; txt=`${dias} día${dias===1?'':'s'}`;}
+      else {color='var(--green)'; txt=`${dias} días`;}
+      const fCobStr = fCobro.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'});
+      fCobEspHTML = `<span style="color:${color};font-weight:600">${fCobStr}</span>`;
+      diasHTML = `<span style="color:${color};font-weight:700">${txt}</span>`;
+    }
+    return `<div style="display:grid;grid-template-columns:1.7fr 1fr 0.8fr 1fr 1.2fr 1.1fr 1fr 110px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
       <div>
         <div style="font-weight:600">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="font-size:10px;color:var(--text2)">${p.po||'—'}</div>
       </div>
       <div style="font-family:monospace;color:var(--green);font-weight:700">${p.venta_total?mxn(p.venta_total):'—'}</div>
-      <div style="font-size:12px;color:var(--text)">${(p.piezas||0).toLocaleString()} pzas</div>
-      <div style="font-size:12px;color:var(--text2)">${fecha}</div>
-      <div style="font-size:12px;color:var(--text2)">${cobrado?'✓ '+fechaCob:''}</div>
+      <div style="font-size:12px;color:var(--text)">${(p.piezas||0).toLocaleString()}</div>
+      <div style="font-size:11px;color:var(--text2)">${fEnt}</div>
+      <div>${fFactInput}</div>
+      <div style="font-size:12px">${fCobEspHTML}</div>
+      <div style="font-size:12px">${diasHTML}</div>
       <div>
-        ${cobrado
-          ? `<button class="btn btn-ghost btn-xs" onclick="toggleCobro('${p.id}',false)">↩ Desmarcar</button>`
-          : `<button class="btn btn-primary btn-xs" style="width:100%" onclick="toggleCobro('${p.id}',true)">💵 Cobrado</button>`
-        }
+        <button class="btn btn-primary btn-xs" style="width:100%" onclick="toggleCobro('${p.id}',true)" ${!p.fecha_factura?'disabled title="Marca la fecha de factura primero" style="width:100%;opacity:0.4;cursor:not-allowed"':''}>💵 Cobrado</button>
       </div>
     </div>`;
   };
 
-  const headerHTML=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 120px;gap:8px;padding:6px 14px;margin-bottom:2px">
-    ${['Cliente','Venta','Piezas','F. Entrega','F. Cobro',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">${h}</span>`).join('')}
+  const rowCobrado = (p)=>{
+    const fEnt = p.fecha_entrega ? new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+    const fFact = p.fecha_factura ? new Date(p.fecha_factura+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+    const fCobReal = p.fecha_cobro ? new Date(p.fecha_cobro+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+    return `<div style="display:grid;grid-template-columns:2fr 1fr 0.8fr 1fr 1fr 1fr 110px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
+      <div>
+        <div style="font-weight:600">${p.sub_cliente||p.cliente||'—'}</div>
+        <div style="font-size:10px;color:var(--text2)">${p.po||'—'}</div>
+      </div>
+      <div style="font-family:monospace;color:var(--green);font-weight:700">${p.venta_total?mxn(p.venta_total):'—'}</div>
+      <div style="font-size:12px;color:var(--text)">${(p.piezas||0).toLocaleString()}</div>
+      <div style="font-size:12px;color:var(--text2)">${fEnt}</div>
+      <div style="font-size:12px;color:var(--text2)">${fFact}</div>
+      <div style="font-size:12px;color:var(--green);font-weight:600">✓ ${fCobReal}</div>
+      <div>
+        <button class="btn btn-ghost btn-xs" onclick="toggleCobro('${p.id}',false)">↩ Desmarcar</button>
+      </div>
+    </div>`;
+  };
+
+  const headerPendientes = `<div style="display:grid;grid-template-columns:1.7fr 1fr 0.8fr 1fr 1.2fr 1.1fr 1fr 110px;gap:8px;padding:6px 14px;margin-bottom:2px">
+    ${['Cliente','Venta','Piezas','F. Entrega','F. Factura','F. Cobro Esp.','Días pago',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">${h}</span>`).join('')}
+  </div>`;
+  const headerCobrados = `<div style="display:grid;grid-template-columns:2fr 1fr 0.8fr 1fr 1fr 1fr 110px;gap:8px;padding:6px 14px;margin-bottom:2px">
+    ${['Cliente','Venta','Piezas','F. Entrega','F. Factura','F. Cobro Real',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">${h}</span>`).join('')}
   </div>`;
 
-  document.getElementById('cobros-pendientes').innerHTML=pendientes.length
-    ? headerHTML+pendientes.map(p=>rowHTML(p,false)).join('')
+  document.getElementById('cobros-pendientes').innerHTML = pendientes.length
+    ? headerPendientes + pendientes.map(rowPendiente).join('')
     : '<div style="text-align:center;padding:20px;color:var(--text2)">Sin pedidos pendientes de cobro</div>';
 
-  document.getElementById('cobros-pagados').innerHTML=pagados.length
-    ? headerHTML+pagados.map(p=>rowHTML(p,true)).join('')
+  document.getElementById('cobros-pagados').innerHTML = pagados.length
+    ? headerCobrados + pagados.map(rowCobrado).join('')
     : '<div style="text-align:center;padding:20px;color:var(--text2)">Sin cobros registrados</div>';
+}
+
+async function setFechaFactura(id, fecha){
+  try{
+    await sbPatch('pipeline_mf', {fecha_factura: fecha||null}, 'id=eq.'+id);
+    const p = PIPELINE.find(x=>x.id===id);
+    if(p) p.fecha_factura = fecha||null;
+    toast(fecha?'📄 Fecha factura actualizada':'Fecha factura limpiada');
+    renderCobros();
+  }catch(e){
+    toast('Error: '+e.message,'err');
+  }
 }
 
 function exportarCobrosExcel(){
   const todos=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado');
   if(!todos.length){toast('Sin pedidos completados','err');return;}
 
-  const generar = function(){
-    const rows=[['Pedido','No. OC','Fecha Entrega','Piezas','Total Venta','Fecha Cobro','Estado Cobro']];
-    todos.forEach(p=>{
-      const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX'):'—';
-      const fCob=p.fecha_cobro?new Date(p.fecha_cobro+'T12:00:00').toLocaleDateString('es-MX'):'—';
-      rows.push([
-        p.sub_cliente||p.cliente||'—',
-        p.po||'—',
-        fEnt,
-        p.piezas||0,
-        p.venta_total||0,
-        p.cobrado?fCob:'—',
-        p.cobrado?'Cobrado':'Pendiente',
-      ]);
-    });
-    rows.push([]);
-    rows.push(['TOTAL PENDIENTE','','','',PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&!p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0),'','']);
-    rows.push(['TOTAL COBRADO','','','',PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0),'','']);
-
-    const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:30},{wch:15},{wch:15},{wch:10},{wch:15},{wch:15},{wch:15}];
-    for(let i=2;i<=rows.length;i++){
-      const cell=ws[XLSX.utils.encode_cell({r:i-1,c:4})];
-      if(cell&&typeof cell.v==='number') cell.z='$#,##0.00';
-    }
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,'Cobros',ws);
-    const fecha=new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb,'Sharp-Plastics-Cobros-'+fecha+'.xlsx');
-    toast('Excel exportado ✓','ok');
-  };
-
-  if(window.XLSX){ generar(); return; }
-  // Cargar SheetJS desde cdnjs (CDN confiable). El antiguo cdn.sheetjs.com
-  // ahora regresa 403 — bug histórico que dejaba el botón sin acción visible.
-  toast('Cargando librería...');
-  const script=document.createElement('script');
-  script.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  script.onload=generar;
-  script.onerror=function(){
-    toast('No se pudo cargar la librería de Excel. Intentando CSV...','err');
-    // Fallback: exportar como CSV puro que Excel también abre directo
-    exportarCobrosCSVFallback(todos);
-  };
-  document.head.appendChild(script);
-}
-
-// Fallback CSV si SheetJS no puede cargarse por cualquier razón (red bloqueada,
-// CDN caído, etc.). Excel/Numbers/Google Sheets abren CSV con UTF-8 BOM directo.
-function exportarCobrosCSVFallback(todos){
+  // CSV puro con BOM UTF-8 — Excel/Numbers/Google Sheets lo abren directo
+  // sin perder formato. Evitamos SheetJS porque el CDN dejó de servir y
+  // las versiones recientes bloquean ciertos CSPs de Vercel.
   const esc = (v)=>{
     if(v==null) return '';
     let s = String(v);
     if(/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g,'""') + '"';
     return s;
   };
-  const lines = ['Pedido,No. OC,Fecha Entrega,Piezas,Total Venta,Fecha Cobro,Estado Cobro'];
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // Calcular fecha esperada de cobro (fecha_factura+30) y días para pago
+  const calcDiasYFechaCobro = (p)=>{
+    if(!p.fecha_factura) return {fechaCobroEsperada:'', diasPago:'', estatus:''};
+    const fFact = new Date(p.fecha_factura+'T12:00:00');
+    const fCobro = new Date(fFact);
+    fCobro.setDate(fCobro.getDate() + 30);
+    const diasMs = fCobro - today;
+    const dias = Math.ceil(diasMs / (1000*60*60*24));
+    let est = '';
+    if(p.cobrado) est = 'Cobrado';
+    else if(dias < 0) est = 'Vencido hace '+Math.abs(dias)+' días';
+    else if(dias === 0) est = 'Vence hoy';
+    else est = dias+' días';
+    return {
+      fechaCobroEsperada: fCobro.toISOString().slice(0,10),
+      diasPago: p.cobrado ? '' : dias,
+      estatus: est,
+    };
+  };
+
+  const lines = ['Cliente,No. OC,Piezas,Fecha Entrega (PO),Fecha Factura,Fecha Cobro Esperada,Días para pago,Total Venta,Estado,Fecha Cobro Real'];
   todos.forEach(p=>{
-    const fEnt = p.fecha_entrega ? new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX') : '—';
-    const fCob = p.fecha_cobro ? new Date(p.fecha_cobro+'T12:00:00').toLocaleDateString('es-MX') : '—';
+    const fEnt = p.fecha_entrega ? new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX') : '';
+    const fFact = p.fecha_factura ? new Date(p.fecha_factura+'T12:00:00').toLocaleDateString('es-MX') : '';
+    const fCobReal = p.fecha_cobro ? new Date(p.fecha_cobro+'T12:00:00').toLocaleDateString('es-MX') : '';
+    const calc = calcDiasYFechaCobro(p);
+    const fCobEsp = calc.fechaCobroEsperada ? new Date(calc.fechaCobroEsperada+'T12:00:00').toLocaleDateString('es-MX') : '';
     lines.push([
       esc(p.sub_cliente||p.cliente||'—'),
       esc(p.po||'—'),
-      esc(fEnt),
       p.piezas||0,
+      esc(fEnt),
+      esc(fFact),
+      esc(fCobEsp),
+      esc(calc.diasPago),
       p.venta_total||0,
-      esc(p.cobrado?fCob:'—'),
-      esc(p.cobrado?'Cobrado':'Pendiente'),
+      esc(calc.estatus || (p.cobrado?'Cobrado':'Pendiente')),
+      esc(fCobReal),
     ].join(','));
   });
+
+  // Totales
+  const facturados = todos.filter(p=>p.fecha_factura && !p.cobrado);
+  const cobrados = todos.filter(p=>p.cobrado);
+  const sinFactura = todos.filter(p=>!p.fecha_factura && !p.cobrado);
+  const totalPorCobrar = facturados.reduce((s,p)=>s+(p.venta_total||0),0);
+  const totalCobrado = cobrados.reduce((s,p)=>s+(p.venta_total||0),0);
+  const totalSinFactura = sinFactura.reduce((s,p)=>s+(p.venta_total||0),0);
   lines.push('');
-  const totalPend = PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&!p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0);
-  const totalCob = PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado')&&p.cobrado).reduce((s,p)=>s+(p.venta_total||0),0);
-  lines.push(`TOTAL PENDIENTE,,,,${totalPend},,`);
-  lines.push(`TOTAL COBRADO,,,,${totalCob},,`);
+  lines.push(`TOTAL POR COBRAR (facturados),,,,,,,${totalPorCobrar},,`);
+  lines.push(`TOTAL COBRADO,,,,,,,${totalCobrado},,`);
+  lines.push(`TOTAL SIN FACTURAR,,,,,,,${totalSinFactura},,`);
+  lines.push(`TOTAL VENTAS,,,,,,,${totalPorCobrar+totalCobrado+totalSinFactura},,`);
+
   const blob = new Blob(['\ufeff'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2214,7 +2338,7 @@ function exportarCobrosCSVFallback(todos){
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
-  toast('Cobros exportados como CSV ✓','ok');
+  toast('Cobros exportados ✓','ok');
 }
 
 function exportarPipelineExcel(){
