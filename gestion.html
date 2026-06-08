@@ -1036,7 +1036,14 @@ function filtrarPipeline(q){
 
 function renderPipeline(){
   const q=window._pipelineQuery||'';
-  const matchQ=p=>{if(!q)return true;const s=((p.sub_cliente||'')+' '+(p.cliente||'')+' '+(p.po||'')+' '+(p.capacidad||'')).toLowerCase();return s.includes(q);};
+  const matchQ=p=>{
+    if(!q) return true;
+    // Convertir TODOS los campos a string explícitamente y normalizar (trim + lowercase)
+    // Cubre casos donde p.po es número, null, undefined, o tiene espacios.
+    const campos = [p.sub_cliente, p.cliente, p.po, p.capacidad,
+                    p.color_botella, p.color_tapa, p.color_boquilla, p.notas];
+    return campos.some(v => String(v == null ? '' : v).trim().toLowerCase().includes(q));
+  };
   const sortFn=(a,b)=>{
     if(!window._pipeSort)return 0;
     const {col,asc}=window._pipeSort;
