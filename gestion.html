@@ -2366,21 +2366,39 @@ function filtrarCobros(v){
 
 // Cargar pdf.js lazy (solo cuando se necesita) — la primera factura PDF tarda
 // ~500ms más por la descarga del worker; subsecuentes son instantáneas.
+// Usamos v3.11.174 (no v4) porque v4 usa archivos .mjs y no expone window.pdfjsLib
+// como global cuando se carga via <script>. Si cdnjs falla, intenta unpkg.
 let _pdfJsReady = null;
 function ensurePdfJs(){
   if(_pdfJsReady) return _pdfJsReady;
-  _pdfJsReady = new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js';
-    s.onload = () => {
+  const CDNS = [
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js',
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+  ];
+  const WORKERS = [
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+  ];
+  _pdfJsReady = (async () => {
+    for(let i = 0; i < CDNS.length; i++){
       try {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
-        resolve();
-      } catch(e){ reject(e); }
-    };
-    s.onerror = () => reject(new Error('No se pudo cargar pdf.js'));
-    document.head.appendChild(s);
-  });
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = CDNS[i];
+          s.onload = resolve;
+          s.onerror = () => reject(new Error('script error'));
+          document.head.appendChild(s);
+        });
+        if(window.pdfjsLib){
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = WORKERS[i];
+          return;
+        }
+      } catch(e){ /* probar siguiente CDN */ }
+    }
+    throw new Error('No se pudo cargar pdf.js de ningún CDN');
+  })();
   return _pdfJsReady;
 }
 
