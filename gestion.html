@@ -248,6 +248,13 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
   </div>
   <!-- Desglose por semana (cards con pedidos) -->
   <div id="cobros-semanas" style="margin-bottom:18px"></div>
+  <!-- Buscador global que filtra pendientes + cobrados a la vez -->
+  <div style="margin-bottom:14px">
+    <input type="search" id="cob-q" placeholder="🔍  Buscar por cliente, PO, folio factura, fecha entrega…" 
+      style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:11px 16px;color:var(--text);font-size:14px;outline:none"
+      oninput="filtrarCobros(this.value)">
+    <div id="cob-q-count" style="font-size:11px;color:var(--text2);margin-top:4px;padding-left:6px;display:none"></div>
+  </div>
   <div class="card" style="margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px">
       <div class="card-title" style="margin-bottom:0">⏳ Pendientes de cobro</div>
@@ -2114,8 +2121,37 @@ async function guardarCotizacion(){
 
 function renderCobros(){
   const todos=PIPELINE.filter(p=>p.estado==='Completado'||p.estado==='Entregado');
-  const pendientes=todos.filter(p=>!p.cobrado);
-  const pagados=todos.filter(p=>p.cobrado);
+  let pendientes=todos.filter(p=>!p.cobrado);
+  let pagados=todos.filter(p=>p.cobrado);
+
+  // Filtro de búsqueda — aplica a ambas tablas. Busca en cliente, sub_cliente,
+  // PO, folio de factura (serie+folio), fecha entrega, fecha factura.
+  const q = (window._cobrosQ||'').trim().toLowerCase();
+  if(q){
+    const matchCob = p => {
+      const folio = ((p.factura_serie||'')+'-'+(p.factura_folio||'')).toLowerCase();
+      const fEnt = p.fecha_entrega ? new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX').toLowerCase() : '';
+      const fFact = p.fecha_factura ? new Date(p.fecha_factura+'T12:00:00').toLocaleDateString('es-MX').toLowerCase() : '';
+      const campos = [
+        p.sub_cliente, p.cliente, p.po, p.factura_serie, p.factura_folio,
+        p.factura_uuid, folio, fEnt, fFact, p.fecha_entrega, p.fecha_factura,
+        p.notas, p.color_botella, p.color_tapa
+      ];
+      return campos.some(v => String(v == null ? '' : v).trim().toLowerCase().includes(q));
+    };
+    pendientes = pendientes.filter(matchCob);
+    pagados = pagados.filter(matchCob);
+  }
+  // Mostrar conteo del filtro
+  const qCountEl = document.getElementById('cob-q-count');
+  if(qCountEl){
+    if(q){
+      qCountEl.style.display = '';
+      qCountEl.textContent = `${pendientes.length} pendiente${pendientes.length===1?'':'s'} · ${pagados.length} cobrado${pagados.length===1?'':'s'} con "${q}"`;
+    } else {
+      qCountEl.style.display = 'none';
+    }
+  }
 
   // "Por cobrar" ahora es SOLO lo facturado y aún no cobrado (lo que dijo Sam)
   const facturadosNoCobrados = pendientes.filter(p=>p.fecha_factura);
@@ -2308,6 +2344,20 @@ async function setFechaFactura(id, fecha){
   }catch(e){
     toast('Error: '+e.message,'err');
   }
+}
+
+// Buscador de Cobros: filtra pendientes + cobrados en memoria.
+// Mantiene el foco del input restaurando focus + selectionStart después
+// del re-render (porque renderCobros reescribe el HTML de ambas tablas).
+function filtrarCobros(v){
+  window._cobrosQ = v||'';
+  const cursorPos = (document.getElementById('cob-q')||{}).selectionStart || 0;
+  clearTimeout(window.__cobQT);
+  window.__cobQT = setTimeout(() => {
+    renderCobros();
+    const inp = document.getElementById('cob-q');
+    if(inp){ inp.focus(); try{ inp.setSelectionRange(cursorPos, cursorPos); }catch(_){} }
+  }, 150);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
