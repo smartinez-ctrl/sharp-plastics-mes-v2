@@ -2439,23 +2439,60 @@ function parsearXMLCFDI(xmlText){
   };
 }
 
-// Parsear factura PDF de Aspel SAE — los textos tienen estructura fija.
-// Tolerante a variaciones de espacio (pdf.js mete espacios variables al extraer).
+// Parsear factura PDF de Aspel SAE. CUIDADO: pdf.js extrae el texto
+// siguiendo el orden de objetos del PDF, NO el orden visual. Aspel SAE
+// coloca los VALORES antes que las etiquetas, así que los regex deben
+// buscar al revés. Ejemplos del texto extraído:
+//   "Serie: SH"           ← orden directo (valor después de etiqueta)
+//   "1811Folio:"          ← orden inverso (valor ANTES de etiqueta)
+//   "779203320 Calle:..." ← PO viene entre "Facturado a:" y "Calle:"
+//   "2026-06-08T19:08:22 Form a de pago:" ← fecha viene antes de "Fecha :"
 function parsearFacturaTexto(texto){
-  const norm = texto.replace(/\s+/g,' ');
+  const norm = texto.replace(/\s+/g,' ').trim();
   const m = (re) => { const r = norm.match(re); return r ? r[1].trim() : ''; };
-  return {
-    serie: m(/Serie:\s*([A-Z0-9]+)/),
-    folio: m(/Folio:\s*(\d+)/),
-    fecha: m(/Fecha\s*:?\s*(\d{4}-\d{2}-\d{2})/),
-    po: m(/Pedido\s*:?\s*([\w-]+)/),
-    uuid: m(/Folio fiscal:\s*([A-F0-9-]{36})/i),
-    total: (() => {
-      // Total: en formato "Total 145.90" o en la línea después del subtotal
-      const t = m(/Total\s+([\d,]+\.\d{2})/);
-      return t ? parseFloat(t.replace(/,/g,'')) : 0;
-    })(),
-  };
+
+  // Serie: orden directo
+  const serie = m(/Serie:\s*([A-Z0-9]+)/i);
+
+  // Folio: orden inverso "1811Folio:" — con fallback al orden directo
+  let folio = m(/(\d+)\s*Folio:/);
+  if(!folio) folio = m(/Folio:\s*(\d+)/);
+
+  // Fecha: cualquier patrón ISO (es único en el documento)
+  const fecha = m(/(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}/);
+
+  // PO: viene entre "Facturado a:" y "Calle:" (lo único entre ambas etiquetas
+  // es el RFC y el número de pedido). Tomamos el primer token alfanumérico.
+  let po = '';
+  const sec = norm.match(/Facturado a:\s+([\s\S]*?)\s+Calle:/);
+  if(sec){
+    // El bloque puede traer cosas como "779203320" o "-010205630 11199048".
+    // Tomamos el primer token que NO sea "RFC:..." ni inicie con letra.
+    const tokens = sec[1].split(/\s+/).filter(t => t && !t.startsWith('RFC:'));
+    if(tokens.length) po = tokens[0].replace(/^-/, '');
+  }
+  // Fallback: buscar "Pedido :" + número siguiente (poco probable pero por si acaso)
+  if(!po) po = m(/Pedido\s*:?\s*([\w-]+)/);
+
+  // UUID: formato fijo. Primero intenta cerca de "Folio fiscal:",
+  // si no, agarra el primer UUID que aparezca en el documento.
+  let uuid = m(/Folio fiscal:\s*([A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12})/i);
+  if(!uuid){
+    const u = norm.match(/[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}/i);
+    if(u) uuid = u[0];
+  }
+
+  // Total: el más confiable es el monto que aparece justo antes de "USD"
+  // o "MXN" en la línea del subtotal. Fallback al monto después de "Subtotal".
+  let total = 0;
+  const usd = norm.match(/Subtotal\s+([\d,]+\.\d{2})/);
+  if(usd) total = parseFloat(usd[1].replace(/,/g,''));
+  if(!total){
+    const t2 = norm.match(/([\d,]+\.\d{2})\s+(USD|MXN|DÓLARES|PESOS)/i);
+    if(t2) total = parseFloat(t2[1].replace(/,/g,''));
+  }
+
+  return { serie, folio, fecha, po, uuid, total };
 }
 
 // Wrapper: dado un File, devuelve los datos parseados sin importar si es PDF o XML
@@ -2506,8 +2543,12 @@ function subirFacturaPedido(pipelineId){
         // Aún así permitir guardar el archivo, pero advertir
         if(!confirm('No se pudo extraer el folio. ¿Subir de todos modos sin matchear datos?')) return;
       }
-      // Si el PO de la factura no coincide con el del pedido, advertir
-      if(datos.po && p.po && String(datos.po).trim() !== String(p.po).trim()){
+      // Si el PO de la factura no coincide con el del pedido, advertir.
+      // Comparación flexible: limpiamos espacios y sufijos como "Purple", "Black"
+      // para que "747531601 Purple" matchee con "747531601" de la factura.
+      const poPedidoCore = String(p.po||'').trim().split(/\s+/)[0];
+      const poFacturaCore = String(datos.po||'').trim().split(/\s+/)[0];
+      if(datos.po && p.po && poFacturaCore !== poPedidoCore){
         if(!confirm(`⚠️ El PO de la factura (${datos.po}) no coincide con el del pedido (${p.po}). ¿Continuar de todos modos?`)) return;
       }
       const url = await subirArchivoFactura(file, pipelineId, datos);
@@ -2580,8 +2621,14 @@ async function procesarFacturasBulk(fileList){
     cont.innerHTML = `<div style="padding:14px;color:var(--text2);font-size:13px">⏳ Procesando ${i+1}/${fileList.length}: ${escapeHtml(file.name)}…</div>`;
     try{
       const datos = await parsearArchivoFactura(file);
-      // Buscar pedido por PO
-      const ped = PIPELINE.find(p => p.po && String(p.po).trim() === String(datos.po||'').trim());
+      // Match flexible: comparar solo el primer token alfanumérico del PO
+      // (ej. "747531601 Purple" vs "747531601" → match)
+      const facCore = String(datos.po||'').trim().split(/\s+/)[0];
+      const ped = PIPELINE.find(p => {
+        if(!p.po || !facCore) return false;
+        const pCore = String(p.po).trim().split(/\s+/)[0];
+        return pCore === facCore;
+      });
       resultados.push({file, datos, ped, ok: !!ped, err: ped ? '' : 'No se encontró pedido con PO '+(datos.po||'(vacío)')});
     }catch(e){
       resultados.push({file, datos:{}, ped:null, ok:false, err: e.message});
