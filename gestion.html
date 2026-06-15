@@ -227,6 +227,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
   <div class="ph-row">
     <div><div class="page-title">Cobros</div><div class="page-sub">Seguimiento de pagos por pedido (30 días post-factura)</div></div>
     <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="abrirImportarFacturas()">📤 Importar facturas</button>
       <button class="btn btn-secondary btn-sm" onclick="exportarCobrosExcel()">📊 Exportar Excel</button>
     </div>
   </div>
@@ -2218,7 +2219,20 @@ function renderCobros(){
       fCobEspHTML = `<span style="color:${color};font-weight:600">${fCobStr}</span>`;
       diasHTML = `<span style="color:${color};font-weight:700">${txt}</span>`;
     }
-    return `<div style="display:grid;grid-template-columns:1.7fr 1fr 0.8fr 1fr 1.2fr 1.1fr 1fr 110px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
+    // Columna Folio: si tiene factura muestra "SH-1811" + link al PDF;
+    // si no, botón para subir el archivo (PDF o XML CFDI).
+    let folioHTML;
+    if(p.factura_folio){
+      const folioTxt = (p.factura_serie?p.factura_serie+'-':'') + p.factura_folio;
+      const pdfLink = p.factura_pdf_url || p.factura_xml_url || '';
+      folioHTML = pdfLink
+        ? `<a href="${pdfLink}" target="_blank" style="color:var(--green);font-weight:700;text-decoration:none;font-size:11px" title="Ver factura">📄 ${escapeHtml(folioTxt)} ↗</a>`
+        : `<span style="color:var(--green);font-weight:700;font-size:11px">📄 ${escapeHtml(folioTxt)}</span>`;
+      folioHTML += `<button class="btn btn-ghost btn-xs" style="margin-left:4px;padding:2px 6px" title="Reemplazar factura" onclick="subirFacturaPedido('${p.id}')">✎</button>`;
+    } else {
+      folioHTML = `<button class="btn btn-ghost btn-xs" style="width:100%;font-size:11px" onclick="subirFacturaPedido('${p.id}')" title="Subir factura PDF o XML">📤 Subir factura</button>`;
+    }
+    return `<div style="display:grid;grid-template-columns:1.5fr 1fr 0.7fr 0.9fr 1.1fr 1.3fr 1fr 0.9fr 110px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
       <div>
         <div style="font-weight:600">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="font-size:10px;color:var(--text2)">${p.po||'—'}</div>
@@ -2227,6 +2241,7 @@ function renderCobros(){
       <div style="font-size:12px;color:var(--text)">${(p.piezas||0).toLocaleString()}</div>
       <div style="font-size:11px;color:var(--text2)">${fEnt}</div>
       <div>${fFactInput}</div>
+      <div>${folioHTML}</div>
       <div style="font-size:12px">${fCobEspHTML}</div>
       <div style="font-size:12px">${diasHTML}</div>
       <div>
@@ -2242,7 +2257,15 @@ function renderCobros(){
     const fEnt = p.fecha_entrega ? new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
     const fFact = p.fecha_factura ? new Date(p.fecha_factura+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
     const fCobReal = p.fecha_cobro ? new Date(p.fecha_cobro+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
-    return `<div style="display:grid;grid-template-columns:2fr 1fr 0.8fr 1fr 1fr 1fr 110px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
+    let folioCob = '<span style="color:var(--text3);font-size:11px">—</span>';
+    if(p.factura_folio){
+      const folioTxt = (p.factura_serie?p.factura_serie+'-':'') + p.factura_folio;
+      const pdfLink = p.factura_pdf_url || p.factura_xml_url || '';
+      folioCob = pdfLink
+        ? `<a href="${pdfLink}" target="_blank" style="color:var(--green);font-weight:600;text-decoration:none;font-size:11px">📄 ${escapeHtml(folioTxt)} ↗</a>`
+        : `<span style="color:var(--green);font-weight:600;font-size:11px">📄 ${escapeHtml(folioTxt)}</span>`;
+    }
+    return `<div style="display:grid;grid-template-columns:1.7fr 1fr 0.8fr 1fr 1fr 1.2fr 1fr 110px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
       <div>
         <div style="font-weight:600">${p.sub_cliente||p.cliente||'—'}</div>
         <div style="font-size:10px;color:var(--text2)">${p.po||'—'}</div>
@@ -2251,6 +2274,7 @@ function renderCobros(){
       <div style="font-size:12px;color:var(--text)">${(p.piezas||0).toLocaleString()}</div>
       <div style="font-size:12px;color:var(--text2)">${fEnt}</div>
       <div style="font-size:12px;color:var(--text2)">${fFact}</div>
+      <div>${folioCob}</div>
       <div style="font-size:12px;color:var(--green);font-weight:600">✓ ${fCobReal}</div>
       <div>
         <button class="btn btn-ghost btn-xs" onclick="toggleCobro('${p.id}',false)">↩ Desmarcar</button>
@@ -2258,11 +2282,11 @@ function renderCobros(){
     </div>`;
   };
 
-  const headerPendientes = `<div style="display:grid;grid-template-columns:1.7fr 1fr 0.8fr 1fr 1.2fr 1.1fr 1fr 110px;gap:8px;padding:6px 14px;margin-bottom:2px">
-    ${['Cliente','Venta','Piezas','F. Entrega','F. Factura','F. Cobro Esp.','Días pago',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">${h}</span>`).join('')}
+  const headerPendientes = `<div style="display:grid;grid-template-columns:1.5fr 1fr 0.7fr 0.9fr 1.1fr 1.3fr 1fr 0.9fr 110px;gap:8px;padding:6px 14px;margin-bottom:2px">
+    ${['Cliente','Venta','Piezas','F. Entrega','F. Factura','Folio Factura','F. Cobro Esp.','Días pago',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">${h}</span>`).join('')}
   </div>`;
-  const headerCobrados = `<div style="display:grid;grid-template-columns:2fr 1fr 0.8fr 1fr 1fr 1fr 110px;gap:8px;padding:6px 14px;margin-bottom:2px">
-    ${['Cliente','Venta','Piezas','F. Entrega','F. Factura','F. Cobro Real',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">${h}</span>`).join('')}
+  const headerCobrados = `<div style="display:grid;grid-template-columns:1.7fr 1fr 0.8fr 1fr 1fr 1.2fr 1fr 110px;gap:8px;padding:6px 14px;margin-bottom:2px">
+    ${['Cliente','Venta','Piezas','F. Entrega','F. Factura','Folio Factura','F. Cobro Real',''].map(h=>`<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2)">${h}</span>`).join('')}
   </div>`;
 
   document.getElementById('cobros-pendientes').innerHTML = pendientes.length
@@ -2284,6 +2308,278 @@ async function setFechaFactura(id, fecha){
   }catch(e){
     toast('Error: '+e.message,'err');
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FACTURAS: parser XML CFDI + parser PDF Aspel SAE + subida a Storage
+// ═══════════════════════════════════════════════════════════════════════
+
+// Cargar pdf.js lazy (solo cuando se necesita) — la primera factura PDF tarda
+// ~500ms más por la descarga del worker; subsecuentes son instantáneas.
+let _pdfJsReady = null;
+function ensurePdfJs(){
+  if(_pdfJsReady) return _pdfJsReady;
+  _pdfJsReady = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js';
+    s.onload = () => {
+      try {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+        resolve();
+      } catch(e){ reject(e); }
+    };
+    s.onerror = () => reject(new Error('No se pudo cargar pdf.js'));
+    document.head.appendChild(s);
+  });
+  return _pdfJsReady;
+}
+
+async function extraerTextoPDF(file){
+  await ensurePdfJs();
+  const arr = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({data: arr}).promise;
+  let texto = '';
+  for(let i = 1; i <= pdf.numPages; i++){
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    texto += tc.items.map(it => it.str).join(' ') + '\n';
+  }
+  return texto;
+}
+
+// Parsear XML CFDI 4.0 — es 100% confiable porque es estructurado
+function parsearXMLCFDI(xmlText){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'text/xml');
+  // Verificar que no haya error de parsing
+  if(doc.querySelector('parsererror')) throw new Error('XML inválido');
+  // El root es <cfdi:Comprobante>
+  const comp = doc.documentElement;
+  // Encontrar Concepto (primer concepto: trae NoIdentificacion que es el PO del MES)
+  const conceptos = doc.getElementsByTagNameNS('*', 'Concepto');
+  const concepto = conceptos.length ? conceptos[0] : null;
+  // TimbreFiscalDigital trae el UUID (folio fiscal del SAT)
+  const tfds = doc.getElementsByTagNameNS('*', 'TimbreFiscalDigital');
+  const tfd = tfds.length ? tfds[0] : null;
+  return {
+    serie: comp.getAttribute('Serie') || '',
+    folio: comp.getAttribute('Folio') || '',
+    fecha: (comp.getAttribute('Fecha') || '').substring(0,10),
+    po: concepto ? (concepto.getAttribute('NoIdentificacion') || '') : '',
+    uuid: tfd ? (tfd.getAttribute('UUID') || '') : '',
+    total: parseFloat(comp.getAttribute('Total') || '0'),
+  };
+}
+
+// Parsear factura PDF de Aspel SAE — los textos tienen estructura fija.
+// Tolerante a variaciones de espacio (pdf.js mete espacios variables al extraer).
+function parsearFacturaTexto(texto){
+  const norm = texto.replace(/\s+/g,' ');
+  const m = (re) => { const r = norm.match(re); return r ? r[1].trim() : ''; };
+  return {
+    serie: m(/Serie:\s*([A-Z0-9]+)/),
+    folio: m(/Folio:\s*(\d+)/),
+    fecha: m(/Fecha\s*:?\s*(\d{4}-\d{2}-\d{2})/),
+    po: m(/Pedido\s*:?\s*([\w-]+)/),
+    uuid: m(/Folio fiscal:\s*([A-F0-9-]{36})/i),
+    total: (() => {
+      // Total: en formato "Total 145.90" o en la línea después del subtotal
+      const t = m(/Total\s+([\d,]+\.\d{2})/);
+      return t ? parseFloat(t.replace(/,/g,'')) : 0;
+    })(),
+  };
+}
+
+// Wrapper: dado un File, devuelve los datos parseados sin importar si es PDF o XML
+async function parsearArchivoFactura(file){
+  const nombre = file.name.toLowerCase();
+  if(nombre.endsWith('.xml')){
+    const txt = await file.text();
+    return parsearXMLCFDI(txt);
+  } else if(nombre.endsWith('.pdf')){
+    const txt = await extraerTextoPDF(file);
+    return parsearFacturaTexto(txt);
+  }
+  throw new Error('Solo PDF o XML');
+}
+
+// Sube un archivo de factura al bucket facturas-sharp y guarda metadatos
+// en pipeline_mf. Devuelve la URL pública.
+async function subirArchivoFactura(file, pipelineId, datos){
+  const ext = file.name.toLowerCase().endsWith('.xml') ? 'xml' : 'pdf';
+  const folioTxt = datos.folio || Date.now();
+  const fname = `${pipelineId}/factura-${folioTxt}.${ext}`;
+  const url = `${SB_URL}/storage/v1/object/facturas-sharp/${fname}`;
+  const blob = new Blob([await file.arrayBuffer()], {type: ext==='xml' ? 'application/xml' : 'application/pdf'});
+  const r = await fetch(url, {
+    method:'POST',
+    headers:{...SB_H, 'Content-Type': blob.type, 'x-upsert':'true'},
+    body: blob
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return `${SB_URL}/storage/v1/object/public/facturas-sharp/${fname}`;
+}
+
+// Llamado desde el botón "📤 Subir factura" o "✎" en cada fila
+function subirFacturaPedido(pipelineId){
+  const p = PIPELINE.find(x => x.id === pipelineId);
+  if(!p){ toast('Pedido no encontrado','err'); return; }
+  // Crear input file invisible
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/pdf,application/xml,text/xml';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    toast('Procesando factura…');
+    try{
+      const datos = await parsearArchivoFactura(file);
+      if(!datos.folio && !datos.serie){
+        // Aún así permitir guardar el archivo, pero advertir
+        if(!confirm('No se pudo extraer el folio. ¿Subir de todos modos sin matchear datos?')) return;
+      }
+      // Si el PO de la factura no coincide con el del pedido, advertir
+      if(datos.po && p.po && String(datos.po).trim() !== String(p.po).trim()){
+        if(!confirm(`⚠️ El PO de la factura (${datos.po}) no coincide con el del pedido (${p.po}). ¿Continuar de todos modos?`)) return;
+      }
+      const url = await subirArchivoFactura(file, pipelineId, datos);
+      const isXml = file.name.toLowerCase().endsWith('.xml');
+      const patch = {
+        factura_serie: datos.serie || null,
+        factura_folio: datos.folio || null,
+        factura_uuid: datos.uuid || null,
+        factura_total: datos.total || null,
+      };
+      if(isXml) patch.factura_xml_url = url;
+      else patch.factura_pdf_url = url;
+      // Si no hay fecha_factura, usar la del archivo
+      if(!p.fecha_factura && datos.fecha) patch.fecha_factura = datos.fecha;
+      await sbPatch('pipeline_mf', patch, 'id=eq.'+pipelineId);
+      Object.assign(p, patch);
+      toast(`✓ Factura ${datos.serie||''}-${datos.folio||''} guardada`,'ok');
+      renderCobros();
+    }catch(err){
+      toast('Error: '+err.message, 'err');
+      console.error(err);
+    }
+  };
+  input.click();
+}
+
+// Importación bulk: el usuario sube varios archivos a la vez y se matchean
+// automáticamente por PO contra los pedidos en pipeline_mf.
+function abrirImportarFacturas(){
+  const old = document.getElementById('modal-imp-facturas');
+  if(old) old.remove();
+  const modal = document.createElement('div');
+  modal.id = 'modal-imp-facturas';
+  modal.className = 'modal-overlay';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:14px;max-width:780px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column">
+      <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:17px;font-weight:700">📤 Importar facturas</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">Sube uno o varios PDFs o XMLs. Se matchean automáticamente por PO.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-imp-facturas').remove()">✕</button>
+      </div>
+      <div style="padding:18px 22px;flex:1;overflow-y:auto">
+        <div id="imp-fac-drop" style="border:2px dashed var(--border2);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:all 0.2s"
+             ondragover="event.preventDefault();this.style.borderColor='var(--green)';this.style.background='var(--green-bg)'"
+             ondragleave="this.style.borderColor='';this.style.background=''"
+             ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';procesarFacturasBulk(event.dataTransfer.files)"
+             onclick="document.getElementById('imp-fac-input').click()">
+          <div style="font-size:36px;margin-bottom:8px">📄</div>
+          <div style="font-size:14px;font-weight:600">Arrastra aquí o click para seleccionar</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:4px">Acepta múltiples archivos · PDF o XML CFDI</div>
+        </div>
+        <input type="file" id="imp-fac-input" multiple accept="application/pdf,application/xml,text/xml" style="display:none" onchange="procesarFacturasBulk(this.files)">
+        <div id="imp-fac-results" style="margin-top:14px"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function procesarFacturasBulk(fileList){
+  if(!fileList || !fileList.length) return;
+  const cont = document.getElementById('imp-fac-results');
+  cont.innerHTML = `<div style="padding:14px;color:var(--text2);font-size:13px">⏳ Procesando ${fileList.length} archivo${fileList.length===1?'':'s'}…</div>`;
+  const resultados = [];
+  for(let i = 0; i < fileList.length; i++){
+    const file = fileList[i];
+    cont.innerHTML = `<div style="padding:14px;color:var(--text2);font-size:13px">⏳ Procesando ${i+1}/${fileList.length}: ${escapeHtml(file.name)}…</div>`;
+    try{
+      const datos = await parsearArchivoFactura(file);
+      // Buscar pedido por PO
+      const ped = PIPELINE.find(p => p.po && String(p.po).trim() === String(datos.po||'').trim());
+      resultados.push({file, datos, ped, ok: !!ped, err: ped ? '' : 'No se encontró pedido con PO '+(datos.po||'(vacío)')});
+    }catch(e){
+      resultados.push({file, datos:{}, ped:null, ok:false, err: e.message});
+    }
+  }
+  // Mostrar preview con checkboxes para que el usuario apruebe
+  const html = `
+    <div style="margin-bottom:10px;font-size:13px;font-weight:600">${resultados.filter(r=>r.ok).length} de ${resultados.length} se vincularán automáticamente</div>
+    <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:30px 1fr 90px 100px 1.4fr 1fr;gap:8px;padding:8px 10px;background:var(--bg3);font-size:10px;text-transform:uppercase;font-weight:700;color:var(--text2)">
+        <span></span><span>Archivo</span><span>Serie/Folio</span><span>PO factura</span><span>Pedido (cliente)</span><span>Status</span>
+      </div>
+      ${resultados.map((r, i) => `
+        <div style="display:grid;grid-template-columns:30px 1fr 90px 100px 1.4fr 1fr;gap:8px;padding:8px 10px;align-items:center;font-size:12px;border-top:1px solid var(--border);background:${r.ok?'transparent':'var(--red-bg)'}">
+          <input type="checkbox" id="impfac-${i}" ${r.ok?'checked':''} ${r.ok?'':'disabled'}>
+          <span style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.file.name)}</span>
+          <span style="font-weight:600">${escapeHtml(r.datos.serie||'')}-${escapeHtml(r.datos.folio||'?')}</span>
+          <span style="font-family:monospace;color:var(--text2)">${escapeHtml(r.datos.po||'—')}</span>
+          <span style="font-size:11px">${r.ped ? '<strong>'+escapeHtml(r.ped.sub_cliente||r.ped.cliente||'?')+'</strong>' : '—'}</span>
+          <span style="font-size:11px;color:${r.ok?'var(--green)':'var(--red)'}">${r.ok?'✓ Listo':escapeHtml(r.err)}</span>
+        </div>
+      `).join('')}
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-imp-facturas').remove()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-imp-fac" onclick='confirmarImportarFacturas(${JSON.stringify(resultados.map(r=>({fileIdx:resultados.indexOf(r),datos:r.datos,pedId:r.ped?.id||null,ok:r.ok})))})'>Confirmar selección</button>
+    </div>
+  `;
+  cont.innerHTML = html;
+  // Guardar referencia a archivos en una variable global porque JSON no serializa Files
+  window._impFacFiles = resultados.map(r => r.file);
+}
+
+async function confirmarImportarFacturas(items){
+  const sel = items.filter((it, i) => {
+    const cb = document.getElementById('impfac-'+i);
+    return cb && cb.checked && it.ok;
+  });
+  if(!sel.length){ toast('Nada seleccionado','err'); return; }
+  const btn = document.getElementById('btn-confirmar-imp-fac');
+  if(btn){ btn.disabled = true; btn.textContent = 'Subiendo…'; }
+  let ok = 0, errs = 0;
+  for(const item of sel){
+    try{
+      const file = window._impFacFiles[item.fileIdx];
+      const url = await subirArchivoFactura(file, item.pedId, item.datos);
+      const isXml = file.name.toLowerCase().endsWith('.xml');
+      const p = PIPELINE.find(x => x.id === item.pedId);
+      const patch = {
+        factura_serie: item.datos.serie || null,
+        factura_folio: item.datos.folio || null,
+        factura_uuid: item.datos.uuid || null,
+        factura_total: item.datos.total || null,
+      };
+      if(isXml) patch.factura_xml_url = url;
+      else patch.factura_pdf_url = url;
+      if(p && !p.fecha_factura && item.datos.fecha) patch.fecha_factura = item.datos.fecha;
+      await sbPatch('pipeline_mf', patch, 'id=eq.'+item.pedId);
+      if(p) Object.assign(p, patch);
+      ok++;
+    }catch(e){ errs++; console.error(e); }
+  }
+  toast(`✓ ${ok} factura${ok===1?'':'s'} importada${ok===1?'':'s'}${errs?' · '+errs+' con error':''}`, errs?'err':'ok');
+  document.getElementById('modal-imp-facturas')?.remove();
+  delete window._impFacFiles;
+  renderCobros();
 }
 
 function exportarCobrosExcel(){
