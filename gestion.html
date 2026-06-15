@@ -1141,7 +1141,7 @@ function renderPipeline(){
     <span></span>
     <span></span>
   </div>`;
-  document.getElementById('pipeline-completados').innerHTML=completados.length?(compHeader+completados.slice(0,10).map(p=>{
+  document.getElementById('pipeline-completados').innerHTML=completados.length?(compHeader+completados.map(p=>{
     const fPed2=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt2=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const margenColor2=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
