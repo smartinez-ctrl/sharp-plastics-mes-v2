@@ -1108,7 +1108,7 @@ function renderPipeline(){
     const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const cellMap={
       cliente:`<div style="min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${p.sub_cliente||p.cliente||'—'}</div><div style="margin-top:2px">${tintas}</div></div>`,
-      po:`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text)">${p.po||'—'}</div>`,
+      po:`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text)">${p.po||'—'}${p.factura_folio?`<br><a href="${p.factura_pdf_url||p.factura_xml_url||'#'}" target="_blank" onclick="event.stopPropagation()" style="color:var(--green);font-weight:700;text-decoration:none;font-size:10px">📄 ${p.factura_serie||''}-${p.factura_folio} ↗</a>`:''}</div>`,
       capacidad:`<div style="font-size:12px;text-align:center;color:var(--text)">${p.capacidad||'—'}</div>`,
       color_botella:colorBotellaChip(p.color_botella),
       piezas:`<div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center;color:var(--text)">${(p.piezas||0).toLocaleString()}</div>`,
@@ -1152,7 +1152,7 @@ function renderPipeline(){
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.sub_cliente||p.cliente||'—'}</div>
         ${tintasC?`<div style="margin-top:3px">${tintasC}</div>`:''}
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text2)">${p.po||'—'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text2)">${p.po||'—'}${p.factura_folio?`<br><a href="${p.factura_pdf_url||p.factura_xml_url||'#'}" target="_blank" onclick="event.stopPropagation()" style="color:var(--green);font-weight:700;text-decoration:none;font-size:10px">📄 ${p.factura_serie||''}-${p.factura_folio} ↗</a>`:''}</div>
       <div style="font-size:12px;text-align:center;color:var(--text2)">${p.capacidad||'—'}</div>
       ${colorBotellaChip(p.color_botella)}
       <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:600;text-align:center">${(p.piezas||0).toLocaleString()}</div>
