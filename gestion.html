@@ -503,6 +503,12 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
           <button class="btn btn-ghost btn-sm" id="btn-ver-po" type="button" style="display:none" onclick="window.open(document.getElementById('mp-pdf-po').value,'_blank')">👁 Ver</button>
         </div>
       </div>
+      <div class="field" id="mp-pdf-aprobacion-field" style="display:none"><label>PDF de aprobación (revisión enviada)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="mp-pdf-aprobacion" readonly style="opacity:0.7;flex:1">
+          <button class="btn btn-ghost btn-sm" type="button" onclick="window.open(document.getElementById('mp-pdf-aprobacion').value,'_blank')">📄 Ver PDF</button>
+        </div>
+      </div>
       <div class="field"><label>Estado</label><select id="mp-estado"><option value="Pendiente">Pendiente</option><option value="En ajuste">En ajuste</option><option value="En producción">En producción</option><option value="Completado">Completado</option><option value="Entregado">Entregado</option><option value="Cancelado">Cancelado</option></select></div>
     </div>
     <div id="mp-cotizacion-resumen" style="display:none;margin-bottom:14px"></div>
@@ -1228,21 +1234,35 @@ async function abrirDetallePedido(id){
   const soloLectura=esCompletado&&!esMaster;
   document.getElementById('modal-pedido-titulo').textContent=`${p.sub_cliente||p.cliente||'Pedido'} — ${p.capacidad?p.capacidad+'ml':''}${esCompletado?(' · '+(esMaster?'✏️ Editable (Master)':'🔒 Solo lectura')):''}`;
 
-  // Banner de rechazo: reset y luego consultar orden de produccion
+  // Banner de rechazo + link al PDF de aprobación: reset y luego consultar orden de produccion
   const banner=document.getElementById('mp-banner-rechazo');
   if(banner){banner.style.display='none';}
+  const pdfField=document.getElementById('mp-pdf-aprobacion-field');
+  const pdfInput=document.getElementById('mp-pdf-aprobacion');
+  if(pdfField) pdfField.style.display='none';
+  if(pdfInput) pdfInput.value='';
   try {
     const ordenRes=await sbGet('ordenes_produccion',`pipeline_id=eq.${id}&select=id,aprobacion_estado,aprobacion_motivo_rechazo,pdf_aprobacion_url,orden_op&order=created_at.desc&limit=1`);
-    if(ordenRes && ordenRes[0] && ordenRes[0].aprobacion_estado==='rechazado'){
+    if(ordenRes && ordenRes[0]){
       const o=ordenRes[0];
-      document.getElementById('mp-motivo-rechazo').textContent=o.aprobacion_motivo_rechazo || 'Sin motivo capturado';
-      const link=document.getElementById('mp-ver-checklist');
-      if(link){
-        if(o.pdf_aprobacion_url){ link.href=o.pdf_aprobacion_url; link.style.display=''; }
-        else { link.style.display='none'; }
+      // Mostrar campo con link al PDF si existe (sin importar el estado)
+      if(o.pdf_aprobacion_url){
+        if(pdfInput) pdfInput.value=o.pdf_aprobacion_url;
+        if(pdfField) pdfField.style.display='';
       }
-      window._ordenRechazadaActual = o.id;
-      if(banner) banner.style.display='';
+      // Banner rojo solo si está rechazado
+      if(o.aprobacion_estado==='rechazado'){
+        document.getElementById('mp-motivo-rechazo').textContent=o.aprobacion_motivo_rechazo || 'Sin motivo capturado';
+        const link=document.getElementById('mp-ver-checklist');
+        if(link){
+          if(o.pdf_aprobacion_url){ link.href=o.pdf_aprobacion_url; link.style.display=''; }
+          else { link.style.display='none'; }
+        }
+        window._ordenRechazadaActual = o.id;
+        if(banner) banner.style.display='';
+      } else {
+        window._ordenRechazadaActual = null;
+      }
     } else {
       window._ordenRechazadaActual = null;
     }
