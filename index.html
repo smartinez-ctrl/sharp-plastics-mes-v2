@@ -780,8 +780,9 @@ async function mostrarChecklistAprobacion(ordenId, token) {
 
   document.body.innerHTML = `
     <style>
-      body{margin:0;padding:0;background:#0d0f12;color:#fff;font-family:-apple-system,Segoe UI,sans-serif;min-height:100vh}
-      .cl-wrap{max-width:640px;margin:0 auto;padding:24px 20px 60px}
+      body{margin:0!important;padding:0!important;background:#0d0f12!important;color:#fff!important;font-family:-apple-system,Segoe UI,sans-serif!important;min-height:100vh!important;height:auto!important;overflow:auto!important;display:block!important;-webkit-overflow-scrolling:touch}
+      html{overflow:auto!important;height:auto!important}
+      .cl-wrap{max-width:640px;margin:0 auto;padding:24px 20px 80px}
       .cl-header{background:#151821;border-radius:14px;padding:20px;margin-bottom:20px}
       .cl-title{font-size:20px;font-weight:700;margin:0 0 4px}
       .cl-sub{font-size:13px;color:#9ca3af;margin:0}
