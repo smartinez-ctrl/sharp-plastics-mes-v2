@@ -457,8 +457,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <div class="tbar-item"><span class="tbar-label">Fotos</span><span class="tbar-val" id="t-fotos" style="color:var(--amber)">00:00:00</span></div>
   </div>
   <div class="scroll"><div class="scroll-narrow">
-    <!-- Sección Validación de color (opcional) -->
-    <div style="margin-bottom:18px">
+    <!-- Sección Fotos de aprobación (movida arriba: se toman primero) -->
+    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Fotos de aprobación</div>
+    <div class="foto-grid">
+      <div class="foto-slot" id="foto-0" onclick="openFotoMenu(0)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(0,event)"><div class="foto-icon">📷</div><div class="foto-label">Frente</div></div>
+      <div class="foto-slot" id="foto-1" onclick="openFotoMenu(1)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(1,event)"><div class="foto-icon">📷</div><div class="foto-label">Reverso</div></div>
+      <div class="foto-slot" id="foto-2" onclick="openFotoMenu(2)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(2,event)"><div class="foto-icon">📷</div><div class="foto-label">Lado izquierdo</div></div>
+      <div class="foto-slot" id="foto-3" onclick="openFotoMenu(3)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(3,event)"><div class="foto-icon">📷</div><div class="foto-label">Lado derecho</div></div>
+    </div>
+    <input type="file" id="fi0" accept="image/*" style="display:none" onchange="handleFoto(0,this)">
+    <input type="file" id="fi1" accept="image/*" style="display:none" onchange="handleFoto(1,this)">
+    <input type="file" id="fi2" accept="image/*" style="display:none" onchange="handleFoto(2,this)">
+    <input type="file" id="fi3" accept="image/*" style="display:none" onchange="handleFoto(3,this)">
+    <input type="file" id="fc0" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(0,this)">
+    <input type="file" id="fc1" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(1,this)">
+    <input type="file" id="fc2" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(2,this)">
+    <input type="file" id="fc3" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(3,this)">
+    <!-- Sección Validación de color (opcional) — movida debajo de las fotos de aprobación -->
+    <div style="margin:20px 0 18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Validación de color</div>
         <span style="font-size:11px;color:var(--text3);font-weight:600">Opcional</span>
@@ -478,21 +494,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       <input type="file" id="fcc2" accept="image/*" capture="environment" style="display:none" onchange="handleFotoColor(2,this)">
       <input type="file" id="fcc3" accept="image/*" capture="environment" style="display:none" onchange="handleFotoColor(3,this)">
     </div>
-    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Fotos de aprobación</div>
-    <div class="foto-grid">
-      <div class="foto-slot" id="foto-0" onclick="openFotoMenu(0)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(0,event)"><div class="foto-icon">📷</div><div class="foto-label">Frente</div></div>
-      <div class="foto-slot" id="foto-1" onclick="openFotoMenu(1)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(1,event)"><div class="foto-icon">📷</div><div class="foto-label">Reverso</div></div>
-      <div class="foto-slot" id="foto-2" onclick="openFotoMenu(2)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(2,event)"><div class="foto-icon">📷</div><div class="foto-label">Lado izquierdo</div></div>
-      <div class="foto-slot" id="foto-3" onclick="openFotoMenu(3)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(3,event)"><div class="foto-icon">📷</div><div class="foto-label">Lado derecho</div></div>
-    </div>
-    <input type="file" id="fi0" accept="image/*" style="display:none" onchange="handleFoto(0,this)">
-    <input type="file" id="fi1" accept="image/*" style="display:none" onchange="handleFoto(1,this)">
-    <input type="file" id="fi2" accept="image/*" style="display:none" onchange="handleFoto(2,this)">
-    <input type="file" id="fi3" accept="image/*" style="display:none" onchange="handleFoto(3,this)">
-    <input type="file" id="fc0" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(0,this)">
-    <input type="file" id="fc1" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(1,this)">
-    <input type="file" id="fc2" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(2,this)">
-    <input type="file" id="fc3" accept="image/*" capture="environment" style="display:none" onchange="handleFoto(3,this)">
     <div id="fotos-upload-status" style="display:none;margin:0 0 12px">
       <div style="background:var(--bg3);border-radius:10px;padding:12px 16px">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px">
@@ -664,14 +665,41 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 </div>
 
 <div class="modal-overlay" id="modal-empaque-prod">
-  <div style="background:var(--bg2);border-radius:16px;padding:20px;width:92%;max-width:480px;max-height:90vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div style="font-size:15px;font-weight:700">📦 Fotos de empaque</div>
+  <div style="background:var(--bg2);border-radius:16px;padding:20px;width:94%;max-width:560px;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:var(--bg2);padding-bottom:8px;z-index:2">
+      <div style="font-size:15px;font-weight:700">📦 Fotos de empaque y entrega</div>
       <button onclick="cerrarEmpaqueProduccion()" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer">×</button>
     </div>
-    <div id="empaque-prod-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px"></div>
+
+    <!-- Sección 1: Cajas abiertas -->
+    <div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">📦 Cajas abiertas (botellas visibles)</div>
+        <button onclick="agregarSlotEmpaque('abiertas')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--amber);padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">+ Agregar</button>
+      </div>
+      <div id="empaque-abiertas-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    </div>
+
+    <!-- Sección 2: Cajas cerradas -->
+    <div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">📦 Cajas cerradas (etiquetas)</div>
+        <button onclick="agregarSlotEmpaque('cerradas')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--amber);padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">+ Agregar</button>
+      </div>
+      <div id="empaque-cerradas-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    </div>
+
+    <!-- Sección 3: Entrega Fedex -->
+    <div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">🚚 Entrega a Fedex</div>
+        <button onclick="agregarSlotEmpaque('fedex')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--amber);padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">+ Agregar</button>
+      </div>
+      <div id="empaque-fedex-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    </div>
+
     <input type="file" id="file-empaque-prod" accept="image/*" style="display:none" onchange="handleEmpaqueProd(this)">
-    <button class="btn btn-primary btn-full" id="btn-guardar-empaque-prod" onclick="guardarEmpaqueProd()">💾 Guardar fotos</button>
+    <button class="btn btn-primary btn-full" id="btn-guardar-empaque-prod" onclick="guardarEmpaqueProd()" style="margin-top:8px">💾 Guardar todo</button>
   </div>
 </div>
 
@@ -1780,35 +1808,39 @@ async function renderDashboard(){
 // ══════════════════════════════════════════════════════
 // NUEVA ORDEN
 // ══════════════════════════════════════════════════════
-// ── Fotos empaque desde producción ───────────────────
-let _empaquesProd=[null,null,null,null,null,null];
-let _empaquesProdPipeId=null;
+// ── Fotos empaque desde producción (3 secciones dinámicas) ─────────
+// Estado: cada sección es un array de URLs (http:// existente) o
+// dataURL base64 (foto nueva sin subir). Se guarda en pipeline_mf en
+// las columnas fotos_empaque_abiertas, fotos_empaque_cerradas, fotos_fedex.
+let _empaquesProdData = { abiertas: [], cerradas: [], fedex: [] };
+let _empaquesProdPipeId = null;
+// Slots por default por sección (mínimo). Se puede agregar más con "+ Agregar".
+const _EMP_DEFAULTS = { abiertas: 4, cerradas: 4, fedex: 2 };
+const _EMP_LABELS = { abiertas: 'Abierta', cerradas: 'Cerrada', fedex: 'Fedex' };
+// Guarda qué sección + índice se está editando ahora
+window._empaqueProdTarget = { seccion: 'abiertas', idx: 0 };
 
 async function abrirEmpaqueProduccion(pipelineId){
-  _empaquesProdPipeId=pipelineId;
-  _empaquesProd=[null,null,null,null,null,null];
-  const labels=['Vista 1','Vista 2','Vista 3','Vista 4','Vista 5','Vista 6'];
-  const grid=document.getElementById('empaque-prod-grid');
-  grid.innerHTML=labels.map((l,i)=>`
-    <div onclick="selEmpaqueSlotProd(${i})"
-      ondragover="event.preventDefault();document.getElementById('emp-prod-${i}').style.borderColor='var(--amber)'"
-      ondragleave="document.getElementById('emp-prod-${i}').style.borderColor=''"
-      ondrop="event.preventDefault();document.getElementById('emp-prod-${i}').style.borderColor='';dropEmpaqueProd(${i},event)">
-      <div id="emp-prod-${i}" style="aspect-ratio:4/3;background:var(--bg3);border:2px dashed var(--border2);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:.2s">
-        <span style="font-size:20px">📷</span>
-        <span style="font-size:10px;color:var(--text3);margin-top:4px">${l}</span>
-      </div>
-    </div>`).join('');
-  // Cargar existentes
-  try{
-    const r=await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=fotos_empaque',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
-    const rows=await r.json();
-    if(rows&&rows[0]&&Array.isArray(rows[0].fotos_empaque)){
-      rows[0].fotos_empaque.forEach((url,i)=>{
-        if(url&&i<6){_empaquesProd[i]=url;mostrarEmpaqueProdSlot(i,url);}
-      });
+  _empaquesProdPipeId = pipelineId;
+  _empaquesProdData = { abiertas: [], cerradas: [], fedex: [] };
+
+  // Cargar existentes de las 3 columnas nuevas
+  try {
+    const r = await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=fotos_empaque_abiertas,fotos_empaque_cerradas,fotos_fedex',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const rows = await r.json();
+    if (rows && rows[0]) {
+      _empaquesProdData.abiertas = Array.isArray(rows[0].fotos_empaque_abiertas) ? rows[0].fotos_empaque_abiertas.filter(Boolean) : [];
+      _empaquesProdData.cerradas = Array.isArray(rows[0].fotos_empaque_cerradas) ? rows[0].fotos_empaque_cerradas.filter(Boolean) : [];
+      _empaquesProdData.fedex = Array.isArray(rows[0].fotos_fedex) ? rows[0].fotos_fedex.filter(Boolean) : [];
     }
-  }catch(e){}
+  } catch(e) { console.warn('load empaque:', e.message); }
+
+  // Rellenar hasta el mínimo con slots vacíos (null) para que se vean los espacios
+  ['abiertas','cerradas','fedex'].forEach(sec => {
+    while (_empaquesProdData[sec].length < _EMP_DEFAULTS[sec]) _empaquesProdData[sec].push(null);
+  });
+
+  renderTodasLasSeccionesEmpaque();
   document.getElementById('modal-empaque-prod').classList.add('open');
 }
 
@@ -1816,58 +1848,127 @@ function cerrarEmpaqueProduccion(){
   document.getElementById('modal-empaque-prod').classList.remove('open');
 }
 
-function selEmpaqueSlotProd(i){
-  window._empaqueProdIdx=i;
+// Renderiza los 3 grids de una vez
+function renderTodasLasSeccionesEmpaque(){
+  ['abiertas','cerradas','fedex'].forEach(renderSeccionEmpaque);
+}
+
+function renderSeccionEmpaque(seccion){
+  const grid = document.getElementById('empaque-'+seccion+'-grid');
+  if (!grid) return;
+  const arr = _empaquesProdData[seccion];
+  const label = _EMP_LABELS[seccion];
+  grid.innerHTML = arr.map((val, i) => {
+    const hasImg = val && (val.startsWith('http') || val.startsWith('data:'));
+    return `
+      <div style="position:relative">
+        <div onclick="selEmpaqueSlotProd('${seccion}',${i})"
+          ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';dropEmpaqueProd('${seccion}',${i},event)"
+          style="aspect-ratio:4/3;background:var(--bg3);border:2px dashed var(--border2);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:.2s;cursor:pointer">
+          ${hasImg
+            ? `<img src="${val}" style="width:100%;height:100%;object-fit:cover">`
+            : `<span style="font-size:20px">📷</span><span style="font-size:10px;color:var(--text3);margin-top:4px">${label} ${i+1}</span>`
+          }
+        </div>
+        ${hasImg ? `<button onclick="eliminarFotoEmpaque('${seccion}',${i})" style="position:absolute;top:4px;right:4px;background:rgba(220,38,38,0.9);color:#fff;border:none;width:22px;height:22px;border-radius:50%;font-size:14px;cursor:pointer;line-height:1;padding:0" title="Eliminar">×</button>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function agregarSlotEmpaque(seccion){
+  if (_empaquesProdData[seccion].length >= 30) { toast('Máximo 30 fotos por sección','err'); return; }
+  _empaquesProdData[seccion].push(null);
+  renderSeccionEmpaque(seccion);
+}
+
+function eliminarFotoEmpaque(seccion, idx){
+  // Elimina la foto pero deja el slot vacío (para no reindexar todo)
+  _empaquesProdData[seccion][idx] = null;
+  renderSeccionEmpaque(seccion);
+}
+
+function selEmpaqueSlotProd(seccion, i){
+  window._empaqueProdTarget = { seccion, idx: i };
   document.getElementById('file-empaque-prod').click();
 }
+
 function handleEmpaqueProd(input){
-  if(!input.files||!input.files[0])return;
-  const i=window._empaqueProdIdx||0;
-  const reader=new FileReader();
-  reader.onload=e=>{_empaquesProd[i]=e.target.result;mostrarEmpaqueProdSlot(i,e.target.result);};
+  if (!input.files || !input.files[0]) return;
+  const { seccion, idx } = window._empaqueProdTarget || {};
+  if (!seccion) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _empaquesProdData[seccion][idx] = e.target.result;
+    renderSeccionEmpaque(seccion);
+  };
   reader.readAsDataURL(input.files[0]);
-  input.value='';
+  input.value = '';
 }
-function dropEmpaqueProd(i,event){
-  const file=event.dataTransfer&&event.dataTransfer.files&&event.dataTransfer.files[0];
-  if(!file||!file.type.startsWith('image/')){return;}
-  const reader=new FileReader();
-  reader.onload=e=>{_empaquesProd[i]=e.target.result;mostrarEmpaqueProdSlot(i,e.target.result);};
+
+function dropEmpaqueProd(seccion, i, event){
+  const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _empaquesProdData[seccion][i] = e.target.result;
+    renderSeccionEmpaque(seccion);
+  };
   reader.readAsDataURL(file);
 }
-function mostrarEmpaqueProdSlot(i,src){
-  const slot=document.getElementById('emp-prod-'+i);
-  if(slot)slot.innerHTML='<img src="'+src+'" style="width:100%;height:100%;object-fit:cover">';
-}
+
 async function guardarEmpaqueProd(){
-  if(!_empaquesProdPipeId)return;
-  const btn=document.getElementById('btn-guardar-empaque-prod');
-  if(btn){btn.disabled=true;btn.textContent='Subiendo...';}
-  try{
-    const urls=[];
-    for(let i=0;i<6;i++){
-      const f=_empaquesProd[i];
-      if(!f){urls.push(null);continue;}
-      if(f.startsWith('http')){urls.push(f);continue;}
-      const base64=f.replace(/^data:image\/\w+;base64,/,'');
-      const arr=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
-      const blob=new Blob([arr],{type:'image/jpeg'});
-      const fname=_empaquesProdPipeId+'/empaque-'+i+'-'+Date.now()+'.jpg';
-      const r=await fetch(SB_URL+'/storage/v1/object/fotos-aprobacion/'+fname,{
-        method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'image/jpeg','x-upsert':'true'},body:blob
-      });
-      if(r.ok)urls.push(SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+fname);
-      else urls.push(null);
-      if(btn)btn.textContent='Subiendo '+(i+1)+'/6...';
+  if (!_empaquesProdPipeId) return;
+  const btn = document.getElementById('btn-guardar-empaque-prod');
+  if (btn) { btn.disabled = true; btn.textContent = 'Subiendo...'; }
+  try {
+    const secciones = ['abiertas','cerradas','fedex'];
+    const uploaded = { abiertas: [], cerradas: [], fedex: [] };
+    let totalPend = 0, hechas = 0;
+    // Contar cuántas nuevas hay para el progreso
+    secciones.forEach(sec => {
+      _empaquesProdData[sec].forEach(f => { if (f && !f.startsWith('http')) totalPend++; });
+    });
+    for (const sec of secciones) {
+      for (let i = 0; i < _empaquesProdData[sec].length; i++) {
+        const f = _empaquesProdData[sec][i];
+        if (!f) { uploaded[sec].push(null); continue; }
+        if (f.startsWith('http')) { uploaded[sec].push(f); continue; }
+        // Es dataURL base64 → subir
+        const base64 = f.replace(/^data:image\/\w+;base64,/, '');
+        const arr = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const blob = new Blob([arr], { type: 'image/jpeg' });
+        const fname = _empaquesProdPipeId + '/' + sec + '-' + i + '-' + Date.now() + '.jpg';
+        const r = await fetch(SB_URL+'/storage/v1/object/fotos-aprobacion/'+fname, {
+          method: 'POST',
+          headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+          body: blob,
+        });
+        if (r.ok) uploaded[sec].push(SB_URL+'/storage/v1/object/public/fotos-aprobacion/'+fname);
+        else uploaded[sec].push(null);
+        hechas++;
+        if (btn) btn.textContent = 'Subiendo '+hechas+'/'+totalPend+'...';
+      }
+      // Recortar trailing nulls para no guardar arrays con basura
+      while (uploaded[sec].length > 0 && uploaded[sec][uploaded[sec].length-1] === null) uploaded[sec].pop();
     }
-    await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+_empaquesProdPipeId,{
-      method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({fotos_empaque:urls})
+    await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+_empaquesProdPipeId, {
+      method: 'PATCH',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        fotos_empaque_abiertas: uploaded.abiertas,
+        fotos_empaque_cerradas: uploaded.cerradas,
+        fotos_fedex: uploaded.fedex,
+      }),
     });
     toast('Fotos guardadas ✓','ok');
     cerrarEmpaqueProduccion();
-  }catch(e){toast('Error: '+e.message,'err');}
-  finally{if(btn){btn.disabled=false;btn.textContent='💾 Guardar fotos';}}
+  } catch(e) {
+    toast('Error: '+e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar todo'; }
+  }
 }
 
 async function ocultarCompletadoProd(pipelineId){
@@ -2353,6 +2454,10 @@ async function verPDFCompletado(pipelineId, tipo){
       tintas:pipe.formula_tintas||[],
       fotos:fotos,
       fotosColor:fotosColor,
+      // Nuevas secciones cargadas desde pipeline_mf (arrays de URLs, sólo valores válidos)
+      fotosEmpaqueAbiertas: (Array.isArray(pipe.fotos_empaque_abiertas) ? pipe.fotos_empaque_abiertas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      fotosEmpaqueCerradas: (Array.isArray(pipe.fotos_empaque_cerradas) ? pipe.fotos_empaque_cerradas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      fotosFedex: (Array.isArray(pipe.fotos_fedex) ? pipe.fotos_fedex : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
       consumoReal:orden?.consumo_real_tintas||[],
       reajustes:orden?.reajustes||0,
     };
@@ -4974,11 +5079,14 @@ function generarPDF(){
     <tbody>${qaRows}</tbody>
   </table>
 
-  <!-- 4. FOTOS DE APROBACIÓN (hoja nueva, 4 por hoja en grid 2x2) -->
+  <!-- 4. FOTOS DE APROBACIÓN, VALIDACIÓN DE COLOR, EMPAQUE Y FEDEX (grid 2x2) -->
   ${(()=>{
     const tieneColor=S.fotosColor&&S.fotosColor.some(f=>f);
     const tieneBotellas=S.fotos&&S.fotos.some(f=>f);
-    if(!tieneColor&&!tieneBotellas)return '';
+    const tieneAbiertas = Array.isArray(S.fotosEmpaqueAbiertas) && S.fotosEmpaqueAbiertas.some(f=>f);
+    const tieneCerradas = Array.isArray(S.fotosEmpaqueCerradas) && S.fotosEmpaqueCerradas.some(f=>f);
+    const tieneFedex    = Array.isArray(S.fotosFedex) && S.fotosFedex.some(f=>f);
+    if(!tieneColor&&!tieneBotellas&&!tieneAbiertas&&!tieneCerradas&&!tieneFedex)return '';
     const labels=['Front','Back','Left side','Right side'];
     const labelsColor=['Color 1','Color 2','Color 3','Color 4'];
     // Fotos en grid 2x2 (4 fotos por hoja máximo). Cada par va en una <tr>
@@ -4987,7 +5095,7 @@ function generarPDF(){
       let rows='';
       for(let i=0;i<arr.length;i+=2){
         const a=arr[i],b=arr[i+1];
-        const labA=labs[i]||'',labB=labs[i+1]||'';
+        const labA=(labs&&labs[i])||'',labB=(labs&&labs[i+1])||'';
         rows+=`<tr style="page-break-inside:avoid;break-inside:avoid">
           <td style="width:50%;padding:3px 5px 6px 0;vertical-align:top">
             ${a?`<img src="${a}" style="width:100%;max-height:95mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:block"><div style="font-size:10px;color:#6b7280;text-align:center;margin-top:2px">${labA}</div>`:''}
@@ -4999,6 +5107,8 @@ function generarPDF(){
       }
       return rows;
     };
+    // Genera labels autonumerados para las secciones dinámicas
+    const autoLabels = (prefix, arr) => arr.map((_, i) => prefix + ' ' + (i + 1));
     let html=`<div style="page-break-before:always;break-before:page">`;
     if(tieneColor){
       html+=`<div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Color Validation</div>
@@ -5007,6 +5117,19 @@ function generarPDF(){
     if(tieneBotellas){
       html+=`<div class="section-title" style="${tieneColor?'':'margin-top:0;'}page-break-after:avoid;break-after:avoid">Approval Photos</div>
         <table style="width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed"><tbody>${buildRows(S.fotos,labels)}</tbody></table>`;
+    }
+    // Cajas abiertas — nueva hoja para que empiece limpio
+    if(tieneAbiertas){
+      html+=`<div style="page-break-before:always;break-before:page"><div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Packaging — Open Boxes</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;table-layout:fixed"><tbody>${buildRows(S.fotosEmpaqueAbiertas, autoLabels('Open box', S.fotosEmpaqueAbiertas))}</tbody></table></div>`;
+    }
+    if(tieneCerradas){
+      html+=`<div style="page-break-before:always;break-before:page"><div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Packaging — Closed Boxes (labels)</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;table-layout:fixed"><tbody>${buildRows(S.fotosEmpaqueCerradas, autoLabels('Closed box', S.fotosEmpaqueCerradas))}</tbody></table></div>`;
+    }
+    if(tieneFedex){
+      html+=`<div style="page-break-before:always;break-before:page"><div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Shipping — FedEx Handoff</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;table-layout:fixed"><tbody>${buildRows(S.fotosFedex, autoLabels('FedEx', S.fotosFedex))}</tbody></table></div>`;
     }
     html+=`</div>`;
     return html;
