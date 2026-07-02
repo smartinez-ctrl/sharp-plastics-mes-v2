@@ -6,12 +6,17 @@ const BASE_URL = 'https://sharp-plastics-mes-v2.vercel.app';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { orden_id, orden_op, cliente, sub_cliente, piezas, colores, foto_urls = [], foto_color_urls = [], observaciones, diseno_url } = req.body;
+  const {
+    orden_id, orden_op, cliente, sub_cliente, piezas, colores,
+    color_botella, color_tapa, po,
+    foto_urls = [], foto_color_urls = [], observaciones, diseno_url
+  } = req.body;
+
   if (!orden_id) return res.status(400).json({ error: 'orden_id requerido' });
 
-  console.log('send-approval: orden_id=', orden_id, 'foto_urls:', foto_urls.length, foto_urls.map(u => u ? 'OK' : 'null'), 'foto_color_urls:', foto_color_urls.length);
+  console.log('send-approval: orden_id=', orden_id, 'foto_urls:', foto_urls.length, 'foto_color_urls:', foto_color_urls.length);
 
-  // Token de aprobación + guardar foto_urls en la orden para que se conserven al recargar
+  // Token de aprobación + guardar foto_urls
   const token = Buffer.from(`${orden_id}:${Date.now()}:approve`).toString('base64url');
   await fetch(`${SB_URL}/rest/v1/ordenes_produccion?id=eq.${orden_id}`, {
     method: 'PATCH',
@@ -20,25 +25,48 @@ export default async function handler(req, res) {
       aprobacion_token: token,
       aprobacion_estado: 'pendiente',
       aprobacion_enviada_at: new Date().toISOString(),
-      foto_urls: foto_urls.filter(u => u && typeof u === 'string' && u.startsWith('http')), // solo URLs válidas (no dataURLs base64)
+      foto_urls: foto_urls.filter(u => u && typeof u === 'string' && u.startsWith('http')),
       foto_color_urls: foto_color_urls.filter(u => u && typeof u === 'string' && u.startsWith('http')),
     }),
   });
 
-  const approveUrl = `${BASE_URL}/api/approve-order?token=${token}&id=${orden_id}`;
-  const verFotosUrl = `${BASE_URL}/api/ver-fotos?id=${orden_id}`;
-  const fotoLabels = ['Frente', 'Reverso', 'Detalle tinta', 'Vista general'];
-  const fotosOk = foto_urls.filter(Boolean);
+  // Generar PDF de aprobacion combinado. Si falla, seguimos sin PDF.
+  let pdfAprobacionUrl = null;
+  try {
+    const pdfRes = await fetch(`${BASE_URL}/api/generate-approval-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orden_id, orden_op, cliente, sub_cliente, po, piezas, colores,
+        color_botella, color_tapa,
+        foto_urls: foto_urls.filter(Boolean),
+        foto_color_urls: foto_color_urls.filter(Boolean),
+        diseno_url,
+      }),
+    });
+    if (pdfRes.ok) {
+      const j = await pdfRes.json();
+      pdfAprobacionUrl = j.url;
+      console.log('PDF de aprobacion generado:', pdfAprobacionUrl);
+    } else {
+      console.warn('generate-approval-pdf fallo:', await pdfRes.text());
+    }
+  } catch (e) {
+    console.warn('generate-approval-pdf error:', e.message);
+  }
 
-  const fotosHTML = fotosOk.length > 0
-    ? `<div style="padding:0 32px;margin-bottom:24px;text-align:center">
-        <a href="${verFotosUrl}" target="_blank" style="display:inline-block;background:#0d0f12;color:#fff;font-size:14px;font-weight:600;padding:12px 32px;border-radius:10px;text-decoration:none">
-          📷 Ver fotos de aprobación
-        </a>
-        <p style="font-size:11px;color:#9ca3af;margin:8px 0 0">Se abre una página con todas las fotos</p>
-      ` + (diseno_url ? `<div style="text-align:center;margin-top:10px"><a href="${diseno_url}" target="_blank" style="display:inline-block;background:#1e2028;color:#f59e0b;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none">🎨 Ver diseño del cliente</a></div>` : '') + `
-      </div>`
-    : '';
+  const checklistUrl = `${BASE_URL}/?aprobar=${orden_id}&token=${token}`;
+
+  const pdfBloque = pdfAprobacionUrl ? `
+    <div style="padding:0 32px;margin-bottom:20px;text-align:center">
+      <a href="${pdfAprobacionUrl}" target="_blank" style="display:inline-block;background:#1e2028;color:#fef3c7;font-size:14px;font-weight:600;padding:12px 32px;border-radius:10px;text-decoration:none">
+        📄 Descargar PDF de revisión completo
+      </a>
+      <p style="font-size:11px;color:#9ca3af;margin:8px 0 0">Incluye diseño del cliente, fotos de aprobación y fotos de pantone (1 por página)</p>
+    </div>` : `
+    <div style="padding:0 32px;margin-bottom:20px;text-align:center">
+      <p style="font-size:12px;color:#dc2626;margin:0">⚠️ No se pudo generar el PDF combinado. Revisa las fotos directamente en el MES.</p>
+    </div>`;
 
   const emailHTML = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
@@ -49,21 +77,22 @@ export default async function handler(req, res) {
   </div>
   <div style="padding:24px 32px 0">
     <h1 style="margin:0 0 6px;font-size:20px;color:#111">Aprobación de ajuste requerida</h1>
-    <p style="margin:0;font-size:14px;color:#6b7280">Una orden está lista y esperando tu aprobación para iniciar producción.</p>
+    <p style="margin:0;font-size:14px;color:#6b7280">Descarga el PDF de revisión, revísalo con calma, y luego completa el checklist de aprobación en el sistema.</p>
   </div>
   <div style="margin:20px 32px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px">
     <table style="width:100%;border-collapse:collapse">
       <tr><td style="padding:4px 0;font-size:12px;color:#6b7280;width:35%">Orden</td><td style="font-size:14px;font-weight:600">${orden_op||'—'}</td></tr>
       <tr><td style="padding:4px 0;font-size:12px;color:#6b7280">Cliente</td><td style="font-size:14px;font-weight:600">${sub_cliente||cliente||'—'}</td></tr>
+      <tr><td style="padding:4px 0;font-size:12px;color:#6b7280">PO</td><td style="font-size:14px;font-weight:600">${po||'—'}</td></tr>
       <tr><td style="padding:4px 0;font-size:12px;color:#6b7280">Piezas</td><td style="font-size:14px;font-weight:600">${(piezas||0).toLocaleString()} pzas</td></tr>
       <tr><td style="padding:4px 0;font-size:12px;color:#6b7280">Colores</td><td style="font-size:14px;font-weight:600">${colores||'—'}</td></tr>
       ${observaciones?`<tr><td style="padding:4px 0;font-size:12px;color:#6b7280;vertical-align:top">Notas</td><td style="font-size:13px">${observaciones}</td></tr>`:''}
     </table>
   </div>
-  ${fotosHTML}
-  <div style="padding:24px 32px;text-align:center">
-    <a href="${approveUrl}" style="display:inline-block;background:#16a34a;color:#fff;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;text-decoration:none">✅ Aprobar y liberar producción</a>
-    <p style="font-size:11px;color:#9ca3af;margin:12px 0 0">Link de un solo uso</p>
+  ${pdfBloque}
+  <div style="padding:12px 32px 24px;text-align:center">
+    <a href="${checklistUrl}" style="display:inline-block;background:#16a34a;color:#fff;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;text-decoration:none">✅ Checklist de aprobación</a>
+    <p style="font-size:11px;color:#9ca3af;margin:12px 0 0">Se abre el sistema con el checklist de 8 puntos.<br>Marca cada uno como Sí/No.</p>
   </div>
   <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:12px 32px;text-align:center">
     <p style="font-size:11px;color:#9ca3af;margin:0">Sharp Plastics MES · Sistema de ejecución de manufactura</p>
@@ -77,7 +106,7 @@ export default async function handler(req, res) {
     body: JSON.stringify({
       from: 'MES Sharp Plastics <onboarding@resend.dev>',
       to: [APPROVAL_EMAIL],
-      subject: `⏳ Aprobación requerida — ${orden_op||'Orden'} · ${sub_cliente||cliente||'—'}`,
+      subject: `⏳ Aprobacion requerida — ${orden_op||'Orden'} · ${sub_cliente||cliente||'—'}`,
       html: emailHTML,
     }),
   });
@@ -88,5 +117,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Error enviando email', detail: err });
   }
 
-  return res.status(200).json({ ok: true, fotos_subidas: fotosOk.length });
+  return res.status(200).json({
+    ok: true,
+    fotos_subidas: foto_urls.filter(Boolean).length,
+    pdf_aprobacion_url: pdfAprobacionUrl,
+  });
 }
