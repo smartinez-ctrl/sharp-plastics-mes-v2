@@ -384,6 +384,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
   </div>
   <div class="scroll"><div class="scroll-narrow">
     <div id="ajuste-resumen" class="card" style="margin-bottom:10px"></div>
+    <!-- Preview del diseño del cliente (mismo card que en la pantalla de setup) -->
+    <div class="card" id="ajuste-diseno-card" style="display:none;margin-bottom:10px">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Diseño del cliente</span>
+        <button class="btn btn-ghost btn-sm" onclick="abrirPdfDiseno()" style="font-size:11px">📄 Abrir PDF</button>
+      </div>
+      <div id="ajuste-diseno-preview" style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px;min-height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+        <span style="font-size:11px;color:var(--text3)">Cargando preview...</span>
+      </div>
+    </div>
     <div class="timer-card">
       <div class="timer-label" style="color:var(--amber)">Cronómetro de ajuste</div>
       <div class="timer-display stopped mono" id="timer-ajuste">00:00:00</div>
@@ -1269,15 +1279,18 @@ async function cargarPdfJs(){
   return window.pdfjsLib;
 }
 
-// Renderiza la primera página del PDF de diseño en la pantalla de setup.
-// Se llama al entrar a un pedido (goNuevaOrden → showScreen('orden')).
-// Si el pedido no tiene pdf_diseno_url, oculta el card y el botón "🎨 Diseño"
-// del bottom bar. El card se muestra con un canvas ajustado al ancho del contenedor.
-async function mostrarPreviewDiseno(){
-  const card = document.getElementById('ord-diseno-card');
-  const btnBottom = document.getElementById('btn-orden-diseno');
-  const previewBox = document.getElementById('ord-diseno-preview');
+// Renderiza la primera página del PDF de diseño en la pantalla indicada.
+// prefix: 'ord' para la pantalla de setup, 'ajuste' para la pantalla de ajuste.
+// Se llama al entrar a un pedido y al pasar a ajuste. Si el pedido no tiene
+// pdf_diseno_url, oculta el card correspondiente. El botón "🎨 Diseño" del
+// bottom bar de setup (btn-orden-diseno) también se oculta cuando no hay diseño.
+async function mostrarPreviewDiseno(prefix){
+  prefix = prefix || 'ord';
+  const card = document.getElementById(prefix + '-diseno-card');
+  const previewBox = document.getElementById(prefix + '-diseno-preview');
   if (!card || !previewBox) return;
+  // El botón del bottom bar sólo existe en la pantalla de setup ('ord')
+  const btnBottom = prefix === 'ord' ? document.getElementById('btn-orden-diseno') : null;
 
   const pipe = S.pipelineId && window._dashRows
     ? window._dashRows.find(p => p.id === S.pipelineId)
@@ -2646,7 +2659,7 @@ async function goNuevaOrden(idx, editandoAhora){
   }
   showScreen('orden');
   // Mostrar preview del PDF de diseño si el pedido tiene uno
-  mostrarPreviewDiseno();
+  mostrarPreviewDiseno('ord');
   renderSteps('steps-orden','orden');
   renderChips();
   renderColores();
@@ -2859,6 +2872,8 @@ async function cargarOrdenExistente(pipelineId){
         S.timers.ajuste.total = tAjusteReal;
         showScreen('ajuste');
         renderSteps('steps-ajuste','ajuste');
+        // Preview del PDF de diseño al recargar el pedido
+        mostrarPreviewDiseno('ajuste');
         setTimeout(()=>{
           const tAjEl=document.getElementById('timer-ajuste');
           if(tAjEl)tAjEl.textContent=fmt(S.timers.ajuste.s);
@@ -3212,6 +3227,8 @@ function goAjuste(){
   renderTMGrid('ajuste');
   renderTintasAjuste();
   updateOrderStrip();
+  // Preview del PDF de diseño (mismo card que en setup) — no bloquear el flujo
+  mostrarPreviewDiseno('ajuste');
   // Marcar pedido como "En ajuste" en cuanto el usuario entra a la pantalla
   // (no esperar al primer play del timer). Así si cierra la pestaña,
   // al volver el código carga la orden existente desde Supabase.
