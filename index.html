@@ -963,8 +963,6 @@ async function submitChecklist(resultado, motivo) {
   const status = document.getElementById('cl-status');
   if (status) status.innerHTML = '<div style="color:#9ca3af;font-size:13px">Enviando...</div>';
 
-  // Nota: aprobacion_respondida_at intencionalmente omitido — no existe la columna.
-  // La marca de tiempo se guarda dentro de aprobacion_checklist.revisado_at.
   const payload = {
     aprobacion_checklist: {
       ...d.state,
@@ -974,6 +972,7 @@ async function submitChecklist(resultado, motivo) {
     },
     aprobacion_estado: resultado,
     aprobacion_motivo_rechazo: resultado === 'rechazado' ? motivo : null,
+    aprobacion_respondida_at: new Date().toISOString(),
   };
 
   console.log('[checklist] submitChecklist payload:', payload);
