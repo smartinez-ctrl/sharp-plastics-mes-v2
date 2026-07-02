@@ -173,6 +173,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
   <div class="nav-section" id="nav-admin-section">
     <div class="nav-label">Administración</div>
     <div class="nav-item" id="nav-catalogos" onclick="showPage('catalogos',this)"><span class="nav-icon">⚙️</span>Catálogos</div>
+    <div class="nav-item" id="nav-pantones" onclick="showPage('pantones',this)"><span class="nav-icon">🎨</span>Pantones</div>
     <div class="nav-item" id="nav-usuarios" onclick="showPage('usuarios',this)"><span class="nav-icon">👥</span>Usuarios</div>
   </div>
   <div style="margin-top:auto;padding:12px;font-size:10px;color:var(--text3);text-align:center;font-family:'Space Mono',monospace">v2.0</div>
@@ -395,7 +396,46 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
   </table></div>
 </div>
 
+<div id="page-pantones" class="page">
+  <div class="ph-row"><div><div class="page-title">Catálogo de pantones</div><div class="page-sub">Registra los colores que usas para que el MES muestre swatches reales</div></div>
+    <div class="page-actions">
+      <input type="text" id="pantones-buscar" placeholder="Buscar código o nombre..." oninput="renderPantonesTabla()" style="padding:7px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--bg2);color:var(--text);font-size:13px;margin-right:8px">
+      <button class="btn btn-primary btn-sm" onclick="openModalPantoneG(null)">+ Nuevo pantone</button>
+    </div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th style="width:60px">Color</th><th>Código</th><th>Nombre</th><th style="width:110px">Hex</th><th>Notas</th><th style="width:120px">Agregado</th><th style="width:80px"></th></tr></thead>
+    <tbody id="pantones-tbody"><tr><td colspan="7" class="loading">Cargando...</td></tr></tbody>
+  </table></div>
+</div>
+
 </div></div>
+
+<!-- MODAL editar/crear pantone -->
+<div class="modal-overlay" id="modal-pantone-g">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title" id="modal-pantone-g-titulo">Nuevo pantone <button class="modal-close" onclick="closeModal('modal-pantone-g')">×</button></div>
+    <div class="field"><label>Código pantone <span style="color:var(--red)">*</span></label>
+      <input type="text" id="pg-codigo" placeholder="Ej: 161 C, Cool Gray 11, PMS 456">
+    </div>
+    <div class="field"><label>Nombre descriptivo</label>
+      <input type="text" id="pg-nombre" placeholder="Ej: Café oscuro, Verde militar">
+    </div>
+    <div class="field"><label>Color hex <span style="color:var(--red)">*</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="color" id="pg-hex-picker" value="#8890a4" style="width:60px;height:44px;padding:0;border:1px solid var(--border2);border-radius:8px;cursor:pointer" onchange="document.getElementById('pg-hex-text').value=this.value">
+        <input type="text" id="pg-hex-text" value="#8890a4" pattern="^#[0-9A-Fa-f]{6}$" style="flex:1;font-family:monospace" oninput="try{document.getElementById('pg-hex-picker').value=this.value}catch(_){}">
+      </div>
+    </div>
+    <div class="field"><label>Notas</label>
+      <textarea id="pg-notas" rows="2" placeholder="Ej: mezcla 60% amarillo + 40% rojo"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pantone-g')" style="flex:1">Cancelar</button>
+      <button class="btn btn-primary" id="btn-pg-guardar" onclick="guardarPantoneG()" style="flex:2">💾 Guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL IMPORTAR PDFs -->
 <div class="modal-overlay" id="modal-empaque">
@@ -654,6 +694,7 @@ function showPage(id,el){
   if(id==='cobros')renderCobros();
   if(id==='catalogos')loadCatalogTab('ct-tintas');
   if(id==='usuarios')loadUsuarios();
+  if(id==='pantones')loadPantonesG();
 }
 
 function switchCatTab(id,el){
@@ -3192,6 +3233,123 @@ async function guardarCatalogoItem(){
 }
 
 // USUARIOS
+// ══════════════════════════════════════════════════════
+// CATÁLOGO DE PANTONES
+// ══════════════════════════════════════════════════════
+let PANTONES = [];
+
+// Normaliza un código para lookup case-insensitive tolerante a formatos:
+// "PMS 161 C", "161c", "161 C" → todos → "161C".
+function normPantone(s){
+  return String(s||'').toUpperCase().replace(/^PMS\s*/,'').replace(/\s+/g,'').trim();
+}
+
+async function loadPantonesG(){
+  try{
+    PANTONES = await sbGet('pantones','select=codigo,codigo_norm,hex,nombre,notas,created_at,created_by&order=created_at.desc&limit=5000');
+  }catch(e){
+    console.error('loadPantonesG:', e);
+    PANTONES = [];
+    toast('Error cargando pantones: '+e.message.substring(0,80),'err');
+  }
+  renderPantonesTabla();
+}
+
+function renderPantonesTabla(){
+  const tbody = document.getElementById('pantones-tbody');
+  if(!tbody) return;
+  const q = (document.getElementById('pantones-buscar')?.value||'').toLowerCase().trim();
+  const filtrados = q
+    ? PANTONES.filter(p =>
+        (p.codigo||'').toLowerCase().includes(q) ||
+        (p.nombre||'').toLowerCase().includes(q) ||
+        normPantone(p.codigo).toLowerCase().includes(normPantone(q).toLowerCase())
+      )
+    : PANTONES;
+  if(!filtrados.length){
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">'+(q?'Sin resultados para "'+q+'"':'Aún no hay pantones registrados. Usa "+ Nuevo pantone" o regístralos desde el MES.')+'</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtrados.map(p => {
+    const fecha = p.created_at ? new Date(p.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+    const cod = p.codigo || '';
+    return `<tr>
+      <td><div style="width:36px;height:36px;border-radius:8px;background:${p.hex||'#8890a4'};border:1px solid var(--border2)"></div></td>
+      <td style="font-family:monospace;font-weight:700">${cod}</td>
+      <td>${p.nombre || '<span style="color:var(--text3)">—</span>'}</td>
+      <td style="font-family:monospace;font-size:12px">${p.hex||'—'}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(p.notas||'').replace(/"/g,'&quot;')}">${p.notas || '<span style="color:var(--text3)">—</span>'}</td>
+      <td style="font-size:11px;color:var(--text3)">${fecha}${p.created_by?'<br><span style="font-size:10px">'+p.created_by+'</span>':''}</td>
+      <td>
+        <button class="btn btn-ghost btn-xs" onclick="openModalPantoneG('${cod.replace(/'/g,"\\'")}')" title="Editar">✏️</button>
+        <button class="btn btn-ghost btn-xs" onclick="borrarPantoneG('${cod.replace(/'/g,"\\'")}')" title="Borrar" style="color:var(--red)">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openModalPantoneG(codigo){
+  const existente = codigo ? PANTONES.find(p => p.codigo === codigo) : null;
+  const isEdit = !!existente;
+  document.getElementById('modal-pantone-g-titulo').firstChild.textContent = isEdit ? 'Editar pantone ' : 'Nuevo pantone ';
+  const cod = document.getElementById('pg-codigo');
+  const nom = document.getElementById('pg-nombre');
+  const hexT = document.getElementById('pg-hex-text');
+  const hexP = document.getElementById('pg-hex-picker');
+  const not = document.getElementById('pg-notas');
+  if(cod){ cod.value = existente ? existente.codigo : ''; cod.readOnly = isEdit; cod.style.opacity = isEdit ? '0.7' : '1'; }
+  if(nom) nom.value = existente?.nombre || '';
+  const hex = existente?.hex || '#8890a4';
+  if(hexT) hexT.value = hex;
+  if(hexP) hexP.value = hex;
+  if(not) not.value = existente?.notas || '';
+  window._pantoneEditando = existente ? existente.codigo : null;
+  openModal('modal-pantone-g');
+}
+
+async function guardarPantoneG(){
+  const codigo = (document.getElementById('pg-codigo').value||'').trim();
+  const nombre = (document.getElementById('pg-nombre').value||'').trim() || null;
+  const hex = (document.getElementById('pg-hex-text').value||'').trim();
+  const notas = (document.getElementById('pg-notas').value||'').trim() || null;
+  if(!codigo){ toast('Falta código pantone','err'); return; }
+  if(!/^#[0-9A-Fa-f]{6}$/.test(hex)){ toast('Hex inválido (formato: #RRGGBB)','err'); return; }
+  const codigo_norm = normPantone(codigo);
+  const btn = document.getElementById('btn-pg-guardar');
+  if(btn){ btn.disabled = true; btn.textContent = 'Guardando...'; }
+  try{
+    if(window._pantoneEditando){
+      // Edit — solo campos editables (código es PK)
+      await sbPatch('pantones', {hex, nombre, notas, updated_at:new Date().toISOString()}, 'codigo=eq.'+encodeURIComponent(codigo));
+    } else {
+      // Nuevo — upsert por si existía
+      await fetch(SB_URL+'/rest/v1/pantones?on_conflict=codigo',{
+        method:'POST',
+        headers:{...SB_H,'Prefer':'resolution=merge-duplicates,return=minimal'},
+        body: JSON.stringify({codigo, codigo_norm, hex, nombre, notas, created_by: (USER&&USER.nombre)||null})
+      }).then(r=>{ if(!r.ok) throw new Error(r.status); });
+    }
+    toast('✓ Pantone guardado','ok');
+    closeModal('modal-pantone-g');
+    await loadPantonesG();
+  }catch(e){
+    toast('Error: '+String(e.message||e).substring(0,120),'err');
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = '💾 Guardar'; }
+  }
+}
+
+async function borrarPantoneG(codigo){
+  if(!confirm('¿Borrar el pantone "'+codigo+'" del catálogo?\n\nLos pedidos que lo usan seguirán mostrándolo como texto, solo perderán el swatch de color.')) return;
+  try{
+    await sbDelete('pantones', 'codigo=eq.'+encodeURIComponent(codigo));
+    toast('Pantone borrado','ok');
+    await loadPantonesG();
+  }catch(e){
+    toast('Error: '+e.message.substring(0,120),'err');
+  }
+}
+
 async function loadUsuarios(){
   const el=document.getElementById('usuarios-tbody');
   el.innerHTML='<tr><td colspan="6" class="loading"><div class="loading-spinner"></div></td></tr>';

@@ -681,6 +681,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
   </div>
 </div>
 
+<!-- Modal para registrar un pantone en el catálogo desde "colores a imprimir" -->
+<div class="modal-overlay" id="modal-registrar-pantone">
+  <div style="background:var(--bg2);border-radius:16px;padding:20px;width:92%;max-width:400px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700">🎨 Registrar pantone</div>
+      <button onclick="cerrarRegistrarPantone()" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+      Este pantone no está en el catálogo. Elige el color hex que mejor lo represente para que la próxima vez aparezca automáticamente.
+    </div>
+    <div class="field"><label>Código pantone</label>
+      <input type="text" id="pn-codigo" readonly style="opacity:0.7">
+    </div>
+    <div class="field"><label>Nombre descriptivo <span style="font-weight:400;color:var(--text3);font-size:10px">(opcional)</span></label>
+      <input type="text" id="pn-nombre" placeholder="Ej: Café oscuro, Verde militar">
+    </div>
+    <div class="field"><label>Color hex</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="color" id="pn-hex-picker" value="#8890a4" style="width:60px;height:44px;padding:0;border:1px solid var(--border2);border-radius:8px;cursor:pointer" onchange="document.getElementById('pn-hex-text').value=this.value">
+        <input type="text" id="pn-hex-text" value="#8890a4" pattern="^#[0-9A-Fa-f]{6}$" style="flex:1;font-family:monospace" oninput="try{document.getElementById('pn-hex-picker').value=this.value}catch(_){}">
+      </div>
+    </div>
+    <div class="field"><label>Notas <span style="font-weight:400;color:var(--text3);font-size:10px">(opcional)</span></label>
+      <textarea id="pn-notas" rows="2" placeholder="Ej: mezcla 60% amarillo + 40% rojo"></textarea>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="guardarPantoneNuevo()">💾 Guardar y aplicar</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-empaque-prod">
   <div style="background:var(--bg2);border-radius:16px;padding:20px;width:94%;max-width:560px;max-height:92vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:var(--bg2);padding-bottom:8px;z-index:2">
@@ -1246,7 +1275,55 @@ let S={
 // ══════════════════════════════════════════════════════
 function fmt(s){s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;return[h,m,sc].map(x=>String(x).padStart(2,'0')).join(':');}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
-function chex(n){const m={azul:'#4a9eff',verde:'#34d399',negro:'#555',rojo:'#f87171',amarillo:'#fbbf24',blanco:'#e8eaf0',naranja:'#fb923c',morado:'#a78bfa',rosa:'#f472b6'};return m[(n||'').toLowerCase()]||'#8890a4';}
+// Cache global de pantones registrados en la tabla public.pantones.
+// Se llena en loadPantones() al arrancar la app (login). Estructura:
+//   { "161C": { codigo:"161 C", hex:"#5C3317", nombre:"Café oscuro", ... }, ... }
+// La clave es el código NORMALIZADO (mayúsculas, sin espacios, sin "PMS").
+window._pantonesCache = window._pantonesCache || {};
+
+// Normaliza un código de pantone para lookup case-insensitive y tolerante a
+// formatos: "PMS 161 C", "161c", "161 C" → todos → "161C".
+function normPantone(s){
+  return String(s||'').toUpperCase().replace(/^PMS\s*/,'').replace(/\s+/g,'').trim();
+}
+
+// Devuelve el hex del pantone si está registrado en el catálogo, o null.
+function pantoneToHex(pantone){
+  if(!pantone) return null;
+  const k = normPantone(pantone);
+  if(!k) return null;
+  const p = window._pantonesCache[k];
+  return p ? p.hex : null;
+}
+
+// Devuelve un color hex para pintar el swatch de "colores a imprimir".
+// Prioridad: (1) pantone registrado en catálogo public.pantones,
+// (2) nombre en la mini-tabla hardcoded en español, (3) gris fallback.
+// Los llamados históricos usan chex(nombre); ahora acepta (nombre, pantone).
+function chex(nombre, pantone){
+  const p = pantoneToHex(pantone);
+  if (p) return p;
+  const m = {azul:'#4a9eff',verde:'#34d399',negro:'#555',rojo:'#f87171',amarillo:'#fbbf24',blanco:'#e8eaf0',naranja:'#fb923c',morado:'#a78bfa',rosa:'#f472b6'};
+  return m[(nombre||'').toLowerCase()] || '#8890a4';
+}
+
+// Carga el catálogo de pantones desde Supabase y lo mete en el cache global.
+// Se llama al inicio de sesión (loadUsers) y después de agregar/editar pantones.
+async function loadPantones(){
+  try{
+    const r = await fetch(SB_URL+'/rest/v1/pantones?select=codigo,codigo_norm,hex,nombre,notas&limit=5000',{
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    });
+    if(!r.ok) return;
+    const rows = await r.json();
+    const cache = {};
+    (rows||[]).forEach(p => {
+      const k = p.codigo_norm || normPantone(p.codigo);
+      if(k) cache[k] = p;
+    });
+    window._pantonesCache = cache;
+  }catch(e){ console.warn('loadPantones:', e.message); }
+}
 function mxn(n){return'$'+(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
 // Abre el PDF de diseño del pedido actual en una pestaña nueva.
 // Si no hay PDF cargado, muestra toast de aviso.
@@ -3043,12 +3120,19 @@ function toggleChip(key,id){
 function renderColores(){
   const el=document.getElementById('colores-list');if(!el)return;
   if(!S.orden.colores.length){el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Sin colores agregados</div>';return;}
-  el.innerHTML=S.orden.colores.map((c,i)=>`
+  el.innerHTML=S.orden.colores.map((c,i)=>{
+    // Está registrado el pantone? Si tiene pantone escrito pero no matchea el
+    // catálogo, ofrecer botón para registrarlo (swatch gris + botón "+ nuevo")
+    const enCatalogo = c.pantone ? !!pantoneToHex(c.pantone) : false;
+    const btnRegistrar = (c.pantone && !enCatalogo) ? `<span onclick="abrirRegistrarPantone(${i})" title="Registrar en catálogo" style="cursor:pointer;color:var(--amber);margin-left:6px;font-size:11px;font-weight:700;background:var(--amber-bg);border:1px solid var(--amber);border-radius:6px;padding:2px 7px">+ registrar</span>` : '';
+    return `
     <div class="color-tag">
-      <div class="color-swatch" style="background:${chex(c.nombre)}"></div>
+      <div class="color-swatch" style="background:${chex(c.nombre, c.pantone)}"></div>
       ${c.nombre}${c.pantone?' · <span style="font-family:monospace;font-size:10px">'+c.pantone+'</span>':''}
+      ${btnRegistrar}
       <span onclick="removeColor(${i})" style="cursor:pointer;color:var(--red);margin-left:4px;font-size:13px">×</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function addColor(){
   const n=document.getElementById('new-color-nombre').value.trim();
@@ -3068,6 +3152,80 @@ function addColor(){
   renderTintasAjuste();
 }
 function removeColor(i){S.orden.colores.splice(i,1);renderColores();renderTintasAjuste();}
+
+// ══════════════════════════════════════════════════════
+// CATÁLOGO DE PANTONES (registro rápido desde colores a imprimir)
+// ══════════════════════════════════════════════════════
+// Guarda temporalmente qué color de S.orden.colores estamos registrando
+// para poder re-renderizar al terminar. El código pantone se muestra
+// readonly en el modal (viene del color existente).
+window._pantoneRegistrando = null;
+
+function abrirRegistrarPantone(colorIdx){
+  const c = S.orden.colores[colorIdx];
+  if(!c || !c.pantone){ toast('Este color no tiene código pantone','err'); return; }
+  window._pantoneRegistrando = { colorIdx, codigo: c.pantone };
+  const codIn = document.getElementById('pn-codigo');
+  const nomIn = document.getElementById('pn-nombre');
+  const notIn = document.getElementById('pn-notas');
+  const hexT = document.getElementById('pn-hex-text');
+  const hexP = document.getElementById('pn-hex-picker');
+  if(codIn) codIn.value = c.pantone;
+  // Pre-llenar nombre con el nombre del color si existe
+  if(nomIn) nomIn.value = c.nombre || '';
+  if(notIn) notIn.value = '';
+  // Color inicial: gris; si tuviera nombre común que matchea la mini tabla,
+  // usarlo como sugerencia
+  const sug = chex(c.nombre, null); // fuerza fallback nombre → hex
+  if(hexT) hexT.value = sug;
+  if(hexP) hexP.value = sug;
+  document.getElementById('modal-registrar-pantone').classList.add('open');
+}
+
+function cerrarRegistrarPantone(){
+  document.getElementById('modal-registrar-pantone').classList.remove('open');
+  window._pantoneRegistrando = null;
+}
+
+async function guardarPantoneNuevo(){
+  const info = window._pantoneRegistrando;
+  if(!info){ cerrarRegistrarPantone(); return; }
+  const codigo = (document.getElementById('pn-codigo').value||'').trim();
+  const nombre = (document.getElementById('pn-nombre').value||'').trim() || null;
+  const hex = (document.getElementById('pn-hex-text').value||'').trim();
+  const notas = (document.getElementById('pn-notas').value||'').trim() || null;
+  if(!codigo){ toast('Falta código','err'); return; }
+  if(!/^#[0-9A-Fa-f]{6}$/.test(hex)){ toast('Hex inválido (ej: #5C3317)','err'); return; }
+  const codigo_norm = normPantone(codigo);
+  const payload = { codigo, codigo_norm, hex, nombre, notas, created_by: (USER&&USER.nombre)||null };
+  try{
+    // Upsert por PK: si ya existe el código, sobreescribir
+    const r = await fetch(SB_URL+'/rest/v1/pantones?on_conflict=codigo',{
+      method:'POST',
+      headers:{
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok){
+      const txt = await r.text();
+      throw new Error(r.status+' '+txt.substring(0,120));
+    }
+    // Actualizar cache local
+    window._pantonesCache[codigo_norm] = payload;
+    // Re-render colores y tintas para que el swatch se actualice
+    renderColores();
+    try{ renderTintasAjuste(); }catch(_){}
+    cerrarRegistrarPantone();
+    toast('Pantone guardado ✓','ok');
+  }catch(e){
+    console.error('guardarPantoneNuevo:', e);
+    toast('Error: '+e.message,'err');
+  }
+}
 
 // ══════════════════════════════════════════════════════
 // AJUSTE
@@ -5312,6 +5470,9 @@ function abrirVentanaPDF(html){
   return w;
 }
 loadUsers();
+// Precargar catálogo de pantones en background para que renderColores/renderTintasAjuste
+// tengan swatches correctos desde el primer render. No bloquea el login.
+loadPantones();
 
 // Re-sincronizar timers al volver a la pestaña
 document.addEventListener('visibilitychange',function(){
