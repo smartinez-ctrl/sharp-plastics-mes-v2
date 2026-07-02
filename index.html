@@ -963,6 +963,8 @@ async function submitChecklist(resultado, motivo) {
   const status = document.getElementById('cl-status');
   if (status) status.innerHTML = '<div style="color:#9ca3af;font-size:13px">Enviando...</div>';
 
+  // Nota: aprobacion_respondida_at intencionalmente omitido — no existe la columna.
+  // La marca de tiempo se guarda dentro de aprobacion_checklist.revisado_at.
   const payload = {
     aprobacion_checklist: {
       ...d.state,
@@ -972,8 +974,9 @@ async function submitChecklist(resultado, motivo) {
     },
     aprobacion_estado: resultado,
     aprobacion_motivo_rechazo: resultado === 'rechazado' ? motivo : null,
-    aprobacion_respondida_at: new Date().toISOString(),
   };
+
+  console.log('[checklist] submitChecklist payload:', payload);
 
   try {
     const r = await fetch(`${SB_URL}/rest/v1/ordenes_produccion?id=eq.${d.ordenId}`, {
@@ -986,7 +989,13 @@ async function submitChecklist(resultado, motivo) {
       },
       body: JSON.stringify(payload),
     });
-    if (!r.ok) throw new Error('Error del servidor: ' + r.status);
+    if (!r.ok) {
+      // Leer el detalle del error de Supabase para debugging
+      let detalle = '';
+      try { detalle = await r.text(); } catch(_) {}
+      console.error('[checklist] error PATCH ordenes_produccion:', r.status, detalle);
+      throw new Error('Error del servidor: ' + r.status + (detalle ? ' — ' + detalle.substring(0, 200) : ''));
+    }
 
     // Sincronizar pipeline_mf si aprobado → 'En producción'
     if (resultado === 'aprobado' && d.orden.pipeline_id) {
