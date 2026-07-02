@@ -332,10 +332,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
         <label>Nombre del producto</label>
         <div style="display:flex;gap:7px"><input type="text" id="new-producto-input" style="flex:1"><button class="btn btn-ghost btn-sm" onclick="addOption('ord-producto','new-producto-input','new-producto-field')">✓</button></div>
       </div>
-      <div class="field-row">
-        <div class="field"><label>Lote botella</label><input type="text" id="ord-lote-bot" placeholder="BOT-001"></div>
-        <div class="field"><label>Lote tapa</label><input type="text" id="ord-lote-tap" placeholder="TAP-001"></div>
-      </div>
       <div class="field"><label>Máquina</label>
         <select id="ord-maquina"><option value="Shuttle">Shuttle</option><option value="Dubuit">Dubuit</option></select>
       </div>
@@ -345,10 +341,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       <div class="field"><label>Ajustador(es)</label><div class="chips" id="chips-ajust"></div></div>
       <div class="field"><label>Operador(es)</label><div class="chips" id="chips-oper"></div></div>
     </div>
+    <!-- Preview del diseño del cliente (se muestra si el pedido tiene pdf_diseno_url) -->
+    <div class="card" id="ord-diseno-card" style="display:none">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Diseño del cliente</span>
+        <button class="btn btn-ghost btn-sm" onclick="abrirPdfDiseno()" style="font-size:11px">📄 Abrir PDF</button>
+      </div>
+      <div id="ord-diseno-preview" style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px;min-height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+        <span style="font-size:11px;color:var(--text3)">Cargando preview...</span>
+      </div>
+    </div>
 <!-- Colores movidos a pantalla de ajuste -->
   </div></div>
   <div class="bottom-bar" style="display:flex;gap:8px">
     <button class="btn btn-ghost btn-sm" onclick="verOrdenTrabajo()" style="flex:0 0 auto">📋 Orden</button>
+    <button class="btn btn-ghost btn-sm" onclick="abrirPdfDiseno()" style="flex:0 0 auto" id="btn-orden-diseno">🎨 Diseño</button>
     <button class="btn btn-primary" onclick="goAjuste()" style="flex:1">Continuar a ajuste →</button>
   </div>
 </div>
@@ -1240,6 +1247,89 @@ function abrirPdfDiseno(){
   const url=pipe&&pipe.pdf_diseno_url;
   if(!url){toast('Este pedido no tiene PDF de diseño cargado','err');return;}
   window.open(url,'_blank');
+}
+
+// Carga pdf.js v3.11.174 desde CDN (una sola vez) para poder renderizar
+// la primera página del diseño en un canvas. Devuelve el objeto pdfjsLib
+// cuando está listo. Usamos v3 clásica porque no necesita módulos ESM,
+// se puede consumir desde script tag normal.
+async function cargarPdfJs(){
+  if (window.pdfjsLib) return window.pdfjsLib;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  return window.pdfjsLib;
+}
+
+// Renderiza la primera página del PDF de diseño en la pantalla de setup.
+// Se llama al entrar a un pedido (goNuevaOrden → showScreen('orden')).
+// Si el pedido no tiene pdf_diseno_url, oculta el card y el botón "🎨 Diseño"
+// del bottom bar. El card se muestra con un canvas ajustado al ancho del contenedor.
+async function mostrarPreviewDiseno(){
+  const card = document.getElementById('ord-diseno-card');
+  const btnBottom = document.getElementById('btn-orden-diseno');
+  const previewBox = document.getElementById('ord-diseno-preview');
+  if (!card || !previewBox) return;
+
+  const pipe = S.pipelineId && window._dashRows
+    ? window._dashRows.find(p => p.id === S.pipelineId)
+    : null;
+  const url = pipe && pipe.pdf_diseno_url;
+
+  if (!url) {
+    card.style.display = 'none';
+    if (btnBottom) btnBottom.style.display = 'none';
+    return;
+  }
+
+  card.style.display = '';
+  if (btnBottom) btnBottom.style.display = '';
+  previewBox.innerHTML = '<span style="font-size:11px;color:var(--text3)">Cargando preview...</span>';
+
+  try {
+    const pdfjsLib = await cargarPdfJs();
+    if (!pdfjsLib) throw new Error('No se pudo cargar pdf.js');
+    const pdf = await pdfjsLib.getDocument(url).promise;
+    const page = await pdf.getPage(1);
+    // Escala para ancho del contenedor (~90% del scroll-narrow, ~320px en móvil)
+    const containerW = previewBox.clientWidth - 20;
+    const viewport1 = page.getViewport({ scale: 1 });
+    const scale = Math.min(2, containerW / viewport1.width);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.width = '100%';
+    canvas.style.maxWidth = viewport.width + 'px';
+    canvas.style.height = 'auto';
+    canvas.style.borderRadius = '8px';
+    canvas.style.cursor = 'pointer';
+    canvas.title = 'Toca para abrir el PDF completo';
+    canvas.onclick = abrirPdfDiseno;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    previewBox.innerHTML = '';
+    previewBox.style.padding = '4px';
+    previewBox.appendChild(canvas);
+    // Indicador si el PDF tiene más de 1 página
+    if (pdf.numPages > 1) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'font-size:10px;color:var(--text3);margin-top:6px;text-align:center';
+      badge.textContent = 'Página 1 de ' + pdf.numPages + ' — toca la imagen para ver todo';
+      previewBox.appendChild(badge);
+    }
+  } catch (e) {
+    console.warn('preview diseño falló:', e);
+    previewBox.innerHTML = '<div style="text-align:center;padding:16px"><div style="font-size:11px;color:var(--text3);margin-bottom:8px">No se pudo mostrar la preview</div><button class="btn btn-ghost btn-sm" onclick="abrirPdfDiseno()">📄 Abrir PDF</button></div>';
+  }
 }
 
 function showScreen(id){
@@ -2555,6 +2645,8 @@ async function goNuevaOrden(idx, editandoAhora){
     }
   }
   showScreen('orden');
+  // Mostrar preview del PDF de diseño si el pedido tiene uno
+  mostrarPreviewDiseno();
   renderSteps('steps-orden','orden');
   renderChips();
   renderColores();
@@ -3110,8 +3202,8 @@ function goAjuste(){
   S.orden.pzas=parseInt(document.getElementById('ord-pzas').value)||0;
   const ps=document.getElementById('ord-producto').value;
   S.orden.producto=ps&&ps!=='__new__'?ps:'';
-  S.orden.loteBot=document.getElementById('ord-lote-bot').value||'';
-  S.orden.loteTap=document.getElementById('ord-lote-tap').value||'';
+  S.orden.loteBot=document.getElementById('ord-lote-bot')?.value||S.orden.loteBot||'';
+  S.orden.loteTap=document.getElementById('ord-lote-tap')?.value||S.orden.loteTap||'';
   S.orden.maquina=document.getElementById('ord-maquina').value||'Shuttle';
   showScreen('ajuste');
   renderSteps('steps-ajuste','ajuste');
