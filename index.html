@@ -800,6 +800,7 @@ async function mostrarChecklistAprobacion(ordenId, token) {
       .cl-timer-box{background:#16a34a;color:#fff;padding:20px;border-radius:12px;text-align:center;font-weight:700}
       .cl-timer-box.rechazo{background:#dc2626}
       .cl-cancel-btn{display:block;width:100%;background:#374151;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:10px}
+      .cl-send-now-btn{display:block;width:100%;background:#16a34a;color:#fff;border:none;padding:14px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px}
       .cl-textarea{width:100%;background:#0d0f12;color:#fff;border:1px solid #374151;border-radius:8px;padding:12px;font-size:13px;font-family:inherit;box-sizing:border-box;margin-top:10px;resize:vertical;min-height:80px}
       .cl-submit-rechazo{display:block;width:100%;background:#dc2626;color:#fff;border:none;padding:14px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px}
     </style>
@@ -829,8 +830,10 @@ async function mostrarChecklistAprobacion(ordenId, token) {
 }
 
 function setChecklistItem(key, value) {
+  console.log('[checklist] setChecklistItem', key, value);
   const d = window._checklistData;
-  if (!d || d.finalizando) return;
+  if (!d) { console.error('[checklist] _checklistData no existe en setItem'); return; }
+  if (d.finalizando) { console.log('[checklist] ya finalizando, ignorando click'); return; }
   d.state[key] = value;
   // Actualizar UI del item
   const item = document.querySelector(`.cl-item[data-key="${key}"]`);
@@ -838,18 +841,25 @@ function setChecklistItem(key, value) {
     item.querySelectorAll('.cl-radio').forEach(r => r.classList.remove('active-si','active-no'));
     const target = item.querySelector('.cl-radio-' + value);
     if (target) target.classList.add('active-' + value);
+  } else {
+    console.warn('[checklist] item no encontrado con key', key);
   }
   actualizarStatusChecklist();
 }
 
 function actualizarStatusChecklist() {
   const d = window._checklistData;
+  if (!d) { console.error('[checklist] _checklistData no existe'); return; }
   const marcados = CHECKLIST_ITEMS.filter(it => d.state[it.key]).length;
-  const countEl = document.getElementById('cl-count-val');
-  if (countEl) countEl.textContent = marcados;
+  console.log('[checklist] marcados:', marcados, 'de', CHECKLIST_ITEMS.length, 'state:', d.state);
 
   const status = document.getElementById('cl-status');
-  if (!status) return;
+  if (!status) { console.error('[checklist] #cl-status no existe'); return; }
+
+  if (d.finalizando) {
+    console.log('[checklist] ya finalizando, no actualizar status');
+    return;
+  }
 
   if (marcados < CHECKLIST_ITEMS.length) {
     // Aún faltan
@@ -857,26 +867,32 @@ function actualizarStatusChecklist() {
     return;
   }
 
-  // Todos marcados: contador
+  // Todos marcados: mostrar botón grande para enviar + contador auto de 5s
   const hayNo = CHECKLIST_ITEMS.some(it => d.state[it.key] === 'no');
+  console.log('[checklist] los 8 marcados, hayNo:', hayNo, '→ iniciando contador');
   iniciarContadorChecklist(hayNo);
 }
 
 function iniciarContadorChecklist(hayNo) {
   const d = window._checklistData;
-  if (d.finalizando) return;
+  if (!d) { console.error('[checklist] no _checklistData en contador'); return; }
+  if (d.finalizando) { console.log('[checklist] ya finalizando'); return; }
   d.finalizando = true;
 
   let seg = 5;
-  const status = document.getElementById('cl-status');
   const render = () => {
-    if (!status) return;
+    const status = document.getElementById('cl-status');
+    if (!status) { console.error('[checklist] #cl-status no existe en render'); return; }
+    const label = hayNo ? '❌ Se rechazará' : '✅ Se aprobará';
     status.innerHTML = `
-      <div class="cl-timer-box ${hayNo ? 'rechazo' : ''}">
-        ${hayNo ? '❌ Se rechazará' : '✅ Se aprobará'} en <span style="font-size:32px;margin:0 6px">${seg}</span>s
+      <div class="cl-timer-box${hayNo ? ' rechazo' : ''}">
+        ${label} en <span style="font-size:32px;margin:0 6px">${seg}</span>s
       </div>
-      <button class="cl-cancel-btn" onclick="cancelarChecklist()">↩ Cancelar aprobación</button>
+      <button class="cl-cancel-btn" onclick="cancelarChecklist()">↩ Cancelar</button>
+      <button class="cl-send-now-btn" onclick="finalizarChecklistYa()">Enviar ahora →</button>
     `;
+    // Scroll al final para que el usuario vea el contador y los botones
+    try { status.scrollIntoView({behavior:'smooth', block:'end'}); } catch(_) {}
   };
   render();
 
@@ -890,6 +906,14 @@ function iniciarContadorChecklist(hayNo) {
       render();
     }
   }, 1000);
+}
+
+// Fallback manual por si el auto-timer no dispara: envía el resultado inmediatamente
+function finalizarChecklistYa() {
+  const d = window._checklistData;
+  if (!d) return;
+  if (d.timerIv) { clearInterval(d.timerIv); d.timerIv = null; }
+  finalizarChecklist();
 }
 
 function cancelarChecklist() {
