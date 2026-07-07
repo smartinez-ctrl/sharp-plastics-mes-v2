@@ -2985,6 +2985,54 @@ function exportarPipelineExcel(){
       ]);
     });
 
+    // ─── AGREGADOS PARA LOS WORKSHEETS DE RESUMEN ────────────────────
+    // Resumen por capacidad: {cap → {pedidos, piezas}}. Ordenado por capacidad ascendente.
+    const capMap = new Map();
+    todos.forEach(p => {
+      const cap = p.capacidad || '(sin capacidad)';
+      const info = capMap.get(cap) || { pedidos: 0, piezas: 0 };
+      info.pedidos += 1;
+      info.piezas += safeNum(p.piezas);
+      capMap.set(cap, info);
+    });
+    const capRows = Array.from(capMap.entries())
+      .sort((a, b) => (parseInt(a[0])||9999) - (parseInt(b[0])||9999))
+      .map(([cap, info]) => [cap, info.pedidos, info.piezas]);
+    // Fila total
+    const capTotalPedidos = capRows.reduce((s, r) => s + r[1], 0);
+    const capTotalPiezas = capRows.reduce((s, r) => s + r[2], 0);
+
+    // Resumen por color: cada tinta cuenta 1 vez por pedido. Un pedido con
+    // 3 colores aparece en 3 filas distintas del resumen. El total de piezas
+    // por color es la suma de piezas de todos los pedidos que lo usan.
+    const colorMap = new Map();
+    todos.forEach(p => {
+      const ti = Array.isArray(p.tintas_info) ? p.tintas_info : [];
+      const ft = Array.isArray(p.formula_tintas) ? p.formula_tintas : [];
+      const colores = ti.length ? ti : ft;
+      const piezas = safeNum(p.piezas);
+      // Evitar duplicar el mismo color dentro del mismo pedido
+      const yaVistos = new Set();
+      colores.forEach(c => {
+        if (!c || typeof c !== 'object') return;
+        const n = typeof c.nombre === 'string' ? c.nombre.trim() : '';
+        const pa = typeof c.pantone === 'string' ? c.pantone.trim() : '';
+        const key = n && pa ? (n + ' (' + pa + ')') : (n || pa || '');
+        if (!key || yaVistos.has(key)) return;
+        yaVistos.add(key);
+        const info = colorMap.get(key) || { pedidos: 0, piezas: 0, nombre: n, pantone: pa };
+        info.pedidos += 1;
+        info.piezas += piezas;
+        colorMap.set(key, info);
+      });
+    });
+    // Ordenar desc por piezas totales (los colores más importantes arriba)
+    const colorRows = Array.from(colorMap.entries())
+      .sort((a, b) => b[1].piezas - a[1].piezas)
+      .map(([key, info]) => [info.nombre || '', info.pantone || '', info.pedidos, info.piezas]);
+    const colTotalPedidos = colorRows.reduce((s, r) => s + r[2], 0);
+    const colTotalPiezas = colorRows.reduce((s, r) => s + r[3], 0);
+
     // Escapar XML
     const xmlEsc=s=>String(s==null?'':s)
       .replace(/&/g,'&amp;')
@@ -3013,9 +3061,64 @@ function exportarPipelineExcel(){
       '<Styles>\n'+
       ' <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#FFE082" ss:Pattern="Solid"/><Alignment ss:Vertical="Center"/></Style>\n'+
       ' <Style ss:ID="num"><NumberFormat ss:Format="#,##0.00"/></Style>\n'+
+      ' <Style ss:ID="int"><NumberFormat ss:Format="#,##0"/></Style>\n'+
+      ' <Style ss:ID="total"><Font ss:Bold="1"/><Interior ss:Color="#E5E7EB" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>\n'+
+      ' <Style ss:ID="totalTxt"><Font ss:Bold="1"/><Interior ss:Color="#E5E7EB" ss:Pattern="Solid"/></Style>\n'+
       '</Styles>\n'+
       '<Worksheet ss:Name="Pipeline">\n'+
       ` <Table>${colsXml}\n${rowsXml}\n </Table>\n`+
+      ' <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n'+
+      '  <FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal>\n'+
+      '  <TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane>\n'+
+      ' </WorksheetOptions>\n'+
+      '</Worksheet>\n'+
+      // ─── Worksheet: Resumen por capacidad ────────────────────
+      '<Worksheet ss:Name="Resumen por capacidad">\n'+
+      ' <Table>'+
+      '<Column ss:Width="140"/><Column ss:Width="90"/><Column ss:Width="120"/>\n'+
+      // Header
+      '<Row><Cell ss:StyleID="header"><Data ss:Type="String">Capacidad (ml)</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String"># Pedidos</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Total piezas</Data></Cell></Row>\n'+
+      // Filas
+      capRows.map(r =>
+        `<Row><Cell><Data ss:Type="String">${xmlEsc(r[0])}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[1]}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[2]}</Data></Cell></Row>`
+      ).join('\n')+
+      // Total
+      `\n<Row><Cell ss:StyleID="totalTxt"><Data ss:Type="String">Total</Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${capTotalPedidos}</Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${capTotalPiezas}</Data></Cell></Row>\n`+
+      ' </Table>\n'+
+      ' <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n'+
+      '  <FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal>\n'+
+      '  <TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane>\n'+
+      ' </WorksheetOptions>\n'+
+      '</Worksheet>\n'+
+      // ─── Worksheet: Resumen por color ────────────────────
+      '<Worksheet ss:Name="Resumen por color">\n'+
+      ' <Table>'+
+      '<Column ss:Width="180"/><Column ss:Width="100"/><Column ss:Width="90"/><Column ss:Width="120"/>\n'+
+      // Header
+      '<Row><Cell ss:StyleID="header"><Data ss:Type="String">Color</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Pantone</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String"># Pedidos</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Total piezas</Data></Cell></Row>\n'+
+      // Filas
+      colorRows.map(r =>
+        `<Row><Cell><Data ss:Type="String">${xmlEsc(r[0])}</Data></Cell>`+
+        `<Cell><Data ss:Type="String">${xmlEsc(r[1])}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[2]}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[3]}</Data></Cell></Row>`
+      ).join('\n')+
+      // Total (nota: piezas puede ser mayor al total del pipeline porque
+      // un pedido con N colores cuenta N veces en la suma por color)
+      `\n<Row><Cell ss:StyleID="totalTxt"><Data ss:Type="String">Total (colores × pedidos)</Data></Cell>`+
+      `<Cell ss:StyleID="totalTxt"><Data ss:Type="String"></Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${colTotalPedidos}</Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${colTotalPiezas}</Data></Cell></Row>\n`+
+      ' </Table>\n'+
       ' <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n'+
       '  <FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal>\n'+
       '  <TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane>\n'+
