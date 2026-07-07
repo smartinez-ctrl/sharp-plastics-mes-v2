@@ -2986,7 +2986,7 @@ function exportarPipelineExcel(){
     });
 
     // ─── AGREGADOS PARA LOS WORKSHEETS DE RESUMEN ────────────────────
-    // Resumen por capacidad: {cap → {pedidos, piezas}}. Ordenado por capacidad ascendente.
+    // Resumen por capacidad (rollup simple): capacidad → # pedidos, total piezas
     const capMap = new Map();
     todos.forEach(p => {
       const cap = p.capacidad || '(sin capacidad)';
@@ -2998,40 +2998,38 @@ function exportarPipelineExcel(){
     const capRows = Array.from(capMap.entries())
       .sort((a, b) => (parseInt(a[0])||9999) - (parseInt(b[0])||9999))
       .map(([cap, info]) => [cap, info.pedidos, info.piezas]);
-    // Fila total
     const capTotalPedidos = capRows.reduce((s, r) => s + r[1], 0);
     const capTotalPiezas = capRows.reduce((s, r) => s + r[2], 0);
 
-    // Resumen por color: cada tinta cuenta 1 vez por pedido. Un pedido con
-    // 3 colores aparece en 3 filas distintas del resumen. El total de piezas
-    // por color es la suma de piezas de todos los pedidos que lo usan.
-    const colorMap = new Map();
+    // Resumen por modelo: capacidad + color_botella + color_tapa + color_chupon
+    // Esto es lo que responde "cuántas botellas 600ml clear necesito?" y da
+    // suficiente detalle para preparar molde y material de inyección.
+    // La key es una tupla concatenada; el mismo modelo con diferentes tintas
+    // de impresión se agrupa junto porque comparten pieza inyectada.
+    const modeloMap = new Map();
+    const norm = v => (v==null||v==='')?'—':String(v).trim();
     todos.forEach(p => {
-      const ti = Array.isArray(p.tintas_info) ? p.tintas_info : [];
-      const ft = Array.isArray(p.formula_tintas) ? p.formula_tintas : [];
-      const colores = ti.length ? ti : ft;
-      const piezas = safeNum(p.piezas);
-      // Evitar duplicar el mismo color dentro del mismo pedido
-      const yaVistos = new Set();
-      colores.forEach(c => {
-        if (!c || typeof c !== 'object') return;
-        const n = typeof c.nombre === 'string' ? c.nombre.trim() : '';
-        const pa = typeof c.pantone === 'string' ? c.pantone.trim() : '';
-        const key = n && pa ? (n + ' (' + pa + ')') : (n || pa || '');
-        if (!key || yaVistos.has(key)) return;
-        yaVistos.add(key);
-        const info = colorMap.get(key) || { pedidos: 0, piezas: 0, nombre: n, pantone: pa };
-        info.pedidos += 1;
-        info.piezas += piezas;
-        colorMap.set(key, info);
-      });
+      const cap = p.capacidad || '(sin capacidad)';
+      const botella = norm(p.color_botella);
+      const tapa    = norm(p.color_tapa);
+      const chupon  = norm(p.color_boquilla || p.color_chupon);
+      const key = cap + '|' + botella + '|' + tapa + '|' + chupon;
+      const info = modeloMap.get(key) || { pedidos: 0, piezas: 0, cap, botella, tapa, chupon };
+      info.pedidos += 1;
+      info.piezas += safeNum(p.piezas);
+      modeloMap.set(key, info);
     });
-    // Ordenar desc por piezas totales (los colores más importantes arriba)
-    const colorRows = Array.from(colorMap.entries())
-      .sort((a, b) => b[1].piezas - a[1].piezas)
-      .map(([key, info]) => [info.nombre || '', info.pantone || '', info.pedidos, info.piezas]);
-    const colTotalPedidos = colorRows.reduce((s, r) => s + r[2], 0);
-    const colTotalPiezas = colorRows.reduce((s, r) => s + r[3], 0);
+    const modeloRows = Array.from(modeloMap.values())
+      .sort((a, b) => {
+        const na = parseInt(a.cap)||9999, nb = parseInt(b.cap)||9999;
+        if (na !== nb) return na - nb;
+        // Dentro de misma capacidad: por color botella, luego piezas desc
+        if (a.botella !== b.botella) return a.botella.localeCompare(b.botella);
+        return b.piezas - a.piezas;
+      })
+      .map(m => [m.cap, m.botella, m.tapa, m.chupon, m.pedidos, m.piezas]);
+    const modTotalPedidos = modeloRows.reduce((s, r) => s + r[4], 0);
+    const modTotalPiezas = modeloRows.reduce((s, r) => s + r[5], 0);
 
     // Escapar XML
     const xmlEsc=s=>String(s==null?'':s)
@@ -3096,28 +3094,30 @@ function exportarPipelineExcel(){
       '  <TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane>\n'+
       ' </WorksheetOptions>\n'+
       '</Worksheet>\n'+
-      // ─── Worksheet: Resumen por color ────────────────────
-      '<Worksheet ss:Name="Resumen por color">\n'+
+      // ─── Worksheet: Resumen por modelo (capacidad + colores del molde) ─
+      '<Worksheet ss:Name="Resumen por modelo">\n'+
       ' <Table>'+
-      '<Column ss:Width="180"/><Column ss:Width="100"/><Column ss:Width="90"/><Column ss:Width="120"/>\n'+
-      // Header
-      '<Row><Cell ss:StyleID="header"><Data ss:Type="String">Color</Data></Cell>'+
-      '<Cell ss:StyleID="header"><Data ss:Type="String">Pantone</Data></Cell>'+
+      '<Column ss:Width="90"/><Column ss:Width="120"/><Column ss:Width="110"/><Column ss:Width="110"/><Column ss:Width="90"/><Column ss:Width="120"/>\n'+
+      '<Row><Cell ss:StyleID="header"><Data ss:Type="String">Capacidad (ml)</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Color botella</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Color tapa</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Color chupón</Data></Cell>'+
       '<Cell ss:StyleID="header"><Data ss:Type="String"># Pedidos</Data></Cell>'+
       '<Cell ss:StyleID="header"><Data ss:Type="String">Total piezas</Data></Cell></Row>\n'+
-      // Filas
-      colorRows.map(r =>
+      modeloRows.map(r =>
         `<Row><Cell><Data ss:Type="String">${xmlEsc(r[0])}</Data></Cell>`+
         `<Cell><Data ss:Type="String">${xmlEsc(r[1])}</Data></Cell>`+
-        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[2]}</Data></Cell>`+
-        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[3]}</Data></Cell></Row>`
+        `<Cell><Data ss:Type="String">${xmlEsc(r[2])}</Data></Cell>`+
+        `<Cell><Data ss:Type="String">${xmlEsc(r[3])}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[4]}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[5]}</Data></Cell></Row>`
       ).join('\n')+
-      // Total (nota: piezas puede ser mayor al total del pipeline porque
-      // un pedido con N colores cuenta N veces en la suma por color)
-      `\n<Row><Cell ss:StyleID="totalTxt"><Data ss:Type="String">Total (colores × pedidos)</Data></Cell>`+
+      `\n<Row><Cell ss:StyleID="totalTxt"><Data ss:Type="String">Total</Data></Cell>`+
       `<Cell ss:StyleID="totalTxt"><Data ss:Type="String"></Data></Cell>`+
-      `<Cell ss:StyleID="total"><Data ss:Type="Number">${colTotalPedidos}</Data></Cell>`+
-      `<Cell ss:StyleID="total"><Data ss:Type="Number">${colTotalPiezas}</Data></Cell></Row>\n`+
+      `<Cell ss:StyleID="totalTxt"><Data ss:Type="String"></Data></Cell>`+
+      `<Cell ss:StyleID="totalTxt"><Data ss:Type="String"></Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${modTotalPedidos}</Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${modTotalPiezas}</Data></Cell></Row>\n`+
       ' </Table>\n'+
       ' <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n'+
       '  <FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal>\n'+
