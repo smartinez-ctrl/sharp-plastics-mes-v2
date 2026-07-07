@@ -138,7 +138,7 @@ tr:hover td{background:var(--bg3)}
       <div class="card">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
           <input type="text" id="q-pedidos" placeholder="🔍 Buscar PO, cliente, color, capacidad..." oninput="renderPedidos()" style="flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none">
-          <button class="btn btn-ghost btn-sm" onclick="exportarPedidosCSV()" title="Lista de pedidos pendientes">📥 Pedidos</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportarPedidosExcel()" title="Pipeline + resumen por capacidad + resumen por modelo (sin datos financieros)">📊 Exportar Excel</button>
           <button class="btn btn-ghost btn-sm" onclick="exportarInsumosRequeridosCSV()" title="Total de cada insumo requerido por los pedidos">📊 Insumos requeridos</button>
         </div>
         <div id="lista-pedidos"></div>
@@ -788,20 +788,239 @@ function exportarAlertasCSV(){
 }
 
 function exportarPedidosCSV(){
+  // Delega al export Excel multi-hoja completo (sin datos financieros)
+  exportarPedidosExcel();
+}
+
+// ══════════════════════════════════════════════════════
+// Export Excel de pedidos activos (Pipeline / Resumen por capacidad /
+// Resumen por modelo). Igual al export de gestión pero SIN columnas
+// financieras (venta, margen, cobrado, fecha cobro) — pensado para
+// operadores y supervisores de piso.
+// ══════════════════════════════════════════════════════
+function exportarPedidosExcel(){
   if(!_data){toast('No hay datos','err');return;}
-  const rows = _data.pedidos.map(p=>({
-    po: p.po||'',
-    cliente: p.sub_cliente||p.cliente||'',
-    piezas: p.piezas||0,
-    capacidad: p.capacidad?p.capacidad+'ml':'',
-    color_botella: p.color_botella||'',
-    color_tapa: p.color_tapa||'',
-    color_chupon: p.color_boquilla||'',
-    estado: p.estado||'',
-    fecha_entrega: p.fecha_entrega ? new Date(p.fecha_entrega).toLocaleDateString('es-MX') : '',
-  }));
-  const ts = new Date().toISOString().slice(0,10);
-  exportarCSV(rows, null, `pedidos-pendientes-${ts}`);
+  // Filtrar solo activos (excluir Entregado y Cancelado; Completado ya viene excluido del endpoint)
+  const ESTADOS_ACTIVOS = new Set(['Pendiente','En ajuste','En producción','En produccion']);
+  const activos = (_data.pedidos||[]).filter(p => ESTADOS_ACTIVOS.has(p.estado));
+  if(!activos.length){toast('No hay pedidos activos para exportar','err');return;}
+  const todos = [...activos].sort((a,b)=>{
+    if(a.orden_posicion!==b.orden_posicion) return (a.orden_posicion||999)-(b.orden_posicion||999);
+    return new Date(a.created_at||0) - new Date(b.created_at||0);
+  });
+
+  try{
+    const fmt = d => d ? new Date(d+'T12:00:00').toLocaleDateString('es-MX') : '';
+    const safe = v => {
+      if(v===null||v===undefined) return '';
+      if(typeof v==='string') return v;
+      if(typeof v==='number') return isFinite(v) ? String(v) : '';
+      if(typeof v==='boolean') return v?'Sí':'No';
+      if(Array.isArray(v)) return v.map(safe).filter(Boolean).join(', ');
+      if(typeof v==='object'){
+        if(v.nombre&&typeof v.nombre==='string') return v.nombre;
+        if(v.label&&typeof v.label==='string') return v.label;
+        if(v.value&&typeof v.value==='string') return v.value;
+        try{return JSON.stringify(v);}catch{return '';}
+      }
+      try{return String(v);}catch{return '';}
+    };
+    const safeNum = v => {
+      if(typeof v==='number') return isFinite(v) ? v : 0;
+      const n = parseFloat(v);
+      return isFinite(n) ? n : 0;
+    };
+    const tintasStr = p => {
+      const ti = Array.isArray(p.tintas_info) ? p.tintas_info : [];
+      if(ti.length){
+        return ti.map(t=>{
+          if(!t||typeof t!=='object') return String(t||'');
+          const n = typeof t.nombre==='string' ? t.nombre : '';
+          const pa = typeof t.pantone==='string' ? t.pantone : '';
+          return n && pa ? n+' ('+pa+')' : (n||pa||'');
+        }).filter(Boolean).join(' / ');
+      }
+      const ft = Array.isArray(p.formula_tintas) ? p.formula_tintas : [];
+      return ft.map((c,i)=>{
+        if(!c||typeof c!=='object') return 'Color '+(i+1);
+        return (typeof c.nombre==='string' ? c.nombre : '') || (typeof c.pantone==='string' ? c.pantone : '') || ('Color '+(i+1));
+      }).filter(Boolean).join(' / ');
+    };
+
+    // Headers SIN venta_total, margen, cobrado, fecha_cobro
+    const headers = [
+      'Cliente','Sub-cliente','PO','Estado',
+      'Fecha pedido','Fecha entrega','Fecha inicio',
+      'Capacidad (ml)','Piezas','# Colores','Tintas',
+      'Color botella','Color tapa','Color chupón',
+      'Dirección de envío','Notas / Packaging'
+    ];
+
+    const rows = [];
+    rows.push(headers.map(h => [h,'String']));
+    todos.forEach(p => {
+      rows.push([
+        [safe(p.cliente),'String'],
+        [safe(p.sub_cliente),'String'],
+        [safe(p.po),'String'],
+        [safe(p.estado),'String'],
+        [fmt(p.fecha_pedido),'String'],
+        [fmt(p.fecha_entrega),'String'],
+        [fmt(p.fecha_inicio),'String'],
+        [safe(p.capacidad),'String'],
+        [safeNum(p.piezas),'Number'],
+        [safeNum(p.colores),'Number'],
+        [safe(tintasStr(p)),'String'],
+        [safe(p.color_botella),'String'],
+        [safe(p.color_tapa),'String'],
+        [safe(p.color_boquilla),'String'],
+        [safe(p.direccion_envio),'String'],
+        [safe(p.notas),'String']
+      ]);
+    });
+
+    // ─── Resumen por capacidad ────────────────────
+    const capMap = new Map();
+    todos.forEach(p => {
+      const cap = p.capacidad || '(sin capacidad)';
+      const info = capMap.get(cap) || {pedidos:0, piezas:0};
+      info.pedidos += 1;
+      info.piezas += safeNum(p.piezas);
+      capMap.set(cap, info);
+    });
+    const capRows = Array.from(capMap.entries())
+      .sort((a,b) => (parseInt(a[0])||9999) - (parseInt(b[0])||9999))
+      .map(([cap, info]) => [cap, info.pedidos, info.piezas]);
+    const capTotalPedidos = capRows.reduce((s,r) => s + r[1], 0);
+    const capTotalPiezas  = capRows.reduce((s,r) => s + r[2], 0);
+
+    // ─── Resumen por modelo (capacidad + colores del molde) ────────
+    const modeloMap = new Map();
+    const norm = v => (v==null||v==='') ? '—' : String(v).trim();
+    todos.forEach(p => {
+      const cap = p.capacidad || '(sin capacidad)';
+      const botella = norm(p.color_botella);
+      const tapa    = norm(p.color_tapa);
+      const chupon  = norm(p.color_boquilla || p.color_chupon);
+      const key = cap+'|'+botella+'|'+tapa+'|'+chupon;
+      const info = modeloMap.get(key) || {pedidos:0, piezas:0, cap, botella, tapa, chupon};
+      info.pedidos += 1;
+      info.piezas += safeNum(p.piezas);
+      modeloMap.set(key, info);
+    });
+    const modeloRows = Array.from(modeloMap.values())
+      .sort((a,b) => {
+        const na = parseInt(a.cap)||9999, nb = parseInt(b.cap)||9999;
+        if(na!==nb) return na-nb;
+        if(a.botella!==b.botella) return a.botella.localeCompare(b.botella);
+        return b.piezas - a.piezas;
+      })
+      .map(m => [m.cap, m.botella, m.tapa, m.chupon, m.pedidos, m.piezas]);
+    const modTotalPedidos = modeloRows.reduce((s,r) => s + r[4], 0);
+    const modTotalPiezas  = modeloRows.reduce((s,r) => s + r[5], 0);
+
+    // Escape XML
+    const xmlEsc = s => String(s==null?'':s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+
+    // Anchos de columna del Pipeline (ajustados: sin las 4 financieras que salían al final)
+    const colWidths = [110,160,90,90,75,75,75,65,55,55,250,90,90,90,220,250];
+    const colsXml = colWidths.map(w => `<Column ss:Width="${w}"/>`).join('');
+
+    const rowsXml = rows.map((row, ri) => {
+      const cells = row.map(([val,tipo]) => {
+        const styleId = ri===0 ? ' ss:StyleID="header"' : (tipo==='Number' ? ' ss:StyleID="num"' : '');
+        return `<Cell${styleId}><Data ss:Type="${tipo}">${xmlEsc(val)}</Data></Cell>`;
+      }).join('');
+      return `<Row>${cells}</Row>`;
+    }).join('\n');
+
+    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n'+
+      '<?mso-application progid="Excel.Sheet"?>\n'+
+      '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" '+
+      'xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n'+
+      '<Styles>\n'+
+      ' <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#FFE082" ss:Pattern="Solid"/><Alignment ss:Vertical="Center"/></Style>\n'+
+      ' <Style ss:ID="num"><NumberFormat ss:Format="#,##0.00"/></Style>\n'+
+      ' <Style ss:ID="int"><NumberFormat ss:Format="#,##0"/></Style>\n'+
+      ' <Style ss:ID="total"><Font ss:Bold="1"/><Interior ss:Color="#E5E7EB" ss:Pattern="Solid"/><NumberFormat ss:Format="#,##0"/></Style>\n'+
+      ' <Style ss:ID="totalTxt"><Font ss:Bold="1"/><Interior ss:Color="#E5E7EB" ss:Pattern="Solid"/></Style>\n'+
+      '</Styles>\n'+
+      '<Worksheet ss:Name="Pipeline">\n'+
+      ` <Table>${colsXml}\n${rowsXml}\n </Table>\n`+
+      ' <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n'+
+      '  <FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal>\n'+
+      '  <TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane>\n'+
+      ' </WorksheetOptions>\n'+
+      '</Worksheet>\n'+
+      // Resumen por capacidad
+      '<Worksheet ss:Name="Resumen por capacidad">\n'+
+      ' <Table>'+
+      '<Column ss:Width="140"/><Column ss:Width="90"/><Column ss:Width="120"/>\n'+
+      '<Row><Cell ss:StyleID="header"><Data ss:Type="String">Capacidad (ml)</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String"># Pedidos</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Total piezas</Data></Cell></Row>\n'+
+      capRows.map(r =>
+        `<Row><Cell><Data ss:Type="String">${xmlEsc(r[0])}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[1]}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[2]}</Data></Cell></Row>`
+      ).join('\n')+
+      `\n<Row><Cell ss:StyleID="totalTxt"><Data ss:Type="String">Total</Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${capTotalPedidos}</Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${capTotalPiezas}</Data></Cell></Row>\n`+
+      ' </Table>\n'+
+      ' <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n'+
+      '  <FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal>\n'+
+      '  <TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane>\n'+
+      ' </WorksheetOptions>\n'+
+      '</Worksheet>\n'+
+      // Resumen por modelo
+      '<Worksheet ss:Name="Resumen por modelo">\n'+
+      ' <Table>'+
+      '<Column ss:Width="90"/><Column ss:Width="120"/><Column ss:Width="110"/><Column ss:Width="110"/><Column ss:Width="90"/><Column ss:Width="120"/>\n'+
+      '<Row><Cell ss:StyleID="header"><Data ss:Type="String">Capacidad (ml)</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Color botella</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Color tapa</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Color chupón</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String"># Pedidos</Data></Cell>'+
+      '<Cell ss:StyleID="header"><Data ss:Type="String">Total piezas</Data></Cell></Row>\n'+
+      modeloRows.map(r =>
+        `<Row><Cell><Data ss:Type="String">${xmlEsc(r[0])}</Data></Cell>`+
+        `<Cell><Data ss:Type="String">${xmlEsc(r[1])}</Data></Cell>`+
+        `<Cell><Data ss:Type="String">${xmlEsc(r[2])}</Data></Cell>`+
+        `<Cell><Data ss:Type="String">${xmlEsc(r[3])}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[4]}</Data></Cell>`+
+        `<Cell ss:StyleID="int"><Data ss:Type="Number">${r[5]}</Data></Cell></Row>`
+      ).join('\n')+
+      `\n<Row><Cell ss:StyleID="totalTxt"><Data ss:Type="String">Total</Data></Cell>`+
+      `<Cell ss:StyleID="totalTxt"><Data ss:Type="String"></Data></Cell>`+
+      `<Cell ss:StyleID="totalTxt"><Data ss:Type="String"></Data></Cell>`+
+      `<Cell ss:StyleID="totalTxt"><Data ss:Type="String"></Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${modTotalPedidos}</Data></Cell>`+
+      `<Cell ss:StyleID="total"><Data ss:Type="Number">${modTotalPiezas}</Data></Cell></Row>\n`+
+      ' </Table>\n'+
+      ' <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n'+
+      '  <FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal>\n'+
+      '  <TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane>\n'+
+      ' </WorksheetOptions>\n'+
+      '</Worksheet>\n'+
+      '</Workbook>';
+
+    const blob = new Blob([xml], {type:'application/vnd.ms-excel;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fecha = new Date().toISOString().split('T')[0];
+    a.download = 'Sharp-Plastics-Produccion-'+fecha+'.xls';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
+    toast('Archivo descargado ✓ ('+(rows.length-1)+' pedidos)','ok');
+  }catch(err){
+    console.error('exportarPedidosExcel error:', err);
+    toast('Error al generar archivo: '+(err.message||err),'err');
+  }
 }
 
 function exportarInventarioCSV(){
