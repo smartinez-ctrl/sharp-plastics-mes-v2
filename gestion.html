@@ -2898,7 +2898,14 @@ function exportarCobrosExcel(){
 function exportarPipelineExcel(){
   console.log('[ExportExcel] click recibido, PIPELINE.length=',PIPELINE&&PIPELINE.length);
   if(!PIPELINE||!PIPELINE.length){toast('Pipeline vacío','err');return;}
-  const todos=[...PIPELINE].sort((a,b)=>{
+  // Filtrar: solo pedidos activos (Pendiente, En ajuste, En producción).
+  // Se excluyen Completado, Entregado y Cancelado — sin importar si están
+  // "ocultos" en la UI o no. Si a futuro se quiere exportar los cerrados,
+  // agregar un botón separado "Exportar todos".
+  const ESTADOS_ACTIVOS = new Set(['Pendiente','En ajuste','En producción','En produccion']);
+  const activos = PIPELINE.filter(p => ESTADOS_ACTIVOS.has(p.estado));
+  if(!activos.length){toast('No hay pedidos activos para exportar','err');return;}
+  const todos=[...activos].sort((a,b)=>{
     if(a.orden_posicion!==b.orden_posicion)return (a.orden_posicion||999)-(b.orden_posicion||999);
     return new Date(a.created_at||0)-new Date(b.created_at||0);
   });
