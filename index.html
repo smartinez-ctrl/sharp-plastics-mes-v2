@@ -2756,7 +2756,14 @@ async function verPDFCompletado(pipelineId, tipo){
         }
       }catch(e){console.warn('Error cargando fotos:',e);}
     }
-    // Fallback: si no encontramos por listing, usar las URLs guardadas en DB
+    // Fallback: si no encontramos por listing, usar las URLs guardadas en DB.
+    // Esto también cubre el caso de fotos editadas desde el modal de gestión
+    // (donde algunos slots pueden haberse marcado como null).
+    if(Array.isArray(orden?.foto_urls)){
+      orden.foto_urls.forEach((url,i)=>{
+        if(url && i<4 && !fotos[i]) fotos[i]=url;
+      });
+    }
     if(Array.isArray(orden?.foto_color_urls)){
       orden.foto_color_urls.forEach((url,i)=>{
         if(url && i<4 && !fotosColor[i]) fotosColor[i]=url;

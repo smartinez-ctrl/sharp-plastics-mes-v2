@@ -3550,7 +3550,10 @@ async function guardarEditFotosQA(){
         const base64 = f.replace(/^data:image\/\w+;base64,/, '');
         const arr = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
         const blob = new Blob([arr], { type: 'image/jpeg' });
-        const prefix = sec === 'aprobacion' ? 'aprobacion' : 'color';
+        // El PDF cliente busca patrones "foto-N-" y "color-N-" al listar
+        // el bucket, así que usamos esos nombres exactos para que la
+        // foto nueva aparezca en el PDF sin cambios extra en el renderer.
+        const prefix = sec === 'aprobacion' ? 'foto' : 'color';
         const fname = _editFotosQA.ordenId + '/' + prefix + '-' + i + '-' + Date.now() + '.jpg';
         const r = await fetch(SB_URL + '/storage/v1/object/fotos-aprobacion/' + fname, {
           method: 'POST',
