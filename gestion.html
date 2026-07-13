@@ -411,6 +411,29 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
 
 </div></div>
 
+<!-- MODAL editar fotos de aprobación y color (QA) -->
+<div class="modal-overlay" id="modal-edit-fotos-qa">
+  <div class="modal" style="max-width:520px;max-height:92vh;overflow-y:auto">
+    <div class="modal-title">📷 Editar fotos de QA <button class="modal-close" onclick="closeModal('modal-edit-fotos-qa')">×</button></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--bg3);border-radius:8px">
+      Cambios directos en las fotos del reporte QA. Se guardan en la orden de producción y aparecerán en el próximo PDF que generes.
+    </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">📸 Fotos de aprobación</div>
+      <div id="edit-fotos-aprobacion-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">🎨 Validación de color</div>
+      <div id="edit-fotos-color-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    </div>
+    <input type="file" id="file-edit-foto-qa" accept="image/*" style="display:none" onchange="handleEditFotoQA(this)">
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-fotos-qa')" style="flex:1">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-edit-fotos-qa" onclick="guardarEditFotosQA()" style="flex:2">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL editar/crear pantone -->
 <div class="modal-overlay" id="modal-pantone-g">
   <div class="modal" style="max-width:440px">
@@ -1224,6 +1247,7 @@ function renderPipeline(){
       <div></div>
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-xs" title="Fotos empaque" onclick="abrirFotosEmpaque('${p.id}')">📦</button>
+        ${(USER.rol==='master'||USER.rol==='supervisor')?`<button class="btn btn-ghost btn-xs" title="Editar fotos de QA (aprobación + color)" onclick="abrirEditFotosQA('${p.id}')">📷</button>`:''}
         <button class="btn btn-ghost btn-xs" title="PDF cotización cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
         <button class="btn btn-ghost btn-xs" title="PDF cotización interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
         <button class="btn btn-ghost btn-xs" title="PDF producción cliente (QA + fotos)" onclick="abrirPDFProduccionCliente('${p.id}')">📋</button>
@@ -3401,6 +3425,156 @@ let PANTONES = [];
 // "PMS 161 C", "161c", "161 C" → todos → "161C".
 function normPantone(s){
   return String(s||'').toUpperCase().replace(/^PMS\s*/,'').replace(/\s+/g,'').trim();
+}
+
+// ══════════════════════════════════════════════════════
+// EDITAR FOTOS DE QA (aprobación + color) desde gestión
+// Accesible para master y supervisor incluso en pedidos completados.
+// Modifica ordenes_produccion.foto_urls y .foto_color_urls. Las nuevas
+// fotos se suben al bucket 'fotos-aprobacion' con nombre único por
+// timestamp — la URL vieja queda huérfana pero no se sobrescribe.
+// ══════════════════════════════════════════════════════
+let _editFotosQA = { pipelineId: null, ordenId: null, aprobacion: [], color: [] };
+window._editFotoQATarget = { seccion: 'aprobacion', idx: 0 };
+const _EDIT_LABELS_APROB = ['Frente', 'Reverso', 'Lado izq', 'Lado der'];
+const _EDIT_LABELS_COLOR = ['Color 1', 'Color 2', 'Color 3', 'Color 4'];
+
+async function abrirEditFotosQA(pipelineId){
+  // Solo master y supervisor pueden editar fotos de QA
+  if (USER.rol !== 'master' && USER.rol !== 'supervisor') {
+    toast('Solo master y supervisor pueden editar fotos de QA', 'err');
+    return;
+  }
+  try {
+    const ordenes = await sbGet('ordenes_produccion',
+      `pipeline_id=eq.${pipelineId}&select=id,foto_urls,foto_color_urls&order=created_at.desc&limit=1`);
+    if (!ordenes.length) {
+      toast('Este pedido no tiene orden de producción todavía', 'err');
+      return;
+    }
+    const orden = ordenes[0];
+    const fillTo4 = arr => {
+      const clean = Array.isArray(arr) ? arr.slice(0, 4) : [];
+      while (clean.length < 4) clean.push(null);
+      return clean;
+    };
+    _editFotosQA = {
+      pipelineId,
+      ordenId: orden.id,
+      aprobacion: fillTo4(orden.foto_urls),
+      color: fillTo4(orden.foto_color_urls),
+    };
+    renderEditFotosQA();
+    openModal('modal-edit-fotos-qa');
+  } catch (e) {
+    toast('Error cargando fotos: ' + e.message, 'err');
+  }
+}
+
+function renderEditFotosQA(){
+  ['aprobacion', 'color'].forEach(sec => {
+    const grid = document.getElementById('edit-fotos-' + sec + '-grid');
+    if (!grid) return;
+    const arr = _editFotosQA[sec];
+    const labels = sec === 'aprobacion' ? _EDIT_LABELS_APROB : _EDIT_LABELS_COLOR;
+    grid.innerHTML = arr.map((val, i) => {
+      const hasImg = val && (val.startsWith('http') || val.startsWith('data:'));
+      return `
+        <div style="position:relative">
+          <div onclick="selEditFotoQASlot('${sec}',${i})"
+            ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
+            ondragleave="this.style.borderColor=''"
+            ondrop="event.preventDefault();this.style.borderColor='';dropEditFotoQA('${sec}',${i},event)"
+            style="aspect-ratio:4/3;background:var(--bg3);border:2px dashed var(--border2);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:.2s;cursor:pointer">
+            ${hasImg
+              ? `<img src="${val}" style="width:100%;height:100%;object-fit:cover">`
+              : `<span style="font-size:20px">📷</span><span style="font-size:10px;color:var(--text3);margin-top:4px">${labels[i]}</span>`
+            }
+          </div>
+          ${hasImg ? `<button onclick="eliminarEditFotoQA('${sec}',${i})" style="position:absolute;top:4px;right:4px;background:rgba(220,38,38,0.9);color:#fff;border:none;width:22px;height:22px;border-radius:50%;font-size:14px;cursor:pointer;line-height:1;padding:0" title="Eliminar">×</button>` : ''}
+        </div>`;
+    }).join('');
+  });
+}
+
+function selEditFotoQASlot(seccion, i){
+  window._editFotoQATarget = { seccion, idx: i };
+  document.getElementById('file-edit-foto-qa').click();
+}
+
+function handleEditFotoQA(input){
+  if (!input.files || !input.files[0]) return;
+  const { seccion, idx } = window._editFotoQATarget || {};
+  if (!seccion) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _editFotosQA[seccion][idx] = e.target.result;
+    renderEditFotosQA();
+  };
+  reader.readAsDataURL(input.files[0]);
+  input.value = '';
+}
+
+function dropEditFotoQA(seccion, i, event){
+  const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _editFotosQA[seccion][i] = e.target.result;
+    renderEditFotosQA();
+  };
+  reader.readAsDataURL(file);
+}
+
+function eliminarEditFotoQA(seccion, idx){
+  _editFotosQA[seccion][idx] = null;
+  renderEditFotosQA();
+}
+
+async function guardarEditFotosQA(){
+  if (!_editFotosQA.ordenId) return;
+  const btn = document.getElementById('btn-guardar-edit-fotos-qa');
+  if (btn) { btn.disabled = true; btn.textContent = 'Subiendo...'; }
+  try {
+    const uploaded = { aprobacion: [], color: [] };
+    let pending = 0, done = 0;
+    ['aprobacion','color'].forEach(sec =>
+      _editFotosQA[sec].forEach(f => { if (f && !f.startsWith('http')) pending++; })
+    );
+    for (const sec of ['aprobacion','color']) {
+      for (let i = 0; i < _editFotosQA[sec].length; i++) {
+        const f = _editFotosQA[sec][i];
+        if (!f) { uploaded[sec].push(null); continue; }
+        if (f.startsWith('http')) { uploaded[sec].push(f); continue; }
+        // Es dataURL base64 nuevo → subir a Storage
+        const base64 = f.replace(/^data:image\/\w+;base64,/, '');
+        const arr = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const blob = new Blob([arr], { type: 'image/jpeg' });
+        const prefix = sec === 'aprobacion' ? 'aprobacion' : 'color';
+        const fname = _editFotosQA.ordenId + '/' + prefix + '-' + i + '-' + Date.now() + '.jpg';
+        const r = await fetch(SB_URL + '/storage/v1/object/fotos-aprobacion/' + fname, {
+          method: 'POST',
+          headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+          body: blob
+        });
+        if (r.ok) uploaded[sec].push(SB_URL + '/storage/v1/object/public/fotos-aprobacion/' + fname);
+        else uploaded[sec].push(null);
+        done++;
+        if (btn) btn.textContent = 'Subiendo ' + done + '/' + pending + '...';
+      }
+    }
+    await sbPatch('ordenes_produccion', {
+      foto_urls: uploaded.aprobacion,
+      foto_color_urls: uploaded.color,
+    }, 'id=eq.' + _editFotosQA.ordenId);
+    toast('Fotos actualizadas ✓', 'ok');
+    closeModal('modal-edit-fotos-qa');
+  } catch (e) {
+    console.error('guardarEditFotosQA:', e);
+    toast('Error: ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar cambios'; }
+  }
 }
 
 async function loadPantonesG(){
