@@ -109,7 +109,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .foto-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 .foto-slot{aspect-ratio:3/2;background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:5px;overflow:hidden;transition:all 0.2s}
 .foto-slot.taken{border-style:solid;border-color:var(--green-border)}
-.foto-slot img{width:100%;height:100%;object-fit:cover}
+.foto-slot img{width:100%;height:100%;object-fit:contain}
 .foto-icon{font-size:22px;opacity:0.5}
 .foto-label{font-size:11px;color:var(--text2)}
 .tinta-row{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px}
@@ -1498,7 +1498,7 @@ function pintarFotosEnSlots(){
       if(!slot)return;
       if(url){
         slot.className='foto-slot taken';
-        slot.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">';
+        slot.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:contain">';
       } else {
         // Si no hay URL, restaurar el HTML estático (icono cámara + label)
         const labels=['Frente','Reverso','Lado izquierdo','Lado derecho'];
@@ -1513,7 +1513,7 @@ function pintarFotosEnSlots(){
       if(!slot)return;
       if(url){
         slot.className='foto-slot taken';
-        slot.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">';
+        slot.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:contain">';
       } else {
         slot.className='foto-slot';
         slot.innerHTML='<div class="foto-icon">🎨</div><div class="foto-label">Color '+(i+1)+'</div>';
@@ -2209,7 +2209,7 @@ function renderSeccionEmpaque(seccion){
           ondrop="event.preventDefault();this.style.borderColor='';dropEmpaqueProd('${seccion}',${i},event)"
           style="aspect-ratio:4/3;background:var(--bg3);border:2px dashed var(--border2);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:.2s;cursor:pointer">
           ${hasImg
-            ? `<img src="${val}" style="width:100%;height:100%;object-fit:cover">`
+            ? `<img src="${val}" style="width:100%;height:100%;object-fit:contain">`
             : `<span style="font-size:20px">📷</span><span style="font-size:10px;color:var(--text3);margin-top:4px">${label} ${i+1}</span>`
           }
         </div>
@@ -2545,7 +2545,7 @@ function buildFotosAprobacionEditor(o){
     html+=`<div style="background:var(--bg4);border:1px solid var(--border2);border-radius:8px;padding:8px">
       <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-align:center">${labels[i]}</div>
       <div id="thumb-foto-${i}" style="width:100%;aspect-ratio:1;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;overflow:hidden">
-        ${url?`<img src="${url}" style="width:100%;height:100%;object-fit:cover">`:`<span style="color:var(--text3);font-size:11px">Sin foto</span>`}
+        ${url?`<img src="${url}" style="width:100%;height:100%;object-fit:contain">`:`<span style="color:var(--text3);font-size:11px">Sin foto</span>`}
       </div>
       <input type="file" id="file-foto-${i}" accept="image/*" capture="environment" style="display:none" onchange="cambiarFotoAprobacion(${i},this.files[0])">
       <button class="btn btn-xs" style="width:100%;background:var(--amber);color:#0b0d10;border:none;touch-action:manipulation" onclick="document.getElementById('file-foto-${i}').click()">📷 Cambiar foto</button>
@@ -2603,7 +2603,7 @@ async function cambiarFotoAprobacion(idx, file){
     });
     if(!pat.ok)throw new Error('Error guardando: '+await pat.text());
     // Refrescar thumbnail
-    if(thumb) thumb.innerHTML = `<img src="${nuevaUrl}" style="width:100%;height:100%;object-fit:cover">`;
+    if(thumb) thumb.innerHTML = `<img src="${nuevaUrl}" style="width:100%;height:100%;object-fit:contain">`;
     toast('✓ Foto '+labels[idx]+' actualizada','ok');
   }catch(e){
     if(thumb) thumb.innerHTML='<span style="color:var(--red);font-size:11px">Error</span>';
@@ -3895,7 +3895,7 @@ function handleFotoDrop(i, event){
     const labels = ['Frente','Reverso','Lado izquierdo','Lado derecho'];
     if(slot){
       slot.className='foto-slot taken';
-      slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
+      slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:contain">';
     }
     toast('Foto '+labels[i]+' cargada');
   };
@@ -3941,7 +3941,7 @@ function handleFotoColorDrop(i, event){
     const slot = document.getElementById('color-'+i);
     if(slot){
       slot.className='foto-slot taken';
-      slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
+      slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:contain">';
     }
     toast('Validación color '+(i+1)+' cargada');
     subirFotoColorAStorage(i, e.target.result);
@@ -4787,7 +4787,7 @@ function handleEmpaqueFoto(i,input){
   reader.onload=function(e){
     S.fotosEmpaque[i]=e.target.result;
     const slot=document.getElementById('empaque-'+i);
-    if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';}
+    if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:contain">';}
     toast('Foto empaque '+(i+1)+' cargada');
   };
   reader.readAsDataURL(input.files[0]);
@@ -4801,7 +4801,7 @@ function handleEmpaquesDrop(i,event){
   reader.onload=function(e){
     S.fotosEmpaque[i]=e.target.result;
     const slot=document.getElementById('empaque-'+i);
-    if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';}
+    if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:contain">';}
     toast('Foto empaque '+(i+1)+' cargada');
   };
   reader.readAsDataURL(file);

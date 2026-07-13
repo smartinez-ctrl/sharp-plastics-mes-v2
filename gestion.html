@@ -3487,7 +3487,7 @@ function renderEditFotosQA(){
             ondrop="event.preventDefault();this.style.borderColor='';dropEditFotoQA('${sec}',${i},event)"
             style="aspect-ratio:4/3;background:var(--bg3);border:2px dashed var(--border2);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:.2s;cursor:pointer">
             ${hasImg
-              ? `<img src="${val}" style="width:100%;height:100%;object-fit:cover">`
+              ? `<img src="${val}" style="width:100%;height:100%;object-fit:contain">`
               : `<span style="font-size:20px">📷</span><span style="font-size:10px;color:var(--text3);margin-top:4px">${labels[i]}</span>`
             }
           </div>
@@ -4007,7 +4007,7 @@ function handleEmpaqueDrop(i, event){
 
 function mostrarEmpaqueSlot(i, src, esUrl){
   const slot = document.getElementById('emp-slot-'+i);
-  if(slot) slot.innerHTML = '<img src="'+src+'" style="width:100%;height:100%;object-fit:cover">';
+  if(slot) slot.innerHTML = '<img src="'+src+'" style="width:100%;height:100%;object-fit:contain">';
 }
 
 async function guardarFotosEmpaque(){
