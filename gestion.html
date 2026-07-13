@@ -1607,11 +1607,56 @@ async function guardarPedido(){
 }
 
 async function eliminarPedido(id){
-  const p=PIPELINE.find(x=>x.id===id);
-  const nombre=p?(p.sub_cliente||p.cliente||'este pedido')+' — PO '+p.po:'este pedido';
-  if(!confirm(`⚠️ ¿Eliminar "${nombre}"?\n\nEsta acción no se puede deshacer.`))return;
-  try{await sbDelete('pipeline_mf',`id=eq.${id}`);toast('Pedido eliminado','ok');await loadPipeline();}
-  catch(e){toast('Error: '+e.message,'err');}
+  const p = PIPELINE.find(x=>x.id===id);
+  const nombre = p ? ((p.sub_cliente||p.cliente||'este pedido')+' — PO '+p.po) : 'este pedido';
+
+  // Ver si tiene órdenes de producción asociadas — el FK
+  // ordenes_produccion.pipeline_id impide borrar el pipeline si existen.
+  let ordenes = [];
+  try {
+    ordenes = await sbGet('ordenes_produccion', `pipeline_id=eq.${id}&select=id,estado,piezas_producidas,aprobacion_estado`);
+  } catch(e) {
+    console.warn('No se pudo consultar órdenes de producción:', e);
+  }
+
+  let confirmMsg = `⚠️ ¿Eliminar "${nombre}"?\n\nEsta acción no se puede deshacer.`;
+  if (ordenes.length > 0) {
+    const totalPzas = ordenes.reduce((s,o) => s + (parseInt(o.piezas_producidas)||0), 0);
+    confirmMsg += `\n\n⛔ Este pedido tiene ${ordenes.length} orden(es) de producción asociada(s)`;
+    if (totalPzas > 0) confirmMsg += ` con ${totalPzas.toLocaleString()} pzas registradas`;
+    confirmMsg += `.\n\nAl eliminar se borrarán también:`;
+    confirmMsg += `\n• Las órdenes de producción`;
+    confirmMsg += `\n• Turnos de operadores registrados`;
+    confirmMsg += `\n• Checklist y motivo de aprobación`;
+    confirmMsg += `\n• Referencias a fotos (los archivos en Storage no se borran)`;
+    confirmMsg += `\n\n¿Continuar?`;
+  }
+  if (!confirm(confirmMsg)) return;
+
+  try{
+    // 1. Borrar dependientes de ordenes_produccion (turnos por operador).
+    //    La tabla podría llamarse produccion_operadores con FK orden_id.
+    //    Si no existe/no aplica, ignoramos el error.
+    for (const orden of ordenes) {
+      try {
+        await sbDelete('produccion_operadores', `orden_id=eq.${orden.id}`);
+      } catch(e) { console.warn('produccion_operadores (ignorado):', e.message); }
+      try {
+        await sbDelete('turnos', `orden_id=eq.${orden.id}`);
+      } catch(e) { console.warn('turnos (ignorado):', e.message); }
+    }
+    // 2. Borrar todas las órdenes del pipeline
+    if (ordenes.length > 0) {
+      await sbDelete('ordenes_produccion', `pipeline_id=eq.${id}`);
+    }
+    // 3. Finalmente borrar el pipeline
+    await sbDelete('pipeline_mf', `id=eq.${id}`);
+    toast('Pedido eliminado ✓','ok');
+    await loadPipeline();
+  } catch(e){
+    console.error('eliminarPedido:', e);
+    toast('Error al eliminar: '+String(e.message||e).substring(0,150),'err');
+  }
 }
 
 // IMPORTAR PDFs
