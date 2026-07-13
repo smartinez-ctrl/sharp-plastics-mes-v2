@@ -1610,11 +1610,11 @@ async function eliminarPedido(id){
   const p = PIPELINE.find(x=>x.id===id);
   const nombre = p ? ((p.sub_cliente||p.cliente||'este pedido')+' — PO '+p.po) : 'este pedido';
 
-  // Ver si tiene órdenes de producción asociadas — el FK
-  // ordenes_produccion.pipeline_id impide borrar el pipeline si existen.
+  // Consultar cuántas órdenes tiene para advertir al usuario. El borrado
+  // en cascada lo hace la BD (FK ON DELETE CASCADE en ordenes_produccion.pipeline_id).
   let ordenes = [];
   try {
-    ordenes = await sbGet('ordenes_produccion', `pipeline_id=eq.${id}&select=id,estado,piezas_producidas,aprobacion_estado`);
+    ordenes = await sbGet('ordenes_produccion', `pipeline_id=eq.${id}&select=id,piezas_producidas`);
   } catch(e) {
     console.warn('No se pudo consultar órdenes de producción:', e);
   }
@@ -1634,44 +1634,21 @@ async function eliminarPedido(id){
   if (!confirm(confirmMsg)) return;
 
   try{
-    console.log('[eliminarPedido] Iniciando cascade delete pipeline_id=', id, 'con', ordenes.length, 'órdenes');
-    // 1. Borrar dependientes de ordenes_produccion (turnos por operador).
-    //    La tabla podría llamarse produccion_operadores con FK orden_id.
-    //    Si no existe/no aplica, ignoramos el error.
-    for (const orden of ordenes) {
-      console.log('[eliminarPedido] Procesando orden', orden.id);
-      try {
-        await sbDelete('produccion_operadores', `orden_id=eq.${orden.id}`);
-        console.log('  ✓ produccion_operadores borrados');
-      } catch(e) { console.warn('  ⚠ produccion_operadores (ignorado):', e.message); }
-      try {
-        await sbDelete('turnos', `orden_id=eq.${orden.id}`);
-        console.log('  ✓ turnos borrados');
-      } catch(e) { console.warn('  ⚠ turnos (ignorado):', e.message); }
-    }
-    // 2. Borrar todas las órdenes del pipeline
-    if (ordenes.length > 0) {
-      console.log('[eliminarPedido] Borrando', ordenes.length, 'órdenes de producción...');
-      await sbDelete('ordenes_produccion', `pipeline_id=eq.${id}`);
-      console.log('[eliminarPedido] ✓ Órdenes borradas');
-    }
-    // 3. Finalmente borrar el pipeline
-    console.log('[eliminarPedido] Borrando pipeline...');
+    // El DELETE hace cascade automático via FK ON DELETE CASCADE.
+    // Si falla con 23503, es que hay otra tabla dependiente cuyo FK no
+    // está configurado en CASCADE — el alert() abajo dice cuál.
     await sbDelete('pipeline_mf', `id=eq.${id}`);
-    console.log('[eliminarPedido] ✓ Pipeline borrado');
     toast('Pedido eliminado ✓','ok');
     await loadPipeline();
   } catch(e){
     console.error('[eliminarPedido] FALLO:', e);
-    // Extraer info útil del error de PostgREST
     let msg = String(e.message||e);
-    // Buscar el nombre de la tabla y constraint que fallaron
-    const tablaMatch = msg.match(/on table [\\"']([^\\"']+)[\\"']/);
-    const constraintMatch = msg.match(/violates foreign key constraint [\\"']([^\\"']+)[\\"']/);
-    if (tablaMatch || constraintMatch) {
-      const tabla = tablaMatch ? tablaMatch[1] : '?';
-      const constraint = constraintMatch ? constraintMatch[1] : '?';
-      alert(`No se pudo borrar el pedido.\n\nHay datos en la tabla "${tabla}" que dependen de este pedido (constraint: ${constraint}).\n\nDile a tu desarrollador que necesita borrar primero esa tabla, o cambiar el FK a ON DELETE CASCADE.\n\nError completo en la consola del navegador (F12).`);
+    // Buscar el nombre de la tabla dependiente. Postgres mete la info en
+    // el "details" del error: "Key is still referenced from table \"XXX\"".
+    const tablaHija = msg.match(/still referenced from table [\\"']([^\\"']+)[\\"']/);
+    const constraintName = msg.match(/violates foreign key constraint [\\"']([^\\"']+)[\\"']/);
+    if (tablaHija) {
+      alert(`No se pudo borrar el pedido.\n\nLa tabla "${tablaHija[1]}" tiene datos que dependen de este pedido y su FK no está en CASCADE.\n\nCorre este SQL en Supabase para arreglarlo (reemplaza el constraint_name real):\n\nSELECT conname FROM pg_constraint WHERE contype='f' AND conrelid='public.${tablaHija[1]}'::regclass AND confrelid='public.pipeline_mf'::regclass;\n\nLuego cambia ese constraint a ON DELETE CASCADE.`);
     } else {
       toast('Error al eliminar: '+msg.substring(0,150),'err');
     }
