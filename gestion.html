@@ -1230,7 +1230,6 @@ function renderPipeline(){
         <button class="btn btn-ghost btn-xs" title="PDF producción interno (QA + fotos + merma)" onclick="abrirPDFProduccionInterno('${p.id}')">🛠</button>
         <button class="btn btn-ghost btn-xs" title="Enviar reporte completo por email" onclick="enviarReporteCompleto('${p.id}',this)">📧</button>
         <button class="btn btn-ghost btn-xs" title="Ocultar pedido" onclick="ocultarPedido('${p.id}',true)" style="opacity:0.6">🙈</button>
-        ${USER.rol==='master'?`<button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>`:''}
       </div>
     </div>`;
   }).join('')):'<div style="text-align:center;padding:30px;color:var(--text3)">Sin completados</div>';
@@ -1609,6 +1608,15 @@ async function guardarPedido(){
 async function eliminarPedido(id){
   const p = PIPELINE.find(x=>x.id===id);
   const nombre = p ? ((p.sub_cliente||p.cliente||'este pedido')+' — PO '+p.po) : 'este pedido';
+
+  // Guard: no permitir borrar pedidos ya cerrados. Esto protege el historico
+  // (piezas producidas, fotos, checklist, mermas, movimientos de inventario
+  // reales). Aunque el usuario intente desde consola, aquí se rechaza.
+  const ESTADOS_INMUTABLES = new Set(['Completado','Entregado']);
+  if (p && ESTADOS_INMUTABLES.has(p.estado)) {
+    alert(`❌ No se puede borrar "${nombre}"\n\nEste pedido está en estado "${p.estado}" y forma parte del historial.\n\nSi lo que quieres es sacarlo de la vista, usa el botón 🙈 "Ocultar pedido".`);
+    return;
+  }
 
   // Consultar cuántas órdenes tiene para advertir al usuario. El borrado
   // en cascada lo hace la BD (FK ON DELETE CASCADE en ordenes_produccion.pipeline_id).
