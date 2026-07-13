@@ -2726,7 +2726,24 @@ async function verPDFCompletado(pipelineId, tipo){
     // Cargar fotos desde Storage
     let fotos=[null,null,null,null];
     let fotosColor=[null,null,null,null];
-    if(orden?.id){
+
+    // Estrategia: PRIMERO leer las URLs guardadas en la BD (fuente de verdad
+    // — se actualizan cuando se editan fotos desde el modal 📷 en gestión).
+    // SEGUNDO, si algún slot quedó vacío, hacer fallback al listing del bucket
+    // (para pedidos muy antiguos que no tenían foto_urls en la BD).
+    if(orden?.foto_urls && Array.isArray(orden.foto_urls)){
+      orden.foto_urls.forEach((url,i)=>{
+        if(url && i<4) fotos[i]=url;
+      });
+    }
+    if(orden?.foto_color_urls && Array.isArray(orden.foto_color_urls)){
+      orden.foto_color_urls.forEach((url,i)=>{
+        if(url && i<4) fotosColor[i]=url;
+      });
+    }
+    // Fallback al listing solo si faltan fotos en la BD
+    const faltanFotos = fotos.some(f => !f) || fotosColor.some(f => !f);
+    if(orden?.id && faltanFotos){
       try{
         const rF=await fetch(SB_URL+'/storage/v1/object/list/fotos-aprobacion',{
           method:'POST',
@@ -2735,8 +2752,14 @@ async function verPDFCompletado(pipelineId, tipo){
         });
         const files=await rF.json();
         if(Array.isArray(files)){
-          // Tomar la foto más reciente por posición (0-3) para cada tipo
-          files.sort((a,b)=>b.name.localeCompare(a.name));
+          // Ordenar por timestamp descendente (extraer el número más grande del
+          // nombre — funciona tanto con formato viejo 'foto-0-frente-{ts}.jpg'
+          // como con formato editado 'foto-0-{ts}.jpg').
+          files.sort((a,b)=>{
+            const tsA = parseInt((a.name.match(/(\d{10,})/g)||['0']).pop());
+            const tsB = parseInt((b.name.match(/(\d{10,})/g)||['0']).pop());
+            return tsB - tsA;
+          });
           files.forEach(f=>{
             // Botellas: foto-N-
             const m=f.name.match(/foto-(\d)-/);
@@ -2755,19 +2778,6 @@ async function verPDFCompletado(pipelineId, tipo){
           });
         }
       }catch(e){console.warn('Error cargando fotos:',e);}
-    }
-    // Fallback: si no encontramos por listing, usar las URLs guardadas en DB.
-    // Esto también cubre el caso de fotos editadas desde el modal de gestión
-    // (donde algunos slots pueden haberse marcado como null).
-    if(Array.isArray(orden?.foto_urls)){
-      orden.foto_urls.forEach((url,i)=>{
-        if(url && i<4 && !fotos[i]) fotos[i]=url;
-      });
-    }
-    if(Array.isArray(orden?.foto_color_urls)){
-      orden.foto_color_urls.forEach((url,i)=>{
-        if(url && i<4 && !fotosColor[i]) fotosColor[i]=url;
-      });
     }
 
     const tmpS = {
