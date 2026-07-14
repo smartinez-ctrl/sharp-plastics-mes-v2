@@ -1,6 +1,12 @@
 const SB_URL = 'https://ozibjgsxyzdbporcarwv.supabase.co';
 const SB_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aWJqZ3N4eXpkYnBvcmNhcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTc5MjEsImV4cCI6MjA5Mjk3MzkyMX0.mO77vLN92En0fvn1U-FFif43CsCG_QMiVKSclBCL7-M';
-const APPROVAL_EMAIL = 'smartinez@sharpplastics.com';
+// Lista de aprobadores autorizados. El correo se envía a todos y cualquiera
+// puede aprobar/rechazar. El identificador del que aprueba viaja en el link
+// como parámetro `?as=` para poder registrar quién lo aprobó en el checklist.
+const APPROVERS = [
+  { key: 'samuel', name: 'Samuel Martínez', email: 'smartinez@sharpplastics.com' },
+  { key: 'sgc',    name: 'SGC',             email: 'sgc@sharpplastics.com' },
+];
 const BASE_URL = 'https://sharp-plastics-mes-v2.vercel.app';
 
 export default async function handler(req, res) {
@@ -55,8 +61,6 @@ export default async function handler(req, res) {
     console.warn('generate-approval-pdf error:', e.message);
   }
 
-  const checklistUrl = `${BASE_URL}/?aprobar=${orden_id}&token=${token}`;
-
   const pdfBloque = pdfAprobacionUrl ? `
     <div style="padding:0 32px;margin-bottom:20px;text-align:center">
       <a href="${pdfAprobacionUrl}" target="_blank" style="display:inline-block;background:#1e2028;color:#fef3c7;font-size:14px;font-weight:600;padding:12px 32px;border-radius:10px;text-decoration:none">
@@ -68,7 +72,12 @@ export default async function handler(req, res) {
       <p style="font-size:12px;color:#dc2626;margin:0">⚠️ No se pudo generar el PDF combinado. Revisa las fotos directamente en el MES.</p>
     </div>`;
 
-  const emailHTML = `<!DOCTYPE html>
+  // Enviar un correo INDIVIDUAL a cada aprobador. Cada link lleva `?as=`
+  // con el identificador del aprobador. Cuando cualquiera hace click y aprueba,
+  // el checklist registra quién fue (revisado_por: {key,name,email}).
+  const buildEmailHTML = (aprobador) => {
+    const checklistUrl = `${BASE_URL}/?aprobar=${orden_id}&token=${token}&as=${aprobador.key}`;
+    return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif">
 <div style="max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden">
@@ -77,7 +86,7 @@ export default async function handler(req, res) {
   </div>
   <div style="padding:24px 32px 0">
     <h1 style="margin:0 0 6px;font-size:20px;color:#111">Aprobación de ajuste requerida</h1>
-    <p style="margin:0;font-size:14px;color:#6b7280">Descarga el PDF de revisión, revísalo con calma, y luego completa el checklist de aprobación en el sistema.</p>
+    <p style="margin:0;font-size:14px;color:#6b7280">Hola ${aprobador.name}, descarga el PDF de revisión, revísalo con calma, y luego completa el checklist de aprobación en el sistema.</p>
   </div>
   <div style="margin:20px 32px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px">
     <table style="width:100%;border-collapse:collapse">
@@ -92,34 +101,52 @@ export default async function handler(req, res) {
   ${pdfBloque}
   <div style="padding:12px 32px 24px;text-align:center">
     <a href="${checklistUrl}" style="display:inline-block;background:#16a34a;color:#fff;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;text-decoration:none">✅ Checklist de aprobación</a>
-    <p style="font-size:11px;color:#9ca3af;margin:12px 0 0">Se abre el sistema con el checklist de 8 puntos.<br>Marca cada uno como Sí/No.</p>
+    <p style="font-size:11px;color:#9ca3af;margin:12px 0 0">Se abre el sistema con el checklist de 8 puntos.<br>Marca cada uno como Sí/No.<br><span style="color:#6b7280">Tu aprobación quedará registrada como <strong>${aprobador.name}</strong></span></p>
   </div>
   <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:12px 32px;text-align:center">
     <p style="font-size:11px;color:#9ca3af;margin:0">Sharp Plastics MES · Sistema de ejecución de manufactura</p>
   </div>
 </div>
 </body></html>`;
+  };
 
-  const resendRes = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
-    body: JSON.stringify({
-      from: 'MES Sharp Plastics <onboarding@resend.dev>',
-      to: [APPROVAL_EMAIL],
-      subject: `⏳ Aprobacion requerida — ${orden_op||'Orden'} · ${sub_cliente||cliente||'—'}`,
-      html: emailHTML,
-    }),
-  });
+  const subject = `⏳ Aprobacion requerida — ${orden_op||'Orden'} · ${sub_cliente||cliente||'—'}`;
+  const enviosOK = [];
+  const enviosFallidos = [];
+  for (const aprobador of APPROVERS) {
+    try {
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+        body: JSON.stringify({
+          from: 'MES Sharp Plastics <onboarding@resend.dev>',
+          to: [aprobador.email],
+          subject,
+          html: buildEmailHTML(aprobador),
+        }),
+      });
+      if (resendRes.ok) {
+        enviosOK.push(aprobador.email);
+      } else {
+        const err = await resendRes.json().catch(() => ({}));
+        enviosFallidos.push({ email: aprobador.email, err });
+        console.error('Resend error para', aprobador.email, ':', err);
+      }
+    } catch (e) {
+      enviosFallidos.push({ email: aprobador.email, err: e.message });
+      console.error('Excepción para', aprobador.email, ':', e);
+    }
+  }
 
-  if (!resendRes.ok) {
-    const err = await resendRes.json();
-    console.error('Resend error:', err);
-    return res.status(500).json({ error: 'Error enviando email', detail: err });
+  if (!enviosOK.length) {
+    return res.status(500).json({ error: 'No se pudo enviar a ningún aprobador', detail: enviosFallidos });
   }
 
   return res.status(200).json({
     ok: true,
     fotos_subidas: foto_urls.filter(Boolean).length,
     pdf_aprobacion_url: pdfAprobacionUrl,
+    enviado_a: enviosOK,
+    fallidos: enviosFallidos.length ? enviosFallidos : undefined,
   });
 }

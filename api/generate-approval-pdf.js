@@ -184,7 +184,15 @@ export default async function handler(req, res) {
     // ─── SERIALIZAR Y SUBIR A STORAGE ───────────────────────────────────
     const pdfBytes = await pdfDoc.save();
     const timestamp = Date.now();
-    const path = `${orden_id}/aprobacion-${timestamp}.pdf`;
+    // Nombre humanizado con el PO (o orden_op como fallback) para que el
+    // usuario reconozca de qué pedido es al descargar. Se sanea para
+    // eliminar caracteres inválidos en paths de Storage.
+    const identificador = String(po || orden_op || 'sin-po')
+      .replace(/[^a-zA-Z0-9\-_]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 60) || 'sin-po';
+    const path = `${orden_id}/aprobacion-${identificador}-${timestamp}.pdf`;
     const upUrl = `${SB_URL}/storage/v1/object/pedidos-pdf/${path}`;
 
     const upRes = await fetch(upUrl, {
