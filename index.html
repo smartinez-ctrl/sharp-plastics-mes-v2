@@ -288,6 +288,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <div class="topbar-left"><div class="logo">MES <span>//</span> Pedidos</div></div>
     <div class="topbar-right">
       <div class="user-chip"><div class="user-chip-av" id="dash-av"></div><span id="dash-name"></span></div>
+      <button class="back-btn" id="btn-editar-fotos-cerrados" onclick="abrirListadoCerradosMES()" title="Editar fotos de pedidos ya cerrados" style="display:none">📷 Fotos cerrados</button>
       <button class="back-btn" onclick="exportarPedidosDashExcel()" title="Exportar pedidos activos a Excel (sin datos financieros)">📊 Excel</button>
       <button class="back-btn" onclick="renderDashboard()" title="Actualizar">↻</button>
       <button class="back-btn" onclick="cerrarSesion()">Salir</button>
@@ -683,6 +684,50 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 </div>
 
 <!-- Modal para registrar un pantone en el catálogo desde "colores a imprimir" -->
+<!-- Modal listador de pedidos cerrados para editar fotos (accesible desde MES topbar) -->
+<div class="modal-overlay" id="modal-cerrados-mes">
+  <div style="background:var(--bg2);border-radius:16px;padding:20px;width:94%;max-width:560px;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;position:sticky;top:0;background:var(--bg2);padding-bottom:8px;z-index:2">
+      <div>
+        <div style="font-size:15px;font-weight:700">📷 Editar fotos de pedidos cerrados</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Últimos 40 completados o entregados</div>
+      </div>
+      <button onclick="cerrarListadoCerradosMES()" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer">×</button>
+    </div>
+    <input type="text" id="cerrados-buscar" placeholder="🔍 Buscar PO, cliente..." oninput="renderListadoCerradosMES()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;margin-bottom:12px;box-sizing:border-box">
+    <div id="cerrados-lista"><div style="text-align:center;padding:30px;color:var(--text3);font-size:12px">Cargando...</div></div>
+  </div>
+</div>
+
+<!-- Modal editor de fotos QA (aprobación + color) desde el MES -->
+<div class="modal-overlay" id="modal-edit-fotos-mes">
+  <div style="background:var(--bg2);border-radius:16px;padding:20px;width:94%;max-width:520px;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;position:sticky;top:0;background:var(--bg2);padding-bottom:8px;z-index:2">
+      <div>
+        <div style="font-size:15px;font-weight:700">📷 Editar fotos de QA</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="edit-fotos-mes-titulo">—</div>
+      </div>
+      <button onclick="cerrarEditFotosMES()" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer">×</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--bg3);border-radius:8px">
+      Cambios se aplican directo al pedido cerrado. Aparecerán en el próximo PDF de QA que se genere.
+    </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">📸 Fotos de aprobación</div>
+      <div id="edit-fotos-mes-aprobacion" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">🎨 Validación de color</div>
+      <div id="edit-fotos-mes-color" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    </div>
+    <input type="file" id="file-edit-fotos-mes" accept="image/*" style="display:none" onchange="handleEditFotoMES(this)">
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" onclick="cerrarEditFotosMES()" style="flex:1">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-edit-fotos-mes" onclick="guardarEditFotosMES()" style="flex:2">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-registrar-pantone">
   <div style="background:var(--bg2);border-radius:16px;padding:20px;width:92%;max-width:400px;max-height:90vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -1723,9 +1768,13 @@ function updateUserChips(){
 
 function applyRoleRestrictions(){
   const esOperador=S.user&&S.user.role==='operador';
+  const rolePuedeEditarFotos = S.user && (S.user.role==='master' || S.user.role==='supervisor');
   // Nueva orden manual — solo supervisores
   const btnNueva=document.getElementById('btn-nueva-orden');
   if(btnNueva)btnNueva.style.display=esOperador?'none':'';
+  // Botón "Fotos cerrados" — solo master y supervisor
+  const btnFC=document.getElementById('btn-editar-fotos-cerrados');
+  if(btnFC)btnFC.style.display=rolePuedeEditarFotos?'':'none';
   // Completar producción — solo supervisores
   const btnCompletar=document.getElementById('btn-completar-prod');
   if(btnCompletar){
@@ -2009,6 +2058,227 @@ function exportarPedidosDashExcel(){
   }catch(e){
     console.error('exportarPedidosDashExcel:', e);
     toast('Error: '+(e.message||e),'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// EDITAR FOTOS DE PEDIDOS CERRADOS (accesible desde topbar del MES).
+// Feature para master y supervisor. Muestra un listado de pedidos
+// Completado/Entregado y, al elegir uno, ofrece:
+//   - Editar fotos de aprobación + color (modal nuevo local)
+//   - Editar fotos de empaque + Fedex (reusa modal-empaque-prod)
+// Los cambios se persisten en ordenes_produccion.foto_urls,
+// .foto_color_urls y pipeline_mf.fotos_empaque_* respectivamente.
+// ══════════════════════════════════════════════════════
+let _cerradosCache = [];
+let _editFotosMES = { pipelineId: null, ordenId: null, po: '', cliente: '', aprobacion: [], color: [] };
+window._editFotoMESTarget = { seccion: 'aprobacion', idx: 0 };
+const _EDIT_MES_LBL_APROB = ['Frente', 'Reverso', 'Lado izq', 'Lado der'];
+const _EDIT_MES_LBL_COLOR = ['Color 1', 'Color 2', 'Color 3', 'Color 4'];
+
+async function abrirListadoCerradosMES(){
+  const rol = S.user && S.user.role;
+  if (rol !== 'master' && rol !== 'supervisor') {
+    toast('Solo master y supervisor pueden editar fotos de pedidos cerrados', 'err');
+    return;
+  }
+  document.getElementById('modal-cerrados-mes').classList.add('open');
+  document.getElementById('cerrados-lista').innerHTML =
+    '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px">Cargando...</div>';
+  try {
+    const r = await fetch(SB_URL+'/rest/v1/pipeline_mf?estado=in.(Completado,Entregado)&select=id,po,cliente,sub_cliente,capacidad,piezas,estado,fecha_entrega,updated_at&order=updated_at.desc&limit=40',
+      { headers: { apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY } });
+    _cerradosCache = await r.json();
+    renderListadoCerradosMES();
+  } catch (e) {
+    document.getElementById('cerrados-lista').innerHTML =
+      '<div style="text-align:center;padding:30px;color:var(--red);font-size:12px">Error: '+e.message+'</div>';
+  }
+}
+
+function cerrarListadoCerradosMES(){
+  document.getElementById('modal-cerrados-mes').classList.remove('open');
+}
+
+function renderListadoCerradosMES(){
+  const q = (document.getElementById('cerrados-buscar')?.value || '').toLowerCase().trim();
+  const filtrados = q
+    ? _cerradosCache.filter(p =>
+        (p.po||'').toLowerCase().includes(q) ||
+        (p.cliente||'').toLowerCase().includes(q) ||
+        (p.sub_cliente||'').toLowerCase().includes(q))
+    : _cerradosCache;
+  const cont = document.getElementById('cerrados-lista');
+  if (!filtrados.length) {
+    cont.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px">'+(q?'Sin resultados':'No hay pedidos cerrados recientes')+'</div>';
+    return;
+  }
+  cont.innerHTML = filtrados.map(p => {
+    const titulo = (p.sub_cliente || p.cliente || 'Pedido');
+    const badge = p.estado==='Entregado' ? '#3b82f6' : '#22c55e';
+    const cap = p.capacidad ? p.capacidad+'ml' : '';
+    return `
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;margin-bottom:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700">${titulo}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${p.po?'PO '+p.po:''}${cap?' · '+cap:''} · ${(p.piezas||0).toLocaleString()} pzas</div>
+          </div>
+          <span style="background:${badge};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap">${p.estado}</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" style="flex:1;font-size:12px" onclick="abrirEditFotosMES('${p.id}','${(p.po||'').replace(/'/g,"&apos;")}','${(p.sub_cliente||p.cliente||'').replace(/'/g,"&apos;")}')">📷 Aprobación + Color</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1;font-size:12px" onclick="cerrarListadoCerradosMES();abrirEmpaqueProduccion('${p.id}')">📦 Empaque + Fedex</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ──────── Modal editor fotos aprobación + color desde MES ────────
+async function abrirEditFotosMES(pipelineId, po, cliente){
+  try {
+    const r = await fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+pipelineId+'&select=id,foto_urls,foto_color_urls&order=created_at.desc&limit=1',
+      { headers: { apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY } });
+    const ordenes = await r.json();
+    if (!Array.isArray(ordenes) || !ordenes.length) {
+      toast('Este pedido no tiene orden de producción todavía','err');
+      return;
+    }
+    const orden = ordenes[0];
+    const fillTo4 = arr => {
+      const clean = Array.isArray(arr) ? arr.slice(0, 4) : [];
+      while (clean.length < 4) clean.push(null);
+      return clean;
+    };
+    _editFotosMES = {
+      pipelineId,
+      ordenId: orden.id,
+      po: po || '',
+      cliente: cliente || '',
+      aprobacion: fillTo4(orden.foto_urls),
+      color: fillTo4(orden.foto_color_urls),
+    };
+    const tit = document.getElementById('edit-fotos-mes-titulo');
+    if (tit) tit.textContent = (cliente || '—') + (po ? ' · PO ' + po : '');
+    renderEditFotosMES();
+    cerrarListadoCerradosMES();
+    document.getElementById('modal-edit-fotos-mes').classList.add('open');
+  } catch (e) {
+    toast('Error: '+e.message,'err');
+  }
+}
+
+function cerrarEditFotosMES(){
+  document.getElementById('modal-edit-fotos-mes').classList.remove('open');
+}
+
+function renderEditFotosMES(){
+  ['aprobacion', 'color'].forEach(sec => {
+    const grid = document.getElementById('edit-fotos-mes-' + sec);
+    if (!grid) return;
+    const arr = _editFotosMES[sec];
+    const labels = sec === 'aprobacion' ? _EDIT_MES_LBL_APROB : _EDIT_MES_LBL_COLOR;
+    grid.innerHTML = arr.map((val, i) => {
+      const hasImg = val && (val.startsWith('http') || val.startsWith('data:'));
+      return `
+        <div style="position:relative">
+          <div onclick="selEditFotoMESSlot('${sec}',${i})"
+            ondragover="event.preventDefault();this.style.borderColor='var(--amber)'"
+            ondragleave="this.style.borderColor=''"
+            ondrop="event.preventDefault();this.style.borderColor='';dropEditFotoMES('${sec}',${i},event)"
+            style="aspect-ratio:4/3;background:var(--bg3);border:2px dashed var(--border2);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:.2s;cursor:pointer">
+            ${hasImg
+              ? `<img src="${val}" style="width:100%;height:100%;object-fit:contain">`
+              : `<span style="font-size:20px">📷</span><span style="font-size:10px;color:var(--text3);margin-top:4px">${labels[i]}</span>`
+            }
+          </div>
+          ${hasImg ? `<button onclick="eliminarEditFotoMES('${sec}',${i})" style="position:absolute;top:4px;right:4px;background:rgba(220,38,38,0.9);color:#fff;border:none;width:22px;height:22px;border-radius:50%;font-size:14px;cursor:pointer;line-height:1;padding:0" title="Eliminar">×</button>` : ''}
+        </div>`;
+    }).join('');
+  });
+}
+
+function selEditFotoMESSlot(seccion, i){
+  window._editFotoMESTarget = { seccion, idx: i };
+  document.getElementById('file-edit-fotos-mes').click();
+}
+
+function handleEditFotoMES(input){
+  if (!input.files || !input.files[0]) return;
+  const { seccion, idx } = window._editFotoMESTarget || {};
+  if (!seccion) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _editFotosMES[seccion][idx] = e.target.result;
+    renderEditFotosMES();
+  };
+  reader.readAsDataURL(input.files[0]);
+  input.value = '';
+}
+
+function dropEditFotoMES(seccion, i, event){
+  const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _editFotosMES[seccion][i] = e.target.result;
+    renderEditFotosMES();
+  };
+  reader.readAsDataURL(file);
+}
+
+function eliminarEditFotoMES(seccion, idx){
+  _editFotosMES[seccion][idx] = null;
+  renderEditFotosMES();
+}
+
+async function guardarEditFotosMES(){
+  if (!_editFotosMES.ordenId) return;
+  const btn = document.getElementById('btn-guardar-edit-fotos-mes');
+  if (btn) { btn.disabled = true; btn.textContent = 'Subiendo...'; }
+  try {
+    const uploaded = { aprobacion: [], color: [] };
+    let pending = 0, done = 0;
+    ['aprobacion','color'].forEach(sec =>
+      _editFotosMES[sec].forEach(f => { if (f && !f.startsWith('http')) pending++; })
+    );
+    for (const sec of ['aprobacion','color']) {
+      for (let i = 0; i < _editFotosMES[sec].length; i++) {
+        const f = _editFotosMES[sec][i];
+        if (!f) { uploaded[sec].push(null); continue; }
+        if (f.startsWith('http')) { uploaded[sec].push(f); continue; }
+        // Nombre compatible con el listing del PDF: foto-N-{ts}.jpg / color-N-{ts}.jpg
+        const base64 = f.replace(/^data:image\/\w+;base64,/, '');
+        const arr = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const blob = new Blob([arr], { type: 'image/jpeg' });
+        const prefix = sec === 'aprobacion' ? 'foto' : 'color';
+        const fname = _editFotosMES.ordenId + '/' + prefix + '-' + i + '-' + Date.now() + '.jpg';
+        const r = await fetch(SB_URL + '/storage/v1/object/fotos-aprobacion/' + fname, {
+          method: 'POST',
+          headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+          body: blob
+        });
+        if (r.ok) uploaded[sec].push(SB_URL + '/storage/v1/object/public/fotos-aprobacion/' + fname);
+        else uploaded[sec].push(null);
+        done++;
+        if (btn) btn.textContent = 'Subiendo ' + done + '/' + pending + '...';
+      }
+    }
+    await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+_editFotosMES.ordenId, {
+      method: 'PATCH',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        foto_urls: uploaded.aprobacion,
+        foto_color_urls: uploaded.color,
+      })
+    });
+    toast('Fotos actualizadas ✓', 'ok');
+    cerrarEditFotosMES();
+  } catch (e) {
+    console.error('guardarEditFotosMES:', e);
+    toast('Error: ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar cambios'; }
   }
 }
 
