@@ -3099,9 +3099,11 @@ async function verPDFCompletado(pipelineId, tipo){
       fotos:fotos,
       fotosColor:fotosColor,
       // Nuevas secciones cargadas desde pipeline_mf (arrays de URLs, sólo valores válidos)
-      fotosEmpaqueAbiertas: (Array.isArray(pipe.fotos_empaque_abiertas) ? pipe.fotos_empaque_abiertas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
-      fotosEmpaqueCerradas: (Array.isArray(pipe.fotos_empaque_cerradas) ? pipe.fotos_empaque_cerradas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
-      fotosFedex: (Array.isArray(pipe.fotos_fedex) ? pipe.fotos_fedex : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      // Si la URL trae ?sinEmpaque=1 (versión "ligera" del PDF cliente),
+      // dejamos los arrays vacíos para omitir esas secciones del PDF.
+      fotosEmpaqueAbiertas: (new URLSearchParams(window.location.search).get('sinEmpaque')==='1') ? [] : (Array.isArray(pipe.fotos_empaque_abiertas) ? pipe.fotos_empaque_abiertas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      fotosEmpaqueCerradas: (new URLSearchParams(window.location.search).get('sinEmpaque')==='1') ? [] : (Array.isArray(pipe.fotos_empaque_cerradas) ? pipe.fotos_empaque_cerradas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      fotosFedex:           (new URLSearchParams(window.location.search).get('sinEmpaque')==='1') ? [] : (Array.isArray(pipe.fotos_fedex) ? pipe.fotos_fedex : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
       consumoReal:orden?.consumo_real_tintas||[],
       reajustes:orden?.reajustes||0,
       aprobacion:{

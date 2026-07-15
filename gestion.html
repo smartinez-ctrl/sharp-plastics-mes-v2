@@ -1251,6 +1251,7 @@ function renderPipeline(){
         <button class="btn btn-ghost btn-xs" title="PDF cotización cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
         <button class="btn btn-ghost btn-xs" title="PDF cotización interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
         <button class="btn btn-ghost btn-xs" title="PDF producción cliente (QA + fotos)" onclick="abrirPDFProduccionCliente('${p.id}')">📋</button>
+        <button class="btn btn-ghost btn-xs" title="PDF cliente ligero (sin fotos de empaque)" onclick="abrirPDFProduccionClienteLight('${p.id}')" style="opacity:0.85">🪶</button>
         <button class="btn btn-ghost btn-xs" title="PDF producción interno (QA + fotos + merma)" onclick="abrirPDFProduccionInterno('${p.id}')">🛠</button>
         <button class="btn btn-ghost btn-xs" title="Enviar reporte completo por email" onclick="enviarReporteCompleto('${p.id}',this)">📧</button>
         <button class="btn btn-ghost btn-xs" title="Ocultar pedido" onclick="ocultarPedido('${p.id}',true)" style="opacity:0.6">🙈</button>
@@ -3909,6 +3910,15 @@ function abrirPDFProduccion(pipelineId, tipo){
 
 function abrirPDFProduccionCliente(pipelineId){
   abrirPDFProduccion(pipelineId, 'cliente');
+}
+
+// Versión "ligera" para clientes: sin fotos de empaque/Fedex.
+// Útil cuando el PDF completo pesa demasiado para compartir por mail o WhatsApp.
+// El endpoint index.html en modo PDF lee ?sinEmpaque=1 y descarta las 3
+// secciones de fotos de empaque, dejando solo aprobación + validación de color.
+function abrirPDFProduccionClienteLight(pipelineId){
+  const url = `index.html?pdfPipeline=${pipelineId}&tipo=cliente&sinEmpaque=1`;
+  window.open(url, '_blank');
 }
 
 function abrirPDFProduccionInterno(pipelineId){
