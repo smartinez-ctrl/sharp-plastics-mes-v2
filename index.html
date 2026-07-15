@@ -2126,12 +2126,24 @@ function renderListadoCerradosMES(){
           </div>
           <span style="background:${badge};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap">${p.estado}</span>
         </div>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
           <button class="btn btn-ghost btn-sm" style="flex:1;font-size:12px" onclick="abrirEditFotosMES('${p.id}','${(p.po||'').replace(/'/g,"&apos;")}','${(p.sub_cliente||p.cliente||'').replace(/'/g,"&apos;")}')">📷 Aprobación + Color</button>
           <button class="btn btn-ghost btn-sm" style="flex:1;font-size:12px" onclick="cerrarListadoCerradosMES();abrirEmpaqueProduccion('${p.id}')">📦 Empaque + Fedex</button>
         </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" style="flex:1;font-size:12px" onclick="abrirPDFClienteDesdeMES('${p.id}',false)" title="PDF completo (con fotos de empaque)">📋 PDF completo</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1;font-size:12px" onclick="abrirPDFClienteDesdeMES('${p.id}',true)" title="PDF ligero (sin fotos de empaque)">🪶 PDF ligero</button>
+        </div>
       </div>`;
   }).join('');
+}
+
+// Abre el PDF cliente desde el listador de cerrados del MES. Si `light`
+// es true, agrega ?sinEmpaque=1 para saltarse las 3 secciones de fotos
+// de empaque en el PDF (útil para PDFs muy pesados de compartir con cliente).
+function abrirPDFClienteDesdeMES(pipelineId, light){
+  const params = 'pdfPipeline='+pipelineId+'&tipo=cliente'+(light?'&sinEmpaque=1':'');
+  window.open('index.html?'+params, '_blank');
 }
 
 // ──────── Modal editor fotos aprobación + color desde MES ────────
