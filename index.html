@@ -4567,6 +4567,31 @@ async function enviarAprobacion(){
   if(uploadPct) uploadPct.textContent='Enviando email...';
 
   try {
+    // Refrescar datos del pipeline desde Supabase por si el usuario acaba
+    // de subir el PDF de diseño (o cambió color_botella, etc.) DESPUÉS
+    // de cargar el dashboard. El cache _dashRows solo se llena al inicio,
+    // así que puede tener valores obsoletos.
+    let pipeFresh = null;
+    if (S.pipelineId) {
+      try {
+        const rp = await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+S.pipelineId+'&select=po,color_botella,color_tapa,pdf_diseno_url',
+          { headers: { apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY } });
+        const rows = await rp.json();
+        pipeFresh = rows && rows[0];
+        // Actualizar el cache también para futuras operaciones en la misma sesión
+        if (pipeFresh && Array.isArray(window._dashRows)) {
+          const idx = window._dashRows.findIndex(p=>p.id===S.pipelineId);
+          if (idx >= 0) {
+            Object.assign(window._dashRows[idx], pipeFresh);
+          }
+        }
+      } catch (e) {
+        console.warn('No se pudo refrescar pipeline antes de aprobar:', e.message);
+      }
+    }
+    const cachedPipe = S.pipelineId && window._dashRows ? window._dashRows.find(p=>p.id===S.pipelineId) : null;
+    const pickFresh = k => (pipeFresh && pipeFresh[k]) || (cachedPipe && cachedPipe[k]) || null;
+
     const resp = await fetch('/api/send-approval', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
@@ -4575,15 +4600,15 @@ async function enviarAprobacion(){
         orden_op: S.orden.op || '—',
         cliente: S.orden.cliente || '—',
         sub_cliente: S.orden.sub_cliente || '',
-        po: S.orden.po || (S.pipelineId && window._dashRows ? (window._dashRows.find(p=>p.id===S.pipelineId)||{}).po||'' : ''),
+        po: S.orden.po || pickFresh('po') || '',
         piezas: S.orden.pzas || 0,
         colores: S.orden.colores?.length || 0,
-        color_botella: S.orden.color_botella || (S.pipelineId && window._dashRows ? (window._dashRows.find(p=>p.id===S.pipelineId)||{}).color_botella||'' : ''),
-        color_tapa: S.orden.color_tapa || (S.pipelineId && window._dashRows ? (window._dashRows.find(p=>p.id===S.pipelineId)||{}).color_tapa||'' : ''),
+        color_botella: S.orden.color_botella || pickFresh('color_botella') || '',
+        color_tapa: S.orden.color_tapa || pickFresh('color_tapa') || '',
         foto_urls: fotoUrls,
         foto_color_urls: fotoColorUrls,
         observaciones: obs,
-        diseno_url: S.pipelineId && window._dashRows ? (window._dashRows.find(p=>p.id===S.pipelineId)||{}).pdf_diseno_url||null : null,
+        diseno_url: pickFresh('pdf_diseno_url'),
       })
     });
     const data = await resp.json();
