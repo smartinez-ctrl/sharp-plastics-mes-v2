@@ -1306,13 +1306,13 @@ const TM_TIPOS=[
 ];
 const QA_ITEMS={
   'Soplado':['Espesor uniforme','Sin líneas paralelas','Rebabeo correcto','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
-  'Impresión':['Sin mal flameo','Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
-  'Ensamble':['Tapa color correcto','Roscado correcto','Prueba de fuga','Tipo de caja correcto','Pzas por caja correctas']
+  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
+  'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa']
 };
 const QA_ITEMS_EN={
   'Blow Molding':['Uniform wall thickness','No parallel lines','Correct flash removal','Correct bottle tone','No flash','No deformity','No orange peel','No perforations on base'],
-  'Printing':['No bad flaming','No incomplete artwork','No delamination','Correct registration','No shadow','No soleo','No contamination','No serrated edges','No misalignment','No missing ink','No bubbles','No poor dispersion'],
-  'Assembly':['Correct cap color','Correct threading','Leak test','Correct box type','Correct pieces per box']
+  'Printing':['No incomplete artwork','No delamination','Correct registration','No shadow','No soleo','No contamination','No serrated edges','No misalignment','No missing ink','No bubbles','No poor dispersion'],
+  'Assembly':['Correct cap color','Correct threading','Correct box type','No cap deformity','No hole in cap center']
 };
 const STEPS=['orden','ajuste','fotos','produccion','cierre'];
 
@@ -5755,12 +5755,27 @@ function generarPDF(){
   // Tamaños generosos para que el QA ocupe la primera hoja completa junto
   // con header e info. Las fotos van en hoja 2 (Color Validation + Approval).
   let tot=0,pass=0;
-  const seccionesES=Object.keys(QA_ITEMS);
-  const seccionesEN=Object.keys(QA_ITEMS_EN);
+  // Construcción dinámica: si el pedido lleva liner, agregar el ítem
+  // "Liner colocado correctamente" (ES) / "Liner correctly installed" (EN)
+  // al final de Ensamble/Assembly. Debe hacerse en ambos idiomas para
+  // que el mapeo por índice ES→EN siga funcionando.
+  const linerES='Liner colocado correctamente';
+  const linerEN='Liner correctly installed';
+  const QA_ES_RUN=Object.fromEntries(Object.entries(QA_ITEMS).map(([k,v])=>[k,v.slice()]));
+  const QA_EN_RUN=Object.fromEntries(Object.entries(QA_ITEMS_EN).map(([k,v])=>[k,v.slice()]));
+  if(S.pipelineId && window._dashRows){
+    const pipe=window._dashRows.find(p=>p.id===S.pipelineId);
+    if(pipe && pipe.requiere_liner){
+      QA_ES_RUN['Ensamble'].push(linerES);
+      QA_EN_RUN['Assembly'].push(linerEN);
+    }
+  }
+  const seccionesES=Object.keys(QA_ES_RUN);
+  const seccionesEN=Object.keys(QA_EN_RUN);
   const colHtml=[];
   seccionesES.forEach((sec,si)=>{
-    const itemsES=QA_ITEMS[sec];
-    const itemsEN=QA_ITEMS_EN[seccionesEN[si]]||itemsES;
+    const itemsES=QA_ES_RUN[sec];
+    const itemsEN=QA_EN_RUN[seccionesEN[si]]||itemsES;
     const secEN=seccionesEN[si]||sec;
     let col='<div style="background:#f0f4f8;font-weight:700;font-size:12px;color:#374151;padding:10px 14px;text-transform:uppercase;letter-spacing:.06em;border-radius:6px 6px 0 0;border:1px solid #d1d5db;border-bottom:none">'+secEN+'</div>';
     col+='<div style="border:1px solid #d1d5db;border-top:none;border-radius:0 0 6px 6px;background:#fff">';
