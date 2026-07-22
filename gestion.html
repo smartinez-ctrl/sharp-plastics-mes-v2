@@ -546,6 +546,12 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
       <div class="field-row-3">
         <div class="field"><label>Color botella</label><input type="text" id="mp-col-bot"></div>
         <div class="field"><label>Color tapa</label><input type="text" id="mp-col-tap"></div>
+        <div class="field"><label>&nbsp;</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;user-select:none">
+            <input type="checkbox" id="mp-liner" style="width:16px;height:16px;cursor:pointer">
+            <span style="font-size:12px;font-weight:600">🔵 Tapas con liner</span>
+          </label>
+        </div>
         <div class="field"><label>Boquilla</label><input type="text" id="mp-col-boq"></div>
       </div>
       <div class="field"><label>Dirección de envío</label><input type="text" id="mp-envio"></div>
@@ -1189,7 +1195,7 @@ function renderPipeline(){
     const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const cellMap={
-      cliente:`<div style="min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${p.sub_cliente||p.cliente||'—'}</div><div style="margin-top:2px">${tintas}</div></div>`,
+      cliente:`<div style="min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${p.sub_cliente||p.cliente||'—'}${p.requiere_liner?' <span style="display:inline-block;background:#1e40af;color:#dbeafe;font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;vertical-align:middle;margin-left:2px" title="Tapas con liner">🔵 LINER</span>':''}</div><div style="margin-top:2px">${tintas}</div></div>`,
       po:`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text)">${p.po||'—'}${p.factura_folio?`<br><a href="${p.factura_pdf_url||p.factura_xml_url||'#'}" target="_blank" onclick="event.stopPropagation()" style="color:var(--green);font-weight:700;text-decoration:none;font-size:10px">📄 ${p.factura_serie||''}-${p.factura_folio} ↗</a>`:''}</div>`,
       capacidad:`<div style="font-size:12px;text-align:center;color:var(--text)">${p.capacidad||'—'}</div>`,
       color_botella:colorBotellaChip(p.color_botella),
@@ -1265,6 +1271,8 @@ function abrirNuevoPedido(){
   ['mp-po','mp-subcli','mp-envio','mp-notas','mp-col-bot','mp-col-tap','mp-col-boq'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   ['mp-piezas','mp-colores','mp-horas','mp-cap','mp-cliente','mp-fecha-entrega','mp-fecha-inicio','mp-fecha-pedido'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('mp-estado').value='Pendiente';
+  const chkLiner = document.getElementById('mp-liner');
+  if (chkLiner) chkLiner.checked = false;
   document.getElementById('mp-cotizacion-resumen').style.display='none';
   document.getElementById('btn-mp-pdf-interno').style.display='none';
   document.getElementById('btn-mp-pdf-cliente').style.display='none';
@@ -1337,6 +1345,8 @@ async function abrirDetallePedido(id){
 
   const flds={'mp-subcli':p.sub_cliente,'mp-po':p.po,'mp-cap':p.capacidad,'mp-piezas':p.piezas,'mp-colores':p.colores,'mp-fecha-entrega':p.fecha_entrega,'mp-fecha-pedido':p.fecha_pedido,'mp-fecha-inicio':p.fecha_inicio,'mp-horas':p.horas_estimadas,'mp-col-bot':p.color_botella,'mp-col-tap':p.color_tapa,'mp-col-boq':p.color_boquilla,'mp-envio':p.direccion_envio,'mp-notas':p.notas,'mp-estado':p.estado||'Pendiente','mp-pdf-diseno':p.pdf_diseno_url||'','mp-pdf-po':p.pdf_po_url||''};
   Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el){el.value=v||'';el.disabled=soloLectura&&k!=='mp-pdf-diseno'&&k!=='mp-pdf-po';}});
+  const chkLiner=document.getElementById('mp-liner');
+  if(chkLiner){chkLiner.checked=!!p.requiere_liner;chkLiner.disabled=soloLectura&&USER.rol!=='master';}
   // Bloquear botón guardar para no-master en completados
   // Block/unblock inputs for completed orders
   setTimeout(()=>{
@@ -1613,6 +1623,7 @@ async function guardarPedido(){
     colores:parseInt(document.getElementById('mp-colores').value)||0,fecha_entrega:document.getElementById('mp-fecha-entrega').value||null,
     fecha_inicio:document.getElementById('mp-fecha-inicio').value||null,horas_estimadas:parseFloat(document.getElementById('mp-horas').value)||null,
     color_botella:document.getElementById('mp-col-bot').value||null,color_tapa:document.getElementById('mp-col-tap').value||null,
+    requiere_liner: !!document.getElementById('mp-liner')?.checked,
     color_boquilla:document.getElementById('mp-col-boq').value||null,direccion_envio:document.getElementById('mp-envio').value||null,
     notas:document.getElementById('mp-notas').value||null,estado:document.getElementById('mp-estado').value,
     pdf_diseno_url:document.getElementById('mp-pdf-diseno')?.value||null,
