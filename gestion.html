@@ -434,6 +434,22 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
   </div>
 </div>
 
+<!-- MODAL editar checklist QA de pedidos completados -->
+<div class="modal-overlay" id="modal-edit-qa">
+  <div class="modal" style="max-width:560px;max-height:92vh;overflow-y:auto">
+    <div class="modal-title">🩺 Editar checklist QA <button class="modal-close" onclick="closeModal('modal-edit-qa')">×</button></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px" id="edit-qa-header">—</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--bg3);border-radius:8px;line-height:1.5">
+      Cambios se guardan directo en la orden de producción. Aparecerán en el próximo PDF de QA (📋 cliente, 🪶 ligero, 🛠 interno). Cada edición queda registrada con tu nombre y timestamp.
+    </div>
+    <div id="edit-qa-items"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-qa')" style="flex:1">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-edit-qa" onclick="guardarEditQA()" style="flex:2">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL editar/crear pantone -->
 <div class="modal-overlay" id="modal-pantone-g">
   <div class="modal" style="max-width:440px">
@@ -1254,6 +1270,7 @@ function renderPipeline(){
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-xs" title="Fotos empaque" onclick="abrirFotosEmpaque('${p.id}')">📦</button>
         ${(USER.rol==='master'||USER.rol==='supervisor')?`<button class="btn btn-ghost btn-xs" title="Editar fotos de QA (aprobación + color)" onclick="abrirEditFotosQA('${p.id}')">📷</button>`:''}
+        ${(USER.rol==='master'||USER.rol==='supervisor')?`<button class="btn btn-ghost btn-xs" title="Editar QA checklist (Soplado / Impresión / Ensamble)" onclick="abrirEditQA('${p.id}')">🩺</button>`:''}
         <button class="btn btn-ghost btn-xs" title="PDF cotización cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
         <button class="btn btn-ghost btn-xs" title="PDF cotización interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
         <button class="btn btn-ghost btn-xs" title="PDF producción cliente (QA + fotos)" onclick="abrirPDFProduccionCliente('${p.id}')">📋</button>
@@ -3589,6 +3606,122 @@ async function guardarEditFotosQA(){
     toast('Error: ' + e.message, 'err');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar cambios'; }
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// EDITAR CHECKLIST QA de pedidos completados/entregados
+// Master y supervisor. Modifica ordenes_produccion.qa_resultados y
+// registra quien edito y cuando en qa_editado_por / qa_editado_at
+// para auditoria. La lista de items sigue la misma estructura que
+// el sistema (Soplado / Impresion / Ensamble) + el item condicional
+// del liner si el pedido lo requiere.
+// ══════════════════════════════════════════════════════
+const _EDIT_QA_ITEMS={
+  'Soplado':['Espesor uniforme','Sin líneas paralelas','Rebabeo correcto','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
+  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
+  'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa']
+};
+const _EDIT_QA_LINER='Liner colocado correctamente';
+let _editQAData={ordenId:null,pipelineId:null,qa:{},requiereLiner:false};
+
+async function abrirEditQA(pipelineId){
+  if(USER.rol!=='master'&&USER.rol!=='supervisor'){
+    toast('Solo master y supervisor pueden editar el QA','err');
+    return;
+  }
+  try{
+    // Cargar orden mas reciente y datos del pedido en paralelo
+    const [ordenes,pipes]=await Promise.all([
+      sbGet('ordenes_produccion',`pipeline_id=eq.${pipelineId}&select=id,qa_resultados&order=created_at.desc&limit=1`),
+      sbGet('pipeline_mf',`id=eq.${pipelineId}&select=po,sub_cliente,cliente,requiere_liner`)
+    ]);
+    if(!ordenes.length){
+      toast('Este pedido no tiene orden de producción todavía','err');
+      return;
+    }
+    const orden=ordenes[0], pipe=pipes[0]||{};
+    _editQAData={
+      ordenId:orden.id,
+      pipelineId,
+      qa:orden.qa_resultados||{},
+      requiereLiner:!!pipe.requiere_liner,
+    };
+    const titulo=(pipe.sub_cliente||pipe.cliente||'—')+(pipe.po?' · PO '+pipe.po:'');
+    document.getElementById('edit-qa-header').textContent=titulo;
+    renderEditQA();
+    openModal('modal-edit-qa');
+  }catch(e){
+    toast('Error cargando QA: '+e.message,'err');
+  }
+}
+
+function renderEditQA(){
+  const cont=document.getElementById('edit-qa-items');
+  if(!cont) return;
+  // Estructura dinamica: agregar liner al Ensamble si el pedido lo requiere
+  const items=JSON.parse(JSON.stringify(_EDIT_QA_ITEMS));
+  if(_editQAData.requiereLiner){
+    if(!items['Ensamble'].includes(_EDIT_QA_LINER)) items['Ensamble'].push(_EDIT_QA_LINER);
+  }
+  let html='',totalTot=0,totalOK=0;
+  Object.entries(items).forEach(([seccion,list])=>{
+    html+=`<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 6px">${seccion}</div>`;
+    list.forEach(item=>{
+      const val=_editQAData.qa[item]||'NC';
+      totalTot++;
+      if(val==='P') totalOK++;
+      const isLiner=item===_EDIT_QA_LINER;
+      const rowBg=isLiner?'background:#1e40af22;border-left:3px solid #3b82f6':'background:var(--bg3)';
+      const btnStyle=(v,color)=>{
+        const sel=val===v;
+        return `padding:5px 9px;font-size:11px;border-radius:5px;border:1px solid ${sel?color:'transparent'};background:${sel?color+'22':'transparent'};color:${sel?color:'var(--text3)'};font-weight:${sel?'700':'500'};cursor:pointer;transition:.15s`;
+      };
+      html+=`<div style="${rowBg};display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;margin-bottom:4px;gap:8px">
+        <div style="font-size:12px;flex:1">${isLiner?'🔵 ':''}${item}</div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="setEditQA('${item.replace(/'/g,"&apos;")}','P')" style="${btnStyle('P','#16a34a')}">✓ OK</button>
+          <button onclick="setEditQA('${item.replace(/'/g,"&apos;")}','NC')" style="${btnStyle('NC','#dc2626')}">✗ NC</button>
+          <button onclick="setEditQA('${item.replace(/'/g,"&apos;")}','NA')" style="${btnStyle('NA','#6b7280')}">N/A</button>
+        </div>
+      </div>`;
+    });
+  });
+  html=`<div style="text-align:right;font-size:11px;color:var(--text3);margin-bottom:6px">Total: <strong style="color:var(--text)">${totalOK}/${totalTot}</strong> pasan</div>`+html;
+  cont.innerHTML=html;
+}
+
+function setEditQA(item,val){
+  // Al hacer click sobre el mismo valor ya seleccionado, lo deseleccionamos
+  // dejandolo vacio (util si el operador se equivoco marcando).
+  if(_editQAData.qa[item]===val) delete _editQAData.qa[item];
+  else _editQAData.qa[item]=val;
+  renderEditQA();
+}
+
+async function guardarEditQA(){
+  if(!_editQAData.ordenId) return;
+  const btn=document.getElementById('btn-guardar-edit-qa');
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  try{
+    // Al guardar: sobrescribir qa_resultados con los valores nuevos
+    // (mantener solo las claves con valor), y agregar audit trail.
+    const qaLimpio={};
+    Object.entries(_editQAData.qa).forEach(([k,v])=>{
+      if(v) qaLimpio[k]=v;
+    });
+    await sbPatch('ordenes_produccion',{
+      qa_resultados:qaLimpio,
+      qa_editado_por:USER.nombre||USER.email||'?',
+      qa_editado_at:new Date().toISOString(),
+    },'id=eq.'+_editQAData.ordenId);
+    toast('QA actualizado ✓','ok');
+    closeModal('modal-edit-qa');
+  }catch(e){
+    console.error('guardarEditQA:',e);
+    toast('Error: '+e.message,'err');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='💾 Guardar cambios';}
   }
 }
 
