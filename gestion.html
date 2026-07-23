@@ -1270,7 +1270,7 @@ function renderPipeline(){
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-xs" title="Fotos empaque" onclick="abrirFotosEmpaque('${p.id}')">📦</button>
         ${(USER.rol==='master'||USER.rol==='supervisor')?`<button class="btn btn-ghost btn-xs" title="Editar fotos de QA (aprobación + color)" onclick="abrirEditFotosQA('${p.id}')">📷</button>`:''}
-        ${(USER.rol==='master'||USER.rol==='supervisor')?`<button class="btn btn-ghost btn-xs" title="Editar QA checklist (Soplado / Impresión / Ensamble)" onclick="abrirEditQA('${p.id}')">🩺</button>`:''}
+        ${(USER.rol==='master'||(USER.rol==='supervisor'&&USER.nombre==='Edgar'))?`<button class="btn btn-ghost btn-xs" title="Editar QA checklist (Soplado / Impresión / Ensamble)" onclick="abrirEditQA('${p.id}')">🩺</button>`:''}
         <button class="btn btn-ghost btn-xs" title="PDF cotización cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
         <button class="btn btn-ghost btn-xs" title="PDF cotización interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
         <button class="btn btn-ghost btn-xs" title="PDF producción cliente (QA + fotos)" onclick="abrirPDFProduccionCliente('${p.id}')">📋</button>
@@ -3626,8 +3626,9 @@ const _EDIT_QA_LINER='Liner colocado correctamente';
 let _editQAData={ordenId:null,pipelineId:null,qa:{},requiereLiner:false};
 
 async function abrirEditQA(pipelineId){
-  if(USER.rol!=='master'&&USER.rol!=='supervisor'){
-    toast('Solo master y supervisor pueden editar el QA','err');
+  const puede = USER.rol==='master' || (USER.rol==='supervisor' && USER.nombre==='Edgar');
+  if(!puede){
+    toast('Solo Sam y Edgar pueden editar el QA','err');
     return;
   }
   try{

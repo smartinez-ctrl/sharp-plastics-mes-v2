@@ -732,6 +732,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
   </div>
 </div>
 
+<!-- Modal editar QA checklist desde el MES (solo Sam y Edgar) -->
+<div class="modal-overlay" id="modal-edit-qa-prod">
+  <div style="background:var(--bg2);border-radius:16px;padding:20px;width:94%;max-width:560px;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;position:sticky;top:0;background:var(--bg2);padding-bottom:8px;z-index:2">
+      <div>
+        <div style="font-size:15px;font-weight:700">🩺 Editar QA checklist</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="edit-qa-prod-header">—</div>
+      </div>
+      <button onclick="cerrarEditQAProd()" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer">×</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:8px 10px;background:var(--bg3);border-radius:8px;line-height:1.5">
+      Cambios se guardan directo en la orden de producción. Aparecerán en el próximo PDF de QA. Se registra tu nombre y la fecha.
+    </div>
+    <div id="edit-qa-prod-items"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-ghost" onclick="cerrarEditQAProd()" style="flex:1">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-edit-qa-prod" onclick="guardarEditQAProd()" style="flex:2">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-registrar-pantone">
   <div style="background:var(--bg2);border-radius:16px;padding:20px;width:92%;max-width:400px;max-height:90vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -2286,6 +2307,133 @@ async function guardarEditFotosMES(){
   }
 }
 
+// ══════════════════════════════════════════════════════
+// EDITAR CHECKLIST QA de pedidos completados desde el MES.
+// Restringido a master (Sam) y supervisor con nombre 'Edgar' — no todo
+// supervisor puede editarlo. Modifica ordenes_produccion.qa_resultados
+// y registra qa_editado_por + qa_editado_at para auditoria.
+// ══════════════════════════════════════════════════════
+const _EDITQA_PROD_ITEMS={
+  'Soplado':['Espesor uniforme','Sin líneas paralelas','Rebabeo correcto','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
+  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
+  'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa']
+};
+const _EDITQA_PROD_LINER='Liner colocado correctamente';
+let _editQAProd={ordenId:null,pipelineId:null,qa:{},requiereLiner:false};
+
+function _puedeEditarQAProd(){
+  return S.user && (S.user.role==='master' || (S.user.role==='supervisor' && S.user.name==='Edgar'));
+}
+
+async function abrirEditQAProd(pipelineId){
+  if(!_puedeEditarQAProd()){
+    toast('Solo Sam y Edgar pueden editar el QA','err');
+    return;
+  }
+  try{
+    const [rOrd,rPipe]=await Promise.all([
+      fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+pipelineId+'&select=id,qa_resultados&order=created_at.desc&limit=1',
+        {headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}),
+      fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=po,sub_cliente,cliente,requiere_liner',
+        {headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}),
+    ]);
+    const ordenes=await rOrd.json(), pipes=await rPipe.json();
+    if(!Array.isArray(ordenes)||!ordenes.length){
+      toast('Este pedido no tiene orden de producción','err');
+      return;
+    }
+    const orden=ordenes[0], pipe=(pipes&&pipes[0])||{};
+    _editQAProd={
+      ordenId:orden.id,
+      pipelineId,
+      qa:orden.qa_resultados||{},
+      requiereLiner:!!pipe.requiere_liner,
+    };
+    const tit=(pipe.sub_cliente||pipe.cliente||'—')+(pipe.po?' · PO '+pipe.po:'');
+    document.getElementById('edit-qa-prod-header').textContent=tit;
+    renderEditQAProd();
+    document.getElementById('modal-edit-qa-prod').classList.add('open');
+  }catch(e){
+    toast('Error: '+e.message,'err');
+  }
+}
+
+function cerrarEditQAProd(){
+  document.getElementById('modal-edit-qa-prod').classList.remove('open');
+}
+
+function renderEditQAProd(){
+  const cont=document.getElementById('edit-qa-prod-items');
+  if(!cont) return;
+  const items=JSON.parse(JSON.stringify(_EDITQA_PROD_ITEMS));
+  if(_editQAProd.requiereLiner){
+    if(!items['Ensamble'].includes(_EDITQA_PROD_LINER)) items['Ensamble'].push(_EDITQA_PROD_LINER);
+  }
+  let html='',totalTot=0,totalOK=0;
+  Object.entries(items).forEach(([seccion,list])=>{
+    html+=`<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 6px">${seccion}</div>`;
+    list.forEach(item=>{
+      const val=_editQAProd.qa[item]||'NC';
+      totalTot++;
+      if(val==='P') totalOK++;
+      const isLiner=item===_EDITQA_PROD_LINER;
+      const rowBg=isLiner?'background:#1e40af22;border-left:3px solid #3b82f6':'background:var(--bg3)';
+      const btnStyle=(v,color)=>{
+        const sel=val===v;
+        return `padding:6px 10px;font-size:12px;border-radius:6px;border:1px solid ${sel?color:'transparent'};background:${sel?color+'22':'transparent'};color:${sel?color:'var(--text3)'};font-weight:${sel?'700':'500'};cursor:pointer;transition:.15s;touch-action:manipulation`;
+      };
+      const itemEsc=item.replace(/'/g,"&apos;");
+      html+=`<div style="${rowBg};display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:8px;margin-bottom:5px;gap:8px">
+        <div style="font-size:12.5px;flex:1">${isLiner?'🔵 ':''}${item}</div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="setEditQAProd('${itemEsc}','P')" style="${btnStyle('P','#16a34a')}">✓</button>
+          <button onclick="setEditQAProd('${itemEsc}','NC')" style="${btnStyle('NC','#dc2626')}">✗</button>
+          <button onclick="setEditQAProd('${itemEsc}','NA')" style="${btnStyle('NA','#6b7280')}">N/A</button>
+        </div>
+      </div>`;
+    });
+  });
+  html=`<div style="text-align:right;font-size:11px;color:var(--text3);margin-bottom:6px">Pasan: <strong style="color:var(--text)">${totalOK}/${totalTot}</strong></div>`+html;
+  cont.innerHTML=html;
+}
+
+function setEditQAProd(item,val){
+  if(_editQAProd.qa[item]===val) delete _editQAProd.qa[item];
+  else _editQAProd.qa[item]=val;
+  renderEditQAProd();
+}
+
+async function guardarEditQAProd(){
+  if(!_editQAProd.ordenId) return;
+  if(!_puedeEditarQAProd()){
+    toast('Sin permiso','err');
+    return;
+  }
+  const btn=document.getElementById('btn-guardar-edit-qa-prod');
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  try{
+    const qaLimpio={};
+    Object.entries(_editQAProd.qa).forEach(([k,v])=>{if(v) qaLimpio[k]=v;});
+    const r=await fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+_editQAProd.ordenId,{
+      method:'PATCH',
+      headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},
+      body:JSON.stringify({
+        qa_resultados:qaLimpio,
+        qa_editado_por:(S.user&&S.user.name)||'?',
+        qa_editado_at:new Date().toISOString(),
+      }),
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    toast('QA actualizado ✓','ok');
+    cerrarEditQAProd();
+  }catch(e){
+    console.error('guardarEditQAProd:',e);
+    toast('Error: '+e.message,'err');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='💾 Guardar cambios';}
+  }
+}
+
 async function renderDashboard(){
   const el=document.getElementById('dash-pedidos');if(!el)return;
   el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)"><div style="font-size:20px;margin-bottom:8px">⏳</div>Cargando...</div>';
@@ -2401,6 +2549,7 @@ async function renderDashboard(){
           <button class="btn btn-ghost btn-sm" style="flex:1;min-width:0" onclick="window.open('index.html?pdfPipeline=${p.id}&tipo=cliente&sinEmpaque=1','_blank')" title="PDF cliente sin fotos de empaque (más liviano)">🪶 PDF ligero</button>
           <button class="btn btn-ghost btn-sm" style="flex:1;min-width:0" onclick="verPDFCompletado('${p.id}','interno')">📊 PDF interno</button>
           <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEmpaqueProduccion('${p.id}')" title="Fotos empaque">📦</button>
+          ${S.user&&(S.user.role==='master'||(S.user.role==='supervisor'&&S.user.name==='Edgar'))?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEditQAProd('${p.id}')" title="Editar QA checklist">🩺</button>`:''}
           ${S.user&&S.user.role==='master'?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEditarCompletado('${p.id}')" title="Editar">✏️</button>`:''}
           <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation;opacity:0.5" onclick="ocultarCompletadoProd('${p.id}')" title="Ocultar">🙈</button>
         </div>
