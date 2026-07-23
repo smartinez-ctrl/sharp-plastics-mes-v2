@@ -5897,70 +5897,44 @@ function generarPDF(){
     if(!tieneColor&&!tieneBotellas&&!tieneAbiertas&&!tieneCerradas&&!tieneFedex)return '';
     const labels=['Front','Back','Left side','Right side'];
     const labelsColor=['Color 1','Color 2','Color 3','Color 4'];
-    // buildRowsGrande: 2 fotos por hoja (para botellas y validación de color).
-    // 1 columna x 2 filas. Cada foto ocupa hasta ~120mm de alto — permite ver
-    // detalles finos como líneas de impresión, viñetas de color, defectos.
-    const buildRowsGrande=(arr,labs)=>{
-      let rows='';
-      for(let i=0;i<arr.length;i+=2){
-        const a=arr[i], b=arr[i+1];
-        const labA=(labs&&labs[i])||'', labB=(labs&&labs[i+1])||'';
-        // Cada par (i, i+1) va en un mini-bloque que no se parte de página
-        rows+=`<tr style="page-break-inside:avoid;break-inside:avoid"><td style="padding:6px 0;text-align:center">
-          ${a?`<img src="${a}" style="width:auto;max-width:100%;max-height:120mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:inline-block"><div style="font-size:11px;color:#6b7280;text-align:center;margin-top:4px">${labA}</div>`:''}
-        </td></tr>`;
-        if (b !== undefined) {
-          rows+=`<tr style="page-break-inside:avoid;break-inside:avoid"><td style="padding:6px 0;text-align:center">
-            ${b?`<img src="${b}" style="width:auto;max-width:100%;max-height:120mm;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;display:inline-block"><div style="font-size:11px;color:#6b7280;text-align:center;margin-top:4px">${labB}</div>`:''}
-          </td></tr>`;
-        }
-      }
-      return rows;
+    // buildRowsFullPage: 1 foto por hoja aprovechando toda la página.
+    // La foto ocupa hasta 230mm de alto (media hoja Letter menos títulos +
+    // márgenes) con object-fit:contain para respetar aspect ratio. Cada
+    // foto tiene su propia hoja con section title + label arriba y luego
+    // la imagen centrada. Permite análisis de detalles finos por cliente.
+    const buildRowsFullPage=(arr,labs,sectionTitle)=>{
+      const pages=[];
+      arr.forEach((f,i)=>{
+        if(!f) return;
+        const label=(labs&&labs[i])||'';
+        pages.push(`<div style="page-break-after:always;break-after:page;text-align:center;padding-top:4mm">
+          <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;text-align:left;font-weight:600">${sectionTitle}</div>
+          <div style="font-size:14px;font-weight:700;color:#111;margin-top:2px;margin-bottom:10px;text-align:left;border-bottom:2px solid #e5e7eb;padding-bottom:6px">${label}</div>
+          <img src="${f}" style="max-width:100%;max-height:230mm;object-fit:contain;display:inline-block;border-radius:8px;border:1px solid #e5e7eb">
+        </div>`);
+      });
+      return pages.join('');
     };
-    // buildRowsCompacto: 8 fotos por hoja para empaque (grid 2×4).
-    // Fotos ~55mm de alto — suficiente para ver la caja y la etiqueta sin
-    // necesitar tanto detalle como en botellas/color.
-    const buildRowsCompacto=(arr,labs)=>{
-      let rows='';
-      for(let i=0;i<arr.length;i+=2){
-        const a=arr[i], b=arr[i+1];
-        const labA=(labs&&labs[i])||'', labB=(labs&&labs[i+1])||'';
-        rows+=`<tr style="page-break-inside:avoid;break-inside:avoid">
-          <td style="width:50%;padding:3px 5px 6px 0;vertical-align:top">
-            ${a?`<img src="${a}" style="width:100%;max-height:55mm;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;text-align:center;margin-top:2px">${labA}</div>`:''}
-          </td>
-          <td style="width:50%;padding:3px 0 6px 5px;vertical-align:top">
-            ${b?`<img src="${b}" style="width:100%;max-height:55mm;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;display:block"><div style="font-size:9px;color:#6b7280;text-align:center;margin-top:2px">${labB}</div>`:''}
-          </td>
-        </tr>`;
-      }
-      return rows;
-    };
-    // Genera labels autonumerados para las secciones dinámicas
-    const autoLabels = (prefix, arr) => arr.map((_, i) => prefix + ' ' + (i + 1));
-    let html=`<div style="page-break-before:always;break-before:page">`;
+    // Labels autonumerados para las secciones dinámicas
+    const autoLabels=(prefix,arr)=>arr.map((_,i)=>prefix+' '+(i+1));
+    let html='';
     if(tieneColor){
-      html+=`<div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Color Validation</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;table-layout:fixed"><tbody>${buildRowsGrande(S.fotosColor,labelsColor)}</tbody></table>`;
+      html+=buildRowsFullPage(S.fotosColor,labelsColor,'Color Validation');
     }
     if(tieneBotellas){
-      html+=`<div class="section-title" style="${tieneColor?'':'margin-top:0;'}page-break-after:avoid;break-after:avoid">Approval Photos</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed"><tbody>${buildRowsGrande(S.fotos,labels)}</tbody></table>`;
+      html+=buildRowsFullPage(S.fotos,labels,'Approval Photos');
     }
-    // Cajas abiertas — nueva hoja, 8 fotos por hoja (grid 2×4 compacto)
+    // Nota: el PDF ligero (?sinEmpaque=1) vacía estos 3 arrays al construir
+    // tmpS, así que estas secciones no salen. En el PDF cliente completo sí.
     if(tieneAbiertas){
-      html+=`<div style="page-break-before:always;break-before:page"><div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Packaging — Open Boxes</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;table-layout:fixed"><tbody>${buildRowsCompacto(S.fotosEmpaqueAbiertas, autoLabels('Open box', S.fotosEmpaqueAbiertas))}</tbody></table></div>`;
+      html+=buildRowsFullPage(S.fotosEmpaqueAbiertas,autoLabels('Open box',S.fotosEmpaqueAbiertas),'Packaging — Open Boxes');
     }
     if(tieneCerradas){
-      html+=`<div style="page-break-before:always;break-before:page"><div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Packaging — Closed Boxes (labels)</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;table-layout:fixed"><tbody>${buildRowsCompacto(S.fotosEmpaqueCerradas, autoLabels('Closed box', S.fotosEmpaqueCerradas))}</tbody></table></div>`;
+      html+=buildRowsFullPage(S.fotosEmpaqueCerradas,autoLabels('Closed box',S.fotosEmpaqueCerradas),'Packaging — Closed Boxes (labels)');
     }
     if(tieneFedex){
-      html+=`<div style="page-break-before:always;break-before:page"><div class="section-title" style="margin-top:0;page-break-after:avoid;break-after:avoid">Shipping — FedEx Handoff</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;table-layout:fixed"><tbody>${buildRowsCompacto(S.fotosFedex, autoLabels('FedEx', S.fotosFedex))}</tbody></table></div>`;
+      html+=buildRowsFullPage(S.fotosFedex,autoLabels('FedEx',S.fotosFedex),'Shipping — FedEx Handoff');
     }
-    html+=`</div>`;
     return html;
   })()}
 
