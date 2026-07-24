@@ -16,7 +16,9 @@ export default async function handler(req, res) {
     reajustes, seg_bot, pzas_hora,
     colores, consumo_real, merma_detalle, tiempos_muertos,
     crosshatch, prueba_agua, firma, observaciones,
-    foto_urls = []
+    foto_urls = [],
+    qa_secciones = {},
+    qa_llenado_at = null,
   } = req.body;
 
   const fecha = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -45,6 +47,44 @@ export default async function handler(req, res) {
   ).join('');
 
   const rendColor = parseFloat(rendimiento) >= 95 ? '#16a34a' : parseFloat(rendimiento) >= 85 ? '#d97706' : '#dc2626';
+
+  // ── Bloque QA final: agrupado por sección con badges por item ─────────
+  const qaSectionEntries = Object.entries(qa_secciones || {});
+  let qaTotal = 0, qaPass = 0, qaFail = 0;
+  qaSectionEntries.forEach(([, items]) => {
+    items.forEach(it => {
+      qaTotal++;
+      if (it.status === 'P') qaPass++;
+      else if (it.status === 'NC') qaFail++;
+    });
+  });
+  const qaHTML = qaSectionEntries.length ? `
+  <div style="padding:0 32px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#374151">Checklist QA final</div>
+      <div style="font-size:11px;color:#6b7280">
+        <span style="color:#16a34a;font-weight:700">${qaPass}</span> / ${qaTotal} aprobados
+        ${qaFail ? ` · <span style="color:#dc2626;font-weight:700">${qaFail} no conformes</span>` : ''}
+      </div>
+    </div>
+    <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+      ${qaSectionEntries.map(([section, items]) => `
+        <div style="background:#f0f4f8;font-size:10px;font-weight:700;color:#374151;padding:6px 12px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e5e7eb">${section}</div>
+        ${items.map(it => {
+          const color = it.status === 'P' ? '#16a34a' : it.status === 'NC' ? '#dc2626' : '#9ca3af';
+          const icon  = it.status === 'P' ? '✓' : it.status === 'NC' ? '✗' : '—';
+          const label = it.status === 'P' ? 'Aprobado' : it.status === 'NC' ? 'No conforme' : it.status === 'NA' ? 'N/A' : 'Pendiente';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 12px;border-bottom:1px solid #f3f4f6;font-size:12px">
+            <span style="color:#374151">${it.item}</span>
+            <span style="color:${color};font-weight:600;white-space:nowrap;margin-left:8px"><span style="font-size:13px">${icon}</span> ${label}</span>
+          </div>`;
+        }).join('')}
+      `).join('')}
+    </div>
+    <div style="font-size:11px;color:#6b7280;margin-top:6px;text-align:right">
+      Llenado por: <strong style="color:#111">${firma || '—'}</strong>${qa_llenado_at ? ' · ' + new Date(qa_llenado_at).toLocaleString('es-MX', {dateStyle:'medium', timeStyle:'short'}) : ''}
+    </div>
+  </div>` : '';
 
   const emailHTML = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
@@ -138,6 +178,8 @@ export default async function handler(req, res) {
       <tbody>${consumoHTML}</tbody>
     </table>
   </div>` : ''}
+
+  ${qaHTML}
 
   ${verFotosUrl ? `
   <div style="padding:0 32px;margin-bottom:16px;text-align:center">

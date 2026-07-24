@@ -5522,6 +5522,17 @@ async function enviarEmailCierre(){
       const tgEst=t.componentes.reduce((s,x)=>s+(parseFloat(x.gramos)||0),0);
       return {...cr, gramos_estimado:tgEst};
     });
+    // Armar el checklist agrupado por sección para incluirlo en el correo.
+    // Se omite Ensamble porque ya no forma parte del QA de cierre.
+    const qa_secciones = {};
+    Object.entries(QA_ITEMS).forEach(([section, items]) => {
+      if (section === 'Ensamble') return;
+      qa_secciones[section] = items.map(item => ({
+        item,
+        status: S.qa[item] || 'NC',
+      }));
+    });
+    const qa_llenado_at = new Date().toISOString();
     const payload={
       orden_id:S.ordenId||null,
       orden_op:S.orden.op||'—',
@@ -5546,6 +5557,8 @@ async function enviarEmailCierre(){
       firma:document.getElementById('cierre-firma')?.value||'—',
       observaciones:document.getElementById('cierre-obs')?.value||'',
       foto_urls:S.fotos||[],
+      qa_secciones,
+      qa_llenado_at,
     };
     const resp=await fetch('/api/send-cierre',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await resp.json();
