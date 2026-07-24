@@ -6455,6 +6455,48 @@ function generarPDF(){
       });
       return pages.join('');
     };
+    // buildRowsCompacto: hasta 8 fotos por hoja (2 columnas × 4 filas).
+    // Sirve para fotos de empaque donde no se necesita ver detalle fino.
+    // Cada foto ~55mm de alto con object-fit:contain.
+    // Para cajas abiertas, la Primera cama queda a la izquierda y la
+    // Segunda cama a la derecha en la misma fila (mismo par de caja).
+    const buildRowsCompacto=(arr,labs,sectionTitle)=>{
+      const items=arr.filter(f=>f);
+      if(!items.length) return '';
+      // Cortar en páginas de 8 fotos, 4 filas × 2 columnas por página
+      const pages=[];
+      for(let p=0;p<items.length;p+=8){
+        const pageItems=[];
+        for(let i=p;i<p+8&&i<arr.length;i++){
+          if(!arr[i]) continue;
+          pageItems.push({url:arr[i],label:(labs&&labs[i])||''});
+        }
+        if(!pageItems.length) continue;
+        // Armar filas de 2
+        let rowsHtml='';
+        for(let r=0;r<pageItems.length;r+=2){
+          const a=pageItems[r], b=pageItems[r+1];
+          rowsHtml+=`<tr style="page-break-inside:avoid;break-inside:avoid">
+            <td style="width:50%;padding:4px 6px 8px 0;vertical-align:top;border:none">
+              ${a?`<img src="${a.url}" style="width:100%;height:auto;max-height:55mm;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;display:block">
+                   <div style="font-size:9px;color:#6b7280;text-align:center;margin-top:3px">${a.label}</div>`:''}
+            </td>
+            <td style="width:50%;padding:4px 0 8px 6px;vertical-align:top;border:none">
+              ${b?`<img src="${b.url}" style="width:100%;height:auto;max-height:55mm;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;display:block">
+                   <div style="font-size:9px;color:#6b7280;text-align:center;margin-top:3px">${b.label}</div>`:''}
+            </td>
+          </tr>`;
+        }
+        // Solo la primera página del bloque muestra el título de la sección
+        const showTitle = (p===0);
+        pages.push(`<div style="page-break-after:always;break-after:page;padding-top:4mm">
+          ${showTitle?`<div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;text-align:left;font-weight:600">${sectionTitle}</div>
+          <div style="font-size:14px;font-weight:700;color:#111;margin-top:2px;margin-bottom:10px;text-align:left;border-bottom:2px solid #e5e7eb;padding-bottom:6px">${sectionTitle}</div>`:''}
+          <table style="width:100%;border-collapse:collapse;border:none;table-layout:fixed"><tbody>${rowsHtml}</tbody></table>
+        </div>`);
+      }
+      return pages.join('');
+    };
     // Labels autonumerados para las secciones dinámicas
     const autoLabels=(prefix,arr)=>arr.map((_,i)=>prefix+' '+(i+1));
     let html='';
@@ -6472,21 +6514,24 @@ function generarPDF(){
     }
     // Nota: el PDF ligero (?sinEmpaque=1) vacía estos 3 arrays al construir
     // tmpS, así que estas secciones no salen. En el PDF cliente completo sí.
+    // FOTOS DE EMPAQUE: layout compacto (hasta 8 por hoja) porque no se
+    // necesita detalle fino, y son muchas.
     // Cajas abiertas: 2 fotos por caja (Primera cama / Segunda cama).
-    // Índice 0 → Primera cama 1, índice 1 → Segunda cama 1, índice 2 → Primera cama 2, etc.
+    // Índice 0 → Primera cama 1, índice 1 → Segunda cama 1, etc.
+    // Con 2 columnas quedan naturalmente lado a lado en la misma fila.
     const openBoxLabels = arr => arr.map((_,i)=>{
       const box = Math.floor(i/2)+1;
       const cama = (i%2===0) ? 'Primera' : 'Segunda';
       return `${cama} cama ${box}`;
     });
     if(tieneAbiertas){
-      html+=buildRowsFullPage(S.fotosEmpaqueAbiertas,openBoxLabels(S.fotosEmpaqueAbiertas),'Packaging — Open Boxes');
+      html+=buildRowsCompacto(S.fotosEmpaqueAbiertas,openBoxLabels(S.fotosEmpaqueAbiertas),'Packaging — Open Boxes');
     }
     if(tieneCerradas){
-      html+=buildRowsFullPage(S.fotosEmpaqueCerradas,autoLabels('Closed box',S.fotosEmpaqueCerradas),'Packaging — Closed Boxes (labels)');
+      html+=buildRowsCompacto(S.fotosEmpaqueCerradas,autoLabels('Closed box',S.fotosEmpaqueCerradas),'Packaging — Closed Boxes (labels)');
     }
     if(tieneFedex){
-      html+=buildRowsFullPage(S.fotosFedex,autoLabels('FedEx',S.fotosFedex),'Shipping — FedEx Handoff');
+      html+=buildRowsCompacto(S.fotosFedex,autoLabels('FedEx',S.fotosFedex),'Shipping — FedEx Handoff');
     }
     return html;
   })()}
