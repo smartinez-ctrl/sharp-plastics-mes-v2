@@ -899,6 +899,7 @@ const CHECKLIST_ITEMS = [
   { key: 'ajuste',           label: 'Ajuste correcto' },
   { key: 'pantones',         label: 'Pantones correctos' },
   { key: 'defectos_imagen',  label: 'No defectos de imagen' },
+  { key: 'crosshatch_norma', label: 'Crosshatch dentro de norma' },
 ];
 
 async function mostrarChecklistAprobacion(ordenId, token, aprobadorAs) {
@@ -1362,12 +1363,12 @@ const TM_TIPOS=[
 ];
 const QA_ITEMS={
   'Soplado':['Espesor uniforme','Sin líneas paralelas','Rebabeo correcto','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
-  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión','Crosshatch dentro de norma'],
+  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
   'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa','Liner colocado correctamente']
 };
 const QA_ITEMS_EN={
   'Blow Molding':['Uniform wall thickness','No parallel lines','Correct flash removal','Correct bottle tone','No flash','No deformity','No orange peel','No perforations on base'],
-  'Printing':['No incomplete artwork','No delamination','Correct registration','No shadow','No soleo','No contamination','No serrated edges','No misalignment','No missing ink','No bubbles','No poor dispersion','Crosshatch within spec'],
+  'Printing':['No incomplete artwork','No delamination','Correct registration','No shadow','No soleo','No contamination','No serrated edges','No misalignment','No missing ink','No bubbles','No poor dispersion'],
   'Assembly':['Correct cap color','Correct threading','Correct box type','No cap deformity','No hole in cap center','Liner correctly installed']
 };
 const STEPS=['orden','ajuste','fotos','produccion','cierre'];
@@ -2365,7 +2366,7 @@ async function guardarEditFotosMES(){
 // ══════════════════════════════════════════════════════
 const _EDITQA_PROD_ITEMS={
   'Soplado':['Espesor uniforme','Sin líneas paralelas','Rebabeo correcto','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
-  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión','Crosshatch dentro de norma'],
+  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
   'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa','Liner colocado correctamente']
 };
 let _editQAProd={ordenId:null,pipelineId:null,qa:{}};
