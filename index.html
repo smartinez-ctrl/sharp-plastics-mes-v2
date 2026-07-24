@@ -1399,13 +1399,13 @@ const TM_TIPOS=[
 ];
 const QA_ITEMS={
   'Soplado':['Espesor uniforme','Sin líneas paralelas','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
-  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
-  'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa','Liner colocado correctamente']
+  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
+  'Ensamble':['Color tapa correcto','Color chupón correcto','Tapa sin hueco en centro','Correcto ensamble de tapa, asegurar chupón y liner','Tapas bien colocadas y cerradas','Papel bien colocado y asegurado']
 };
 const QA_ITEMS_EN={
   'Blow Molding':['Uniform wall thickness','No parallel lines','Correct bottle tone','No flash','No deformity','No orange peel','No pinholes at base'],
-  'Printing':['No incomplete artwork','No delamination','Correct registration','No shadow','No soleo','No contamination','No serrated edges','No misalignment','No missing ink','No bubbles','No poor dispersion'],
-  'Assembly':['Correct cap color','Correct threading','Correct box type','No cap deformity','No hole in cap center','Liner correctly installed']
+  'Printing':['Complete artwork','No delamination','Correct position','No shadow','No contamination','Clean, sharp edges','Correct alignment','No missing ink','No bubbles','Correct dispersion'],
+  'Assembly':['Correct cap color','Correct mouthpiece color','No hole in cap center','Correct cap assembly, secure mouthpiece and liner','Caps properly placed and closed','Paper properly placed and secured']
 };
 const STEPS=['orden','ajuste','fotos','produccion','cierre'];
 
@@ -2402,8 +2402,8 @@ async function guardarEditFotosMES(){
 // ══════════════════════════════════════════════════════
 const _EDITQA_PROD_ITEMS={
   'Soplado':['Espesor uniforme','Sin líneas paralelas','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
-  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
-  'Ensamble':['Color tapa correcto','Color chupón correcto','Tapa sin hueco en centro','Correcto ensamble de tapa, asegurar chupón y liner','Tapas bien colocadas y cerradas','Papel bien colocado y asegurado','Liner colocado correctamente'],
+  'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
+  'Ensamble':['Color tapa correcto','Color chupón correcto','Tapa sin hueco en centro','Correcto ensamble de tapa, asegurar chupón y liner','Tapas bien colocadas y cerradas','Papel bien colocado y asegurado'],
   'Empaque':['Se realizó inspección al 100% de las botellas','Etiquetas de pedido listas y revisadas','Corrugado correcto y en perfecto estado','Botellas bien acomodadas','Cantidad correcta por cama y por caja','Fotos por cama tomadas','Correcto sellado de la caja']
 };
 let _editQAProd={ordenId:null,pipelineId:null,qa:{}};
@@ -2871,7 +2871,7 @@ async function guardarEmpaqueProd(){
 // ordenes_produccion.qa_empaque_* y el pipeline pasa a 'Completado'.
 // ══════════════════════════════════════════════════════
 const _EMPAQUE_QA_ITEMS = {
-  'Ensamble': ['Color tapa correcto','Color chupón correcto','Tapa sin hueco en centro','Correcto ensamble de tapa, asegurar chupón y liner','Tapas bien colocadas y cerradas','Papel bien colocado y asegurado','Liner colocado correctamente'],
+  'Ensamble': ['Color tapa correcto','Color chupón correcto','Tapa sin hueco en centro','Correcto ensamble de tapa, asegurar chupón y liner','Tapas bien colocadas y cerradas','Papel bien colocado y asegurado'],
   'Empaque':  ['Se realizó inspección al 100% de las botellas','Etiquetas de pedido listas y revisadas','Corrugado correcto y en perfecto estado','Botellas bien acomodadas','Cantidad correcta por cama y por caja','Fotos por cama tomadas','Correcto sellado de la caja'],
 };
 let _empaqueQA = { qa:{}, canvas:null, drawing:false, ordenId:null, pipelineId:null, hasStrokes:false };
@@ -6307,9 +6307,8 @@ function generarPDF(){
   // Tamaños generosos para que el QA ocupe la primera hoja completa junto
   // con header e info. Las fotos van en hoja 2 (Color Validation + Approval).
   let tot=0,pass=0;
-  // El item "Liner colocado correctamente" / "Liner correctly installed"
-  // ya viene incluido de fábrica en QA_ITEMS.Ensamble / QA_ITEMS_EN.Assembly
-  // porque todas las tapas llevan liner siempre.
+  // El item de liner ya no va como un ítem separado — está implícito en
+  // "Correcto ensamble de tapa, asegurar chupón y liner" (item 4 de Ensamble).
   const seccionesES=Object.keys(QA_ITEMS);
   const seccionesEN=Object.keys(QA_ITEMS_EN);
   const colHtml=[];
