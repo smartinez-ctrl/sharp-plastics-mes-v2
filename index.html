@@ -475,8 +475,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <div class="tbar-item"><span class="tbar-label">Fotos</span><span class="tbar-val" id="t-fotos" style="color:var(--amber)">00:00:00</span></div>
   </div>
   <div class="scroll"><div class="scroll-narrow">
+    <!-- Sección Prueba de crosshatch: 1 foto obligatoria, junto con las
+         fotos de aprobación. Es un test de adhesión y sirve para probar
+         que la impresión resistió (ASTM D3359). -->
+    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+      <span>Prueba de crosshatch</span>
+      <span style="font-size:10px;color:#dc2626;font-weight:600;background:#fef2f2;border:1px solid #fecaca;padding:2px 8px;border-radius:5px;text-transform:none;letter-spacing:0">Obligatoria</span>
+    </div>
+    <div class="foto-grid" style="grid-template-columns:1fr">
+      <div class="foto-slot" id="foto-crosshatch"
+        onclick="openCrosshatchMenu()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'"
+        ondragleave="this.style.borderColor='';this.style.background='';"
+        ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoCrosshatchDrop(event)">
+        <div class="foto-icon">🧪</div><div class="foto-label">Crosshatch</div>
+      </div>
+    </div>
+    <input type="file" id="fi-crosshatch" accept="image/*" style="display:none" onchange="handleFotoCrosshatch(this)">
+    <input type="file" id="fc-crosshatch" accept="image/*" capture="environment" style="display:none" onchange="handleFotoCrosshatch(this)">
     <!-- Sección Fotos de aprobación (movida arriba: se toman primero) -->
-    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Fotos de aprobación</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:22px 0 10px">Fotos de aprobación</div>
     <div class="foto-grid">
       <div class="foto-slot" id="foto-0" onclick="openFotoMenu(0)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(0,event)"><div class="foto-icon">📷</div><div class="foto-label">Frente</div></div>
       <div class="foto-slot" id="foto-1" onclick="openFotoMenu(1)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(1,event)"><div class="foto-icon">📷</div><div class="foto-label">Reverso</div></div>
@@ -1271,12 +1289,32 @@ async function loadUsers(){
 }
 
 function populateSupervisoresSelects(){
+  // foto-aprueba (asignar responsable de fotos): sigue con todos los sups/masters.
   const sups=USERS.filter(u=>u.role==='supervisor'||u.role==='master');
   const opts='<option value="">Seleccionar...</option>'+sups.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
-  ['foto-aprueba','cierre-firma'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el)el.innerHTML=opts;
-  });
+  const apr=document.getElementById('foto-aprueba');
+  if(apr)apr.innerHTML=opts;
+  // cierre-firma (firma del cierre): SOLO el usuario logueado, para que
+  // nadie pueda asignar la responsabilidad a otra persona. Si no hay
+  // usuario logueado aún, se llena luego en updateUserChips().
+  populateFirmaCierreLocked();
+}
+
+// Bloquea el dropdown de firma de cierre al usuario logueado únicamente.
+// Se puede llamar de nuevo cuando cambie S.user (por ejemplo tras login).
+function populateFirmaCierreLocked(){
+  const el=document.getElementById('cierre-firma');
+  if(!el) return;
+  const uName=(S.user&&S.user.name)||'';
+  el.innerHTML=uName
+    ? `<option value="${uName}" selected>${uName}</option>`
+    : '<option value="">— sin sesión —</option>';
+  // Un option unico ya lo bloquea de facto, pero también deshabilitamos
+  // por si acaso alguien intenta cambiarlo desde consola.
+  el.disabled=false; // habilitado para que el value se envíe
+  el.setAttribute('readonly','readonly');
+  el.style.pointerEvents='none';
+  el.style.opacity='0.85';
 }
 
 // ══════════════════════════════════════════════════════
@@ -1601,6 +1639,17 @@ function pintarFotosEnSlots(){
       }
     });
   }
+  // Slot único de crosshatch (obligatoria)
+  const slotCx=document.getElementById('foto-crosshatch');
+  if(slotCx){
+    if(S.fotoCrosshatch){
+      slotCx.className='foto-slot taken';
+      slotCx.innerHTML='<img src="'+S.fotoCrosshatch+'" style="width:100%;height:100%;object-fit:contain">';
+    } else {
+      slotCx.className='foto-slot';
+      slotCx.innerHTML='<div class="foto-icon">🧪</div><div class="foto-label">Crosshatch</div>';
+    }
+  }
 }
 function dismissKeyboard(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();}
 
@@ -1784,6 +1833,10 @@ function updateUserChips(){
     if(a){a.textContent=u.name.slice(0,2).toUpperCase();a.style.background=u.color+'22';a.style.color=u.color;}
     if(n)n.textContent=u.name;
   });
+  // Actualizar el dropdown de firma de cierre para que solo tenga al
+  // usuario logueado — se refresca aquí porque updateUserChips corre
+  // después de cada login exitoso.
+  if(typeof populateFirmaCierreLocked==='function') populateFirmaCierreLocked();
 }
 
 function applyRoleRestrictions(){
@@ -3452,10 +3505,12 @@ async function cargarOrdenExistente(pipelineId){
       o.foto_color_urls.forEach((url,i)=>{if(url&&i<4)S.fotosColor[i]=url;});
       console.log('[DIAG cargarOrden] fotos color restauradas:',S.fotosColor.filter(Boolean).length,'de 4');
     }
+    // Restaurar foto de crosshatch (test de adhesión, obligatoria)
+    S.fotoCrosshatch = o.foto_crosshatch_url || null;
     // Re-pintar slots después de que el DOM esté listo (por si la pantalla
     // de fotos ya está activa). Si no está activa, showScreen('fotos') las
     // re-pintará cuando el operador navegue ahí.
-    if((S.fotos&&S.fotos.some(Boolean))||(S.fotosColor&&S.fotosColor.some(Boolean))){
+    if((S.fotos&&S.fotos.some(Boolean))||(S.fotosColor&&S.fotosColor.some(Boolean))||S.fotoCrosshatch){
       setTimeout(pintarFotosEnSlots,500);
     }
     // Restaurar parámetros en DOM
@@ -3606,7 +3661,7 @@ function prefillOrden(){
 function resetOrden(){
   // Reset state
   S.orden={cliente:'',op:'',producto:'',pzas:0,loteBot:'',loteTap:'',maquina:'Shuttle',ajustadores:[],operadores:[],colores:[]};
-  S.tintas=[];S.fotos=[null,null,null,null];S.fotosColor=[null,null,null,null];S.fotosEmpaque=[null,null,null,null];S.qa={};S.consumoReal=[];
+  S.tintas=[];S.fotos=[null,null,null,null];S.fotosColor=[null,null,null,null];S.fotoCrosshatch=null;S.fotosEmpaque=[null,null,null,null];S.qa={};S.consumoReal=[];
   S.merma={ajuste:{},prod:{}};S.tm={ajuste:{},prod:{}};
   S.activeTM={ajuste:null,prod:null};S.reajustes=0;S.pipelineId=null;
   // Stop all timers
@@ -4475,6 +4530,109 @@ async function subirFotoColorAStorage(i, dataUrl){
     // al enviar aprobación. Solo registramos en consola.
   }
 }
+
+// ══════════════════════════════════════════════════════
+// FOTO DE CROSSHATCH (obligatoria, 1 sola)
+// Guardada en S.fotoCrosshatch y en foto_crosshatch_url de la orden.
+// ══════════════════════════════════════════════════════
+function handleFotoCrosshatchDrop(event){
+  const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){toast('Solo imágenes','err');return;}
+  const reader = new FileReader();
+  reader.onload = function(e){
+    S.fotoCrosshatch = e.target.result;
+    const slot = document.getElementById('foto-crosshatch');
+    if(slot){
+      slot.className='foto-slot taken';
+      slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:contain">';
+    }
+    toast('Crosshatch cargado');
+    subirFotoCrosshatchAStorage(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function openCrosshatchMenu(){
+  const existing=document.getElementById('photo-menu-overlay');if(existing)existing.remove();
+  const overlay=document.createElement('div');
+  overlay.id='photo-menu-overlay';overlay.className='photo-menu';
+  overlay.innerHTML=`<div class="photo-menu-inner">
+    <div style="text-align:center;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px">Prueba de crosshatch</div>
+    <button class="photo-opt" onclick="document.getElementById('fc-crosshatch').click();document.getElementById('photo-menu-overlay').remove()">📷 Tomar foto con cámara</button>
+    <button class="photo-opt" onclick="document.getElementById('fi-crosshatch').click();document.getElementById('photo-menu-overlay').remove()">🖼 Elegir archivo</button>
+    <button class="photo-opt" style="color:var(--text3)" onclick="document.getElementById('photo-menu-overlay').remove()">Cancelar</button>
+  </div>`;
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+  document.body.appendChild(overlay);
+}
+
+function handleFotoCrosshatch(input){
+  if(!input.files||!input.files[0]) return;
+  const file=input.files[0];
+  const reader=new FileReader();
+  reader.onload=e=>{
+    S.fotoCrosshatch=e.target.result;
+    const slot=document.getElementById('foto-crosshatch');
+    if(slot){slot.classList.add('taken');slot.innerHTML=`<img src="${e.target.result}" alt="crosshatch">`;}
+    toast('Crosshatch guardado ✓');
+    subirFotoCrosshatchAStorage(e.target.result);
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+// Sube la foto de crosshatch a Storage y actualiza S.fotoCrosshatch con la URL.
+async function subirFotoCrosshatchAStorage(dataUrl){
+  const slot = document.getElementById('foto-crosshatch');
+  if(slot){
+    const overlay = document.createElement('div');
+    overlay.className = 'foto-uploading-overlay';
+    overlay.id = 'uploading-crosshatch';
+    overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;border-radius:8px;pointer-events:none';
+    overlay.innerHTML = '⏳ Subiendo...';
+    slot.style.position='relative';
+    slot.appendChild(overlay);
+  }
+  try{
+    if(!S.ordenId){
+      await guardarOrden('ajuste').catch(()=>{});
+      if(!S.ordenId){
+        const ov = document.getElementById('uploading-crosshatch');
+        if(ov) ov.innerHTML='⚠ Reintentar al enviar';
+        return;
+      }
+    }
+    const compressed = await comprimirFoto(dataUrl);
+    const base64Data = compressed.replace(/^data:image\/\w+;base64,/, '');
+    const byteStr = atob(base64Data);
+    const arr = new Uint8Array(byteStr.length);
+    for(let j=0;j<byteStr.length;j++) arr[j]=byteStr.charCodeAt(j);
+    const blob = new Blob([arr], {type:'image/jpeg'});
+    const filename = `${S.ordenId}/crosshatch-${Date.now()}.jpg`;
+    const upRes = await fetch(`${SB_URL}/storage/v1/object/fotos-aprobacion/${filename}`, {
+      method: 'POST',
+      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true'},
+      body: blob,
+    });
+    if(upRes.ok){
+      const url = `${SB_URL}/storage/v1/object/public/fotos-aprobacion/${filename}`;
+      S.fotoCrosshatch = url;
+      guardarOrden('ajuste').catch(e=>console.warn('guardar tras crosshatch:',e));
+      const ov = document.getElementById('uploading-crosshatch');
+      if(ov) ov.remove();
+    } else {
+      const errText = await upRes.text().catch(()=>'');
+      console.warn('Error subiendo crosshatch', upRes.status, errText);
+      const ov = document.getElementById('uploading-crosshatch');
+      if(ov) ov.innerHTML='⚠ Error '+upRes.status;
+    }
+  }catch(e){
+    console.warn('subirFotoCrosshatchAStorage falló:', e);
+    const ov = document.getElementById('uploading-crosshatch');
+    if(ov) ov.innerHTML='⚠ Reintentar al enviar';
+  }
+}
 function goFotos(){
   guardarOrden('fotos');
   showScreen('fotos');
@@ -4573,6 +4731,11 @@ async function enviarAprobacion(){
   const faltantes=fotoLabels.filter((_,i)=>!fotos[i]||fotos[i]===null);
   if(faltantes.length>0){
     toast('⚠️ Faltan: '+faltantes.join(', '),'err');
+    return;
+  }
+  // Foto de crosshatch también es obligatoria (test de adhesión)
+  if(!S.fotoCrosshatch){
+    toast('⚠️ Falta la foto de la prueba de crosshatch','err');
     return;
   }
 
@@ -5008,6 +5171,7 @@ window.addEventListener('beforeunload', function(){
       operadores:S.orden.operadores||[],
       foto_urls:(S.fotos||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
       foto_color_urls:(S.fotosColor||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
+      foto_crosshatch_url: (S.fotoCrosshatch && typeof S.fotoCrosshatch==='string' && S.fotoCrosshatch.startsWith('http')) ? S.fotoCrosshatch : null,
     };
     const url=SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+S.ordenId;
     const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
@@ -5091,6 +5255,7 @@ async function _guardarOrdenInterno(estado){
     // Solo persistir URLs HTTP de Storage (no dataURLs base64 que ocuparían MB en DB)
     foto_urls:(S.fotos||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
     foto_color_urls:(S.fotosColor||[]).filter(u=>u&&typeof u==='string'&&u.startsWith('http')),
+    foto_crosshatch_url: (S.fotoCrosshatch && typeof S.fotoCrosshatch==='string' && S.fotoCrosshatch.startsWith('http')) ? S.fotoCrosshatch : null,
   };
   try{
     let rows;
@@ -5271,11 +5436,17 @@ function handleEmpaquesDrop(i,event){
 
 function renderQA(){
   const el=document.getElementById('qa-checklist');if(!el)return;
+  // El QA que se llena al CERRAR el pedido solo cubre impresión.
+  // La sección "Ensamble" (incluido el liner) se llena aparte en la
+  // cajita de empaque, junto con los items de packaging.
+  const QA_CIERRE=Object.fromEntries(
+    Object.entries(QA_ITEMS).filter(([sec])=>sec!=='Ensamble')
+  );
   // Pre-llenar: items del QA sin valor → 'NC' (No conforme) por default.
   // El operador debe marcar activamente cada item como OK — así evita
   // firmar el QA sin haber revisado. Los inputs de crosshatch y agua
   // también empiezan vacíos (no "Aprobado ✓" pre-llenado).
-  Object.values(QA_ITEMS).forEach(items=>{
+  Object.values(QA_CIERRE).forEach(items=>{
     items.forEach(item=>{
       if(!S.qa[item]) S.qa[item]='NC';
     });
@@ -5285,7 +5456,7 @@ function renderQA(){
   const ca=document.getElementById('cierreAgua');
   if(ca && !ca.value) ca.value='';
   let total=0,passed=0,html='';
-  Object.entries(QA_ITEMS).forEach(([section,items])=>{
+  Object.entries(QA_CIERRE).forEach(([section,items])=>{
     html+=`<div class="qa-section-title">${section}</div>`;
     items.forEach(item=>{
       total++;const val=S.qa[item]||'';if(val==='P')passed++;
@@ -6035,6 +6206,12 @@ function generarPDF(){
     }
     if(tieneBotellas){
       html+=buildRowsFullPage(S.fotos,labels,'Approval Photos');
+    }
+    // Foto de crosshatch (test de adhesión, obligatoria): 1 sola imagen.
+    // Va justo después de las Approval Photos porque conceptualmente forma
+    // parte de la aprobación (junto con el water test que ya es un input).
+    if(S.fotoCrosshatch){
+      html+=buildRowsFullPage([S.fotoCrosshatch],['Crosshatch adhesion test'],'Adhesion Test — Crosshatch');
     }
     // Nota: el PDF ligero (?sinEmpaque=1) vacía estos 3 arrays al construir
     // tmpS, así que estas secciones no salen. En el PDF cliente completo sí.
