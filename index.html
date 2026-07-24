@@ -801,40 +801,73 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 
 <div class="modal-overlay" id="modal-empaque-prod">
   <div style="background:var(--bg2);border-radius:16px;padding:20px;width:94%;max-width:560px;max-height:92vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:var(--bg2);padding-bottom:8px;z-index:2">
-      <div style="font-size:15px;font-weight:700">📦 Fotos de empaque y entrega</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;position:sticky;top:0;background:var(--bg2);padding-bottom:8px;z-index:2">
+      <div style="font-size:15px;font-weight:700">📦 Empaque y cierre</div>
       <button onclick="cerrarEmpaqueProduccion()" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer">×</button>
     </div>
 
-    <!-- Sección 1: Cajas abiertas -->
-    <div style="margin-bottom:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">📦 Cajas abiertas (botellas visibles)</div>
-        <button onclick="agregarSlotEmpaque('abiertas')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--amber);padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">+ Agregar</button>
-      </div>
-      <div id="empaque-abiertas-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    <!-- Tabs -->
+    <div style="display:flex;background:var(--bg3);border-radius:9px;padding:3px;margin-bottom:16px">
+      <button id="tab-btn-fotos" onclick="switchEmpaqueTab('fotos')"
+        style="flex:1;background:var(--bg2);color:var(--text);border:none;padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">📷 Fotos</button>
+      <button id="tab-btn-qa" onclick="switchEmpaqueTab('qa')"
+        style="flex:1;background:transparent;color:var(--text3);border:none;padding:8px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">🩺 QA de empaque</button>
     </div>
 
-    <!-- Sección 2: Cajas cerradas -->
-    <div style="margin-bottom:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">📦 Cajas cerradas (etiquetas)</div>
-        <button onclick="agregarSlotEmpaque('cerradas')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--amber);padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">+ Agregar</button>
+    <!-- Tab Fotos -->
+    <div id="tab-empaque-fotos">
+      <div style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">📦 Cajas abiertas (2 camas por caja)</div>
+          <button onclick="agregarSlotEmpaque('abiertas')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--amber);padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">+ Caja</button>
+        </div>
+        <div id="empaque-abiertas-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
       </div>
-      <div id="empaque-cerradas-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+      <div style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">📦 Cajas cerradas (etiquetas)</div>
+          <button onclick="agregarSlotEmpaque('cerradas')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--amber);padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">+ Agregar</button>
+        </div>
+        <div id="empaque-cerradas-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+      </div>
+      <div style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">🚚 Entrega a Fedex</div>
+          <button onclick="agregarSlotEmpaque('fedex')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--amber);padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">+ Agregar</button>
+        </div>
+        <div id="empaque-fedex-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+      </div>
+      <input type="file" id="file-empaque-prod" accept="image/*" style="display:none" onchange="handleEmpaqueProd(this)">
+      <button class="btn btn-primary btn-full" id="btn-guardar-empaque-prod" onclick="guardarEmpaqueProd()" style="margin-top:8px">💾 Guardar fotos</button>
     </div>
 
-    <!-- Sección 3: Entrega Fedex -->
-    <div style="margin-bottom:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">🚚 Entrega a Fedex</div>
-        <button onclick="agregarSlotEmpaque('fedex')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--amber);padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">+ Agregar</button>
+    <!-- Tab QA de empaque -->
+    <div id="tab-empaque-qa" style="display:none">
+      <div id="empaque-qa-header" style="font-size:11px;color:var(--text3);margin-bottom:6px">—</div>
+      <div id="empaque-qa-items"></div>
+      <div style="margin-top:14px">
+        <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:4px">Participantes del empaque</label>
+        <textarea id="empaque-qa-participantes" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none" placeholder="Ej: Edgar García (líder), María López, Roberto Sánchez..."></textarea>
       </div>
-      <div id="empaque-fedex-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+      <div style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Firma (dibuja con el dedo)</label>
+          <button onclick="limpiarFirmaEmpaque()" style="background:transparent;border:none;color:var(--text3);font-size:10px;cursor:pointer;text-decoration:underline">Limpiar</button>
+        </div>
+        <canvas id="empaque-firma-canvas" width="500" height="120"
+          style="width:100%;height:120px;background:#fff;border:2px dashed var(--border2);border-radius:9px;touch-action:none;cursor:crosshair"></canvas>
+        <div id="empaque-firma-name" style="font-size:11px;color:var(--text3);margin-top:6px">Firmante: —</div>
+      </div>
+      <div style="margin-top:14px">
+        <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:4px">Confirma tu PIN</label>
+        <input type="password" inputmode="numeric" maxlength="6" id="empaque-firma-pin"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:16px;font-family:'Space Mono',monospace;letter-spacing:6px;text-align:center;outline:none" placeholder="••••">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="firmarQAEmpaque()" style="margin-top:14px">✍️ Firmar y completar pedido</button>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:8px">
+        Solo Edgar o Dulce pueden firmar el QA de empaque.
+      </div>
     </div>
-
-    <input type="file" id="file-empaque-prod" accept="image/*" style="display:none" onchange="handleEmpaqueProd(this)">
-    <button class="btn btn-primary btn-full" id="btn-guardar-empaque-prod" onclick="guardarEmpaqueProd()" style="margin-top:8px">💾 Guardar todo</button>
   </div>
 </div>
 
@@ -2370,7 +2403,8 @@ async function guardarEditFotosMES(){
 const _EDITQA_PROD_ITEMS={
   'Soplado':['Espesor uniforme','Sin líneas paralelas','Rebabeo correcto','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
   'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
-  'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa','Liner colocado correctamente']
+  'Ensamble':['Color tapa correcto','Color chupón correcto','Tapa sin hueco en centro','Correcto ensamble de tapa, asegurar chupón y liner','Tapas bien colocadas y cerradas','Papel bien colocado y asegurado','Liner colocado correctamente'],
+  'Empaque':['Se realizó inspección al 100% de las botellas','Etiquetas de pedido listas y revisadas','Corrugado correcto y en perfecto estado','Botellas bien acomodadas','Cantidad correcta por cama y por caja','Fotos por cama tomadas','Correcto sellado de la caja']
 };
 let _editQAProd={ordenId:null,pipelineId:null,qa:{}};
 
@@ -2594,7 +2628,7 @@ async function renderDashboard(){
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" style="flex:1;min-width:0" onclick="verPDFCompletado('${p.id}','cliente')">📋 PDF cliente</button>
-          <button class="btn btn-ghost btn-sm" style="flex:1;min-width:0" onclick="window.open('index.html?pdfPipeline=${p.id}&tipo=cliente&sinEmpaque=1','_blank')" title="PDF cliente sin fotos de empaque (más liviano)">🪶 PDF ligero</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1;min-width:0" onclick="verPDFCompletado('${p.id}','cliente',{sinEmpaque:true})" title="PDF cliente sin fotos de empaque (más liviano)">🪶 PDF ligero</button>
           <button class="btn btn-ghost btn-sm" style="flex:1;min-width:0" onclick="verPDFCompletado('${p.id}','interno')">📊 PDF interno</button>
           <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEmpaqueProduccion('${p.id}')" title="Fotos empaque">📦</button>
           ${S.user&&(S.user.role==='master'||(S.user.role==='supervisor'&&S.user.name==='Edgar'))?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEditQAProd('${p.id}')" title="Editar QA checklist">🩺</button>`:''}
@@ -2644,7 +2678,7 @@ async function renderDashboard(){
 let _empaquesProdData = { abiertas: [], cerradas: [], fedex: [] };
 let _empaquesProdPipeId = null;
 // Slots por default por sección (mínimo). Se puede agregar más con "+ Agregar".
-const _EMP_DEFAULTS = { abiertas: 4, cerradas: 4, fedex: 2 };
+const _EMP_DEFAULTS = { abiertas: 2, cerradas: 4, fedex: 2 };
 const _EMP_LABELS = { abiertas: 'Abierta', cerradas: 'Cerrada', fedex: 'Fedex' };
 // Guarda qué sección + índice se está editando ahora
 window._empaqueProdTarget = { seccion: 'abiertas', idx: 0 };
@@ -2652,8 +2686,10 @@ window._empaqueProdTarget = { seccion: 'abiertas', idx: 0 };
 async function abrirEmpaqueProduccion(pipelineId){
   _empaquesProdPipeId = pipelineId;
   _empaquesProdData = { abiertas: [], cerradas: [], fedex: [] };
+  // Reset del estado del QA para este modal
+  _empaqueQA = { qa:{}, canvas:null, drawing:false, ordenId:null, pipelineId:pipelineId, hasStrokes:false };
 
-  // Cargar existentes de las 3 columnas nuevas
+  // Cargar existentes de las 3 columnas nuevas + QA empaque (si ya se firmó/llenó)
   try {
     const r = await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=fotos_empaque_abiertas,fotos_empaque_cerradas,fotos_fedex',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
     const rows = await r.json();
@@ -2661,6 +2697,17 @@ async function abrirEmpaqueProduccion(pipelineId){
       _empaquesProdData.abiertas = Array.isArray(rows[0].fotos_empaque_abiertas) ? rows[0].fotos_empaque_abiertas.filter(Boolean) : [];
       _empaquesProdData.cerradas = Array.isArray(rows[0].fotos_empaque_cerradas) ? rows[0].fotos_empaque_cerradas.filter(Boolean) : [];
       _empaquesProdData.fedex = Array.isArray(rows[0].fotos_fedex) ? rows[0].fotos_fedex.filter(Boolean) : [];
+    }
+    // Cargar QA empaque previo si existe
+    const rOrd = await fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+pipelineId+'&select=id,qa_empaque_resultados,qa_empaque_participantes&order=created_at.desc&limit=1',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const ordRows = await rOrd.json();
+    if (Array.isArray(ordRows) && ordRows.length) {
+      _empaqueQA.ordenId = ordRows[0].id;
+      _empaqueQA.qa = ordRows[0].qa_empaque_resultados || {};
+      setTimeout(() => {
+        const p = document.getElementById('empaque-qa-participantes');
+        if (p) p.value = ordRows[0].qa_empaque_participantes || '';
+      }, 100);
     }
   } catch(e) { console.warn('load empaque:', e.message); }
 
@@ -2670,6 +2717,8 @@ async function abrirEmpaqueProduccion(pipelineId){
   });
 
   renderTodasLasSeccionesEmpaque();
+  // Siempre abrir en el tab de fotos
+  switchEmpaqueTab('fotos');
   document.getElementById('modal-empaque-prod').classList.add('open');
 }
 
@@ -2687,6 +2736,16 @@ function renderSeccionEmpaque(seccion){
   if (!grid) return;
   const arr = _empaquesProdData[seccion];
   const label = _EMP_LABELS[seccion];
+  // Para 'abiertas' calculamos label dinámico: 'Primera cama X' / 'Segunda cama X'
+  // donde X = número de caja (2 fotos por caja).
+  const getLabel = (i) => {
+    if (seccion === 'abiertas') {
+      const box = Math.floor(i/2)+1;
+      const cama = (i%2===0) ? 'Primera' : 'Segunda';
+      return `${cama} cama ${box}`;
+    }
+    return `${label} ${i+1}`;
+  };
   grid.innerHTML = arr.map((val, i) => {
     const hasImg = val && (val.startsWith('http') || val.startsWith('data:'));
     return `
@@ -2698,7 +2757,7 @@ function renderSeccionEmpaque(seccion){
           style="aspect-ratio:4/3;background:var(--bg3);border:2px dashed var(--border2);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:.2s;cursor:pointer">
           ${hasImg
             ? `<img src="${val}" style="width:100%;height:100%;object-fit:contain">`
-            : `<span style="font-size:20px">📷</span><span style="font-size:10px;color:var(--text3);margin-top:4px">${label} ${i+1}</span>`
+            : `<span style="font-size:20px">📷</span><span style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center;padding:0 4px">${getLabel(i)}</span>`
           }
         </div>
         ${hasImg ? `<button onclick="eliminarFotoEmpaque('${seccion}',${i})" style="position:absolute;top:4px;right:4px;background:rgba(220,38,38,0.9);color:#fff;border:none;width:22px;height:22px;border-radius:50%;font-size:14px;cursor:pointer;line-height:1;padding:0" title="Eliminar">×</button>` : ''}
@@ -2709,6 +2768,12 @@ function renderSeccionEmpaque(seccion){
 function agregarSlotEmpaque(seccion){
   if (_empaquesProdData[seccion].length >= 30) { toast('Máximo 30 fotos por sección','err'); return; }
   _empaquesProdData[seccion].push(null);
+  // Para 'abiertas' agregamos SIEMPRE en pares: cada caja necesita
+  // Primera cama + Segunda cama. Si el nuevo slot es 'Primera',
+  // añadimos también la 'Segunda' a continuación.
+  if (seccion === 'abiertas' && _empaquesProdData[seccion].length % 2 === 1 && _empaquesProdData[seccion].length < 30) {
+    _empaquesProdData[seccion].push(null);
+  }
   renderSeccionEmpaque(seccion);
 }
 
@@ -2796,7 +2861,168 @@ async function guardarEmpaqueProd(){
   } catch(e) {
     toast('Error: '+e.message, 'err');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar todo'; }
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar fotos'; }
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// QA DE EMPAQUE (Assembly + Packaging + Liner) con firma canvas + PIN.
+// Solo Sam / Edgar / Dulce pueden firmar. Al firmar se guarda todo en
+// ordenes_produccion.qa_empaque_* y el pipeline pasa a 'Completado'.
+// ══════════════════════════════════════════════════════
+const _EMPAQUE_QA_ITEMS = {
+  'Ensamble': ['Color tapa correcto','Color chupón correcto','Tapa sin hueco en centro','Correcto ensamble de tapa, asegurar chupón y liner','Tapas bien colocadas y cerradas','Papel bien colocado y asegurado','Liner colocado correctamente'],
+  'Empaque':  ['Se realizó inspección al 100% de las botellas','Etiquetas de pedido listas y revisadas','Corrugado correcto y en perfecto estado','Botellas bien acomodadas','Cantidad correcta por cama y por caja','Fotos por cama tomadas','Correcto sellado de la caja'],
+};
+let _empaqueQA = { qa:{}, canvas:null, drawing:false, ordenId:null, pipelineId:null, hasStrokes:false };
+
+function switchEmpaqueTab(which){
+  const tabFotos = document.getElementById('tab-empaque-fotos');
+  const tabQA    = document.getElementById('tab-empaque-qa');
+  const btnFotos = document.getElementById('tab-btn-fotos');
+  const btnQA    = document.getElementById('tab-btn-qa');
+  if (which === 'qa') {
+    tabFotos.style.display = 'none';
+    tabQA.style.display = '';
+    btnFotos.style.background = 'transparent';
+    btnFotos.style.color = 'var(--text3)';
+    btnQA.style.background = 'var(--bg2)';
+    btnQA.style.color = 'var(--text)';
+    renderEmpaqueQAItems();
+    setupFirmaCanvas();
+    // Actualizar nombre del firmante
+    const el = document.getElementById('empaque-firma-name');
+    if (el) el.textContent = 'Firmante: ' + ((S.user && S.user.name) || '—');
+  } else {
+    tabFotos.style.display = '';
+    tabQA.style.display = 'none';
+    btnQA.style.background = 'transparent';
+    btnQA.style.color = 'var(--text3)';
+    btnFotos.style.background = 'var(--bg2)';
+    btnFotos.style.color = 'var(--text)';
+  }
+}
+
+function renderEmpaqueQAItems(){
+  const cont = document.getElementById('empaque-qa-items');
+  if (!cont) return;
+  let html = '', tot = 0, ok = 0;
+  Object.entries(_EMPAQUE_QA_ITEMS).forEach(([sec, list]) => {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 6px">${sec}</div>`;
+    list.forEach(item => {
+      const val = _empaqueQA.qa[item] || 'NC';
+      tot++;
+      if (val === 'P') ok++;
+      const btnStyle = (v, color) => {
+        const sel = val === v;
+        return `padding:6px 10px;font-size:12px;border-radius:6px;border:1px solid ${sel?color:'transparent'};background:${sel?color+'22':'transparent'};color:${sel?color:'var(--text3)'};font-weight:${sel?'700':'500'};cursor:pointer;touch-action:manipulation`;
+      };
+      const iesc = item.replace(/'/g,"&apos;");
+      html += `<div style="background:var(--bg3);display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:8px;margin-bottom:5px;gap:8px">
+        <div style="font-size:12.5px;flex:1">${item}</div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="setEmpaqueQA('${iesc}','P')" style="${btnStyle('P','#16a34a')}">✓</button>
+          <button onclick="setEmpaqueQA('${iesc}','NC')" style="${btnStyle('NC','#dc2626')}">✗</button>
+          <button onclick="setEmpaqueQA('${iesc}','NA')" style="${btnStyle('NA','#6b7280')}">N/A</button>
+        </div>
+      </div>`;
+    });
+  });
+  const header = document.getElementById('empaque-qa-header');
+  if (header) header.textContent = `${ok}/${tot} aprobados`;
+  cont.innerHTML = html;
+}
+
+function setEmpaqueQA(item, val){
+  if (_empaqueQA.qa[item] === val) delete _empaqueQA.qa[item];
+  else _empaqueQA.qa[item] = val;
+  renderEmpaqueQAItems();
+}
+
+function setupFirmaCanvas(){
+  const c = document.getElementById('empaque-firma-canvas');
+  if (!c) return;
+  _empaqueQA.canvas = c;
+  const ctx = c.getContext('2d');
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#1a2864';
+  const pos = e => {
+    const r = c.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: (t.clientX - r.left) * (c.width / r.width), y: (t.clientY - r.top) * (c.height / r.height) };
+  };
+  const start = e => { e.preventDefault(); _empaqueQA.drawing = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+  const draw  = e => { if (!_empaqueQA.drawing) return; e.preventDefault(); const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); _empaqueQA.hasStrokes = true; };
+  const end   = e => { _empaqueQA.drawing = false; };
+  // Limpiar listeners viejos y agregar nuevos
+  c.onmousedown = start; c.onmousemove = draw; c.onmouseup = end; c.onmouseleave = end;
+  c.ontouchstart = start; c.ontouchmove = draw; c.ontouchend = end;
+}
+
+function limpiarFirmaEmpaque(){
+  const c = document.getElementById('empaque-firma-canvas');
+  if (!c) return;
+  c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  _empaqueQA.hasStrokes = false;
+}
+
+async function firmarQAEmpaque(){
+  // 1) Permiso: master (Sam) o supervisor Edgar / Dulce
+  if (!S.user) return toast('Sesión no válida', 'err');
+  const puede = S.user.role === 'master'
+    || (S.user.role === 'supervisor' && (S.user.name === 'Edgar' || S.user.name === 'Dulce'));
+  if (!puede) return toast('Solo Sam, Edgar o Dulce pueden firmar', 'err');
+  // 2) Validaciones
+  const participantes = document.getElementById('empaque-qa-participantes').value.trim();
+  if (!participantes) return toast('Escribe los participantes del empaque', 'err');
+  if (!_empaqueQA.hasStrokes) return toast('Firma en el recuadro', 'err');
+  const pin = document.getElementById('empaque-firma-pin').value.trim();
+  if (!pin || pin !== S.user.pin) return toast('PIN incorrecto', 'err');
+  // 3) Todos los items marcados
+  const allItems = [..._EMPAQUE_QA_ITEMS['Ensamble'], ..._EMPAQUE_QA_ITEMS['Empaque']];
+  const sinMarcar = allItems.filter(it => !_empaqueQA.qa[it]);
+  if (sinMarcar.length) return toast('Falta marcar: ' + sinMarcar[0] + (sinMarcar.length>1 ? ' (+' + (sinMarcar.length-1) + ' más)' : ''), 'err');
+  // 4) Traer orden_id de la última orden del pipeline
+  const pipelineId = _empaqueQA.pipelineId;
+  if (!pipelineId) return toast('Pipeline no cargado', 'err');
+  try {
+    const rOrd = await fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+pipelineId+'&select=id&order=created_at.desc&limit=1',
+      { headers: { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
+    const rows = await rOrd.json();
+    if (!Array.isArray(rows) || !rows.length) return toast('No hay orden de producción para este pedido', 'err');
+    const ordenId = rows[0].id;
+    // 5) Serializar canvas → PNG dataURL
+    const canvasDataUrl = _empaqueQA.canvas.toDataURL('image/png');
+    const pinMask = '•'.repeat(pin.length);
+    const firmadoAt = new Date().toISOString();
+    // 6) PATCH ordenes_produccion + PATCH pipeline_mf.estado
+    const [rUp1, rUp2] = await Promise.all([
+      fetch(SB_URL+'/rest/v1/ordenes_produccion?id=eq.'+ordenId, {
+        method:'PATCH',
+        headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json', Prefer:'return=minimal' },
+        body:JSON.stringify({
+          qa_empaque_resultados: _empaqueQA.qa,
+          qa_empaque_participantes: participantes,
+          qa_empaque_firma_nombre: S.user.name,
+          qa_empaque_firma_canvas: canvasDataUrl,
+          qa_empaque_firma_pin_mask: pinMask,
+          qa_empaque_firmado_at: firmadoAt,
+        }),
+      }),
+      fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId, {
+        method:'PATCH',
+        headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json', Prefer:'return=minimal' },
+        body:JSON.stringify({ estado: 'Completado' }),
+      }),
+    ]);
+    if (!rUp1.ok || !rUp2.ok) throw new Error('Error al guardar');
+    toast('QA firmado — pedido completado ✓', 'ok');
+    cerrarEmpaqueProduccion();
+    if (typeof renderDashboard === 'function') renderDashboard();
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
   }
 }
 
@@ -3201,7 +3427,10 @@ async function guardarTMOrden(ordenId, fase, key, valor){
   },800);
 }
 
-async function verPDFCompletado(pipelineId, tipo){
+async function verPDFCompletado(pipelineId, tipo, opts={}){
+  // opts.sinEmpaque: si true, omite fotos de empaque/fedex (equivalente al 'PDF ligero').
+  const sinEmpaque = opts.sinEmpaque === true
+    || new URLSearchParams(window.location.search).get('sinEmpaque')==='1';
   try{
     const [rPipe, rOrden] = await Promise.all([
       fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=*',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}}),
@@ -3303,9 +3532,9 @@ async function verPDFCompletado(pipelineId, tipo){
       // Nuevas secciones cargadas desde pipeline_mf (arrays de URLs, sólo valores válidos)
       // Si la URL trae ?sinEmpaque=1 (versión "ligera" del PDF cliente),
       // dejamos los arrays vacíos para omitir esas secciones del PDF.
-      fotosEmpaqueAbiertas: (new URLSearchParams(window.location.search).get('sinEmpaque')==='1') ? [] : (Array.isArray(pipe.fotos_empaque_abiertas) ? pipe.fotos_empaque_abiertas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
-      fotosEmpaqueCerradas: (new URLSearchParams(window.location.search).get('sinEmpaque')==='1') ? [] : (Array.isArray(pipe.fotos_empaque_cerradas) ? pipe.fotos_empaque_cerradas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
-      fotosFedex:           (new URLSearchParams(window.location.search).get('sinEmpaque')==='1') ? [] : (Array.isArray(pipe.fotos_fedex) ? pipe.fotos_fedex : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      fotosEmpaqueAbiertas: sinEmpaque ? [] : (Array.isArray(pipe.fotos_empaque_abiertas) ? pipe.fotos_empaque_abiertas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      fotosEmpaqueCerradas: sinEmpaque ? [] : (Array.isArray(pipe.fotos_empaque_cerradas) ? pipe.fotos_empaque_cerradas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      fotosFedex:           sinEmpaque ? [] : (Array.isArray(pipe.fotos_fedex) ? pipe.fotos_fedex : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
       consumoReal:orden?.consumo_real_tintas||[],
       reajustes:orden?.reajustes||0,
       aprobacion:{
@@ -6243,8 +6472,15 @@ function generarPDF(){
     }
     // Nota: el PDF ligero (?sinEmpaque=1) vacía estos 3 arrays al construir
     // tmpS, así que estas secciones no salen. En el PDF cliente completo sí.
+    // Cajas abiertas: 2 fotos por caja (Primera cama / Segunda cama).
+    // Índice 0 → Primera cama 1, índice 1 → Segunda cama 1, índice 2 → Primera cama 2, etc.
+    const openBoxLabels = arr => arr.map((_,i)=>{
+      const box = Math.floor(i/2)+1;
+      const cama = (i%2===0) ? 'Primera' : 'Segunda';
+      return `${cama} cama ${box}`;
+    });
     if(tieneAbiertas){
-      html+=buildRowsFullPage(S.fotosEmpaqueAbiertas,autoLabels('Open box',S.fotosEmpaqueAbiertas),'Packaging — Open Boxes');
+      html+=buildRowsFullPage(S.fotosEmpaqueAbiertas,openBoxLabels(S.fotosEmpaqueAbiertas),'Packaging — Open Boxes');
     }
     if(tieneCerradas){
       html+=buildRowsFullPage(S.fotosEmpaqueCerradas,autoLabels('Closed box',S.fotosEmpaqueCerradas),'Packaging — Closed Boxes (labels)');
