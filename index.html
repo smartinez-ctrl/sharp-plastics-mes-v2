@@ -678,7 +678,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 <!-- fotos empaque movidas al pipeline -->
     <div class="card">
       <div class="card-title">Firma de cierre</div>
-      <div class="field"><label>Aprobado por</label><select id="cierre-firma"><option value="">Seleccionar...</option></select></div>
+      <!-- El campo 'Aprobado por' se autocompleta con el usuario logueado
+           (populateFirmaCierreLocked). Se mantiene oculto en el DOM porque
+           varios flujos (guardar orden, PDF, email) leen su value. -->
+      <div class="field" style="display:none"><label>Aprobado por</label><select id="cierre-firma"><option value="">Seleccionar...</option></select></div>
       <div class="field"><label>Observaciones finales</label>
         <textarea id="cierre-obs" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none" placeholder="Notas..."></textarea>
       </div>
