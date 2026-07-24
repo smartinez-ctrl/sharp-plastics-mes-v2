@@ -385,11 +385,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
   </div>
   <div class="scroll"><div class="scroll-narrow">
     <div id="ajuste-resumen" class="card" style="margin-bottom:10px"></div>
-    <!-- Banner destacado: este pedido lleva liner en la tapa. Aparece solo si
-         pipeline_mf.requiere_liner === true. Se llena en cargarPedidoActivo(). -->
-    <div id="ajuste-liner-banner" style="display:none;background:#1e40af;color:#fff;border-radius:10px;padding:12px 14px;margin-bottom:10px;font-weight:700;font-size:14px;text-align:center;box-shadow:0 0 0 2px #dbeafe">
-      🔵 ESTE PEDIDO LLEVA LINER EN LA TAPA
-    </div>
     <!-- Preview del diseño del cliente (mismo card que en la pantalla de setup) -->
     <div class="card" id="ajuste-diseno-card" style="display:none;margin-bottom:10px">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
@@ -1328,12 +1323,12 @@ const TM_TIPOS=[
 const QA_ITEMS={
   'Soplado':['Espesor uniforme','Sin líneas paralelas','Rebabeo correcto','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
   'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
-  'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa']
+  'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa','Liner colocado correctamente']
 };
 const QA_ITEMS_EN={
   'Blow Molding':['Uniform wall thickness','No parallel lines','Correct flash removal','Correct bottle tone','No flash','No deformity','No orange peel','No perforations on base'],
   'Printing':['No incomplete artwork','No delamination','Correct registration','No shadow','No soleo','No contamination','No serrated edges','No misalignment','No missing ink','No bubbles','No poor dispersion'],
-  'Assembly':['Correct cap color','Correct threading','Correct box type','No cap deformity','No hole in cap center']
+  'Assembly':['Correct cap color','Correct threading','Correct box type','No cap deformity','No hole in cap center','Liner correctly installed']
 };
 const STEPS=['orden','ajuste','fotos','produccion','cierre'];
 
@@ -2316,10 +2311,9 @@ async function guardarEditFotosMES(){
 const _EDITQA_PROD_ITEMS={
   'Soplado':['Espesor uniforme','Sin líneas paralelas','Rebabeo correcto','Tono botella correcto','Sin rebabas','Sin deformidad','Sin piel de naranja','Fondo sin perforaciones'],
   'Impresión':['Sin arte incompleto','Sin desprendimiento','Registro correcto','Sin Shadow','Sin Soleo','Sin contaminación','Sin bordes dentados','Sin descuadre','Sin faltante de tinta','Sin burbuja','Sin mala dispersión'],
-  'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa']
+  'Ensamble':['Tapa color correcto','Roscado correcto','Tipo de caja correcto','Sin deformidad en tapa','Sin hueco en centro de tapa','Liner colocado correctamente']
 };
-const _EDITQA_PROD_LINER='Liner colocado correctamente';
-let _editQAProd={ordenId:null,pipelineId:null,qa:{},requiereLiner:false};
+let _editQAProd={ordenId:null,pipelineId:null,qa:{}};
 
 function _puedeEditarQAProd(){
   return S.user && (S.user.role==='master' || (S.user.role==='supervisor' && S.user.name==='Edgar'));
@@ -2334,7 +2328,7 @@ async function abrirEditQAProd(pipelineId){
     const [rOrd,rPipe]=await Promise.all([
       fetch(SB_URL+'/rest/v1/ordenes_produccion?pipeline_id=eq.'+pipelineId+'&select=id,qa_resultados&order=created_at.desc&limit=1',
         {headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}),
-      fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=po,sub_cliente,cliente,requiere_liner',
+      fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=po,sub_cliente,cliente',
         {headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}),
     ]);
     const ordenes=await rOrd.json(), pipes=await rPipe.json();
@@ -2347,7 +2341,6 @@ async function abrirEditQAProd(pipelineId){
       ordenId:orden.id,
       pipelineId,
       qa:orden.qa_resultados||{},
-      requiereLiner:!!pipe.requiere_liner,
     };
     const tit=(pipe.sub_cliente||pipe.cliente||'—')+(pipe.po?' · PO '+pipe.po:'');
     document.getElementById('edit-qa-prod-header').textContent=tit;
@@ -2365,10 +2358,8 @@ function cerrarEditQAProd(){
 function renderEditQAProd(){
   const cont=document.getElementById('edit-qa-prod-items');
   if(!cont) return;
-  const items=JSON.parse(JSON.stringify(_EDITQA_PROD_ITEMS));
-  if(_editQAProd.requiereLiner){
-    if(!items['Ensamble'].includes(_EDITQA_PROD_LINER)) items['Ensamble'].push(_EDITQA_PROD_LINER);
-  }
+  // Todas las tapas llevan liner siempre — el item está fijo en la lista.
+  const items=_EDITQA_PROD_ITEMS;
   let html='',totalTot=0,totalOK=0;
   Object.entries(items).forEach(([seccion,list])=>{
     html+=`<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 6px">${seccion}</div>`;
@@ -2376,15 +2367,13 @@ function renderEditQAProd(){
       const val=_editQAProd.qa[item]||'NC';
       totalTot++;
       if(val==='P') totalOK++;
-      const isLiner=item===_EDITQA_PROD_LINER;
-      const rowBg=isLiner?'background:#1e40af22;border-left:3px solid #3b82f6':'background:var(--bg3)';
       const btnStyle=(v,color)=>{
         const sel=val===v;
         return `padding:6px 10px;font-size:12px;border-radius:6px;border:1px solid ${sel?color:'transparent'};background:${sel?color+'22':'transparent'};color:${sel?color:'var(--text3)'};font-weight:${sel?'700':'500'};cursor:pointer;transition:.15s;touch-action:manipulation`;
       };
       const itemEsc=item.replace(/'/g,"&apos;");
-      html+=`<div style="${rowBg};display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:8px;margin-bottom:5px;gap:8px">
-        <div style="font-size:12.5px;flex:1">${isLiner?'🔵 ':''}${item}</div>
+      html+=`<div style="background:var(--bg3);display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:8px;margin-bottom:5px;gap:8px">
+        <div style="font-size:12.5px;flex:1">${item}</div>
         <div style="display:flex;gap:4px;flex-shrink:0">
           <button onclick="setEditQAProd('${itemEsc}','P')" style="${btnStyle('P','#16a34a')}">✓</button>
           <button onclick="setEditQAProd('${itemEsc}','NC')" style="${btnStyle('NC','#dc2626')}">✗</button>
@@ -3329,7 +3318,6 @@ async function goNuevaOrden(idx, editandoAhora){
     S.orden.op=p.po||'';
     S.orden.pzas=p.piezas||0;
     S.orden.producto=p.capacidad?'Botella MF '+p.capacidad+'ml':'';
-    S.orden.requiere_liner=!!p.requiere_liner;
     S.pipelineId=p.id||null;
     // Extraer colores desde formula_tintas (nombres de tintas) o campos de color
     if(p.formula_tintas&&p.formula_tintas.length){
@@ -4049,10 +4037,7 @@ function renderResumen(){
     </div>
     <div style="text-align:right">${S.orden.colores.map(c=>`<div class="color-tag" style="font-size:10px"><div class="color-swatch" style="background:${chex(c.nombre)}"></div>${c.nombre}</div>`).join('')}</div>
   </div>`;
-  // Mostrar/ocultar banner "Tapas con liner" según el flag del pedido.
-  // La flag se guarda en S.orden.requiere_liner al cargar el pedido.
-  const bn=document.getElementById('ajuste-liner-banner');
-  if(bn) bn.style.display=S.orden.requiere_liner?'block':'none';
+  // (Todas las tapas llevan liner siempre — el banner del pedido se removió.)
 }
 
 // ══════════════════════════════════════════════════════
@@ -5286,20 +5271,11 @@ function handleEmpaquesDrop(i,event){
 
 function renderQA(){
   const el=document.getElementById('qa-checklist');if(!el)return;
-  // Construir lista de items dinámica: si el pedido lleva liner, agregar
-  // el item "Liner colocado correctamente" a la sección Ensamble (una vez).
-  // Se agrega en runtime y no en la constante QA_ITEMS para no romper
-  // pedidos anteriores que ya cerraron.
-  const linerLbl='Liner colocado correctamente';
-  const QA_RUN=Object.fromEntries(Object.entries(QA_ITEMS).map(([k,v])=>[k,v.slice()]));
-  if(S.orden && S.orden.requiere_liner){
-    if(!QA_RUN['Ensamble'].includes(linerLbl)) QA_RUN['Ensamble'].push(linerLbl);
-  }
   // Pre-llenar: items del QA sin valor → 'NC' (No conforme) por default.
   // El operador debe marcar activamente cada item como OK — así evita
   // firmar el QA sin haber revisado. Los inputs de crosshatch y agua
   // también empiezan vacíos (no "Aprobado ✓" pre-llenado).
-  Object.values(QA_RUN).forEach(items=>{
+  Object.values(QA_ITEMS).forEach(items=>{
     items.forEach(item=>{
       if(!S.qa[item]) S.qa[item]='NC';
     });
@@ -5309,13 +5285,12 @@ function renderQA(){
   const ca=document.getElementById('cierreAgua');
   if(ca && !ca.value) ca.value='';
   let total=0,passed=0,html='';
-  Object.entries(QA_RUN).forEach(([section,items])=>{
+  Object.entries(QA_ITEMS).forEach(([section,items])=>{
     html+=`<div class="qa-section-title">${section}</div>`;
     items.forEach(item=>{
       total++;const val=S.qa[item]||'';if(val==='P')passed++;
-      const isLiner=item===linerLbl;
-      html+=`<div class="qa-item"${isLiner?' style="background:#1e40af22;border-left:3px solid #3b82f6;padding-left:8px"':''}>
-        <div style="font-size:12px;flex:1">${isLiner?'🔵 ':''}${item}</div>
+      html+=`<div class="qa-item">
+        <div style="font-size:12px;flex:1">${item}</div>
         <div class="qa-btns">
           <button class="qa-btn qa-ok ${val==='P'?'sel':''}" data-item="${item}" data-val="P" onclick="setQA(this)">✓ OK</button>
           <button class="qa-btn qa-nc ${val==='NC'?'sel':''}" data-item="${item}" data-val="NC" onclick="setQA(this)">✗ NC</button>
@@ -5904,27 +5879,15 @@ function generarPDF(){
   // Tamaños generosos para que el QA ocupe la primera hoja completa junto
   // con header e info. Las fotos van en hoja 2 (Color Validation + Approval).
   let tot=0,pass=0;
-  // Construcción dinámica: si el pedido lleva liner, agregar el ítem
-  // "Liner colocado correctamente" (ES) / "Liner correctly installed" (EN)
-  // al final de Ensamble/Assembly. Debe hacerse en ambos idiomas para
-  // que el mapeo por índice ES→EN siga funcionando.
-  const linerES='Liner colocado correctamente';
-  const linerEN='Liner correctly installed';
-  const QA_ES_RUN=Object.fromEntries(Object.entries(QA_ITEMS).map(([k,v])=>[k,v.slice()]));
-  const QA_EN_RUN=Object.fromEntries(Object.entries(QA_ITEMS_EN).map(([k,v])=>[k,v.slice()]));
-  if(S.pipelineId && window._dashRows){
-    const pipe=window._dashRows.find(p=>p.id===S.pipelineId);
-    if(pipe && pipe.requiere_liner){
-      QA_ES_RUN['Ensamble'].push(linerES);
-      QA_EN_RUN['Assembly'].push(linerEN);
-    }
-  }
-  const seccionesES=Object.keys(QA_ES_RUN);
-  const seccionesEN=Object.keys(QA_EN_RUN);
+  // El item "Liner colocado correctamente" / "Liner correctly installed"
+  // ya viene incluido de fábrica en QA_ITEMS.Ensamble / QA_ITEMS_EN.Assembly
+  // porque todas las tapas llevan liner siempre.
+  const seccionesES=Object.keys(QA_ITEMS);
+  const seccionesEN=Object.keys(QA_ITEMS_EN);
   const colHtml=[];
   seccionesES.forEach((sec,si)=>{
-    const itemsES=QA_ES_RUN[sec];
-    const itemsEN=QA_EN_RUN[seccionesEN[si]]||itemsES;
+    const itemsES=QA_ITEMS[sec];
+    const itemsEN=QA_ITEMS_EN[seccionesEN[si]]||itemsES;
     const secEN=seccionesEN[si]||sec;
     let col='<div style="background:#f0f4f8;font-weight:700;font-size:12px;color:#374151;padding:10px 14px;text-transform:uppercase;letter-spacing:.06em;border-radius:6px 6px 0 0;border:1px solid #d1d5db;border-bottom:none">'+secEN+'</div>';
     col+='<div style="border:1px solid #d1d5db;border-top:none;border-radius:0 0 6px 6px;background:#fff">';
