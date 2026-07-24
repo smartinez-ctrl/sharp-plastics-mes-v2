@@ -475,26 +475,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <div class="tbar-item"><span class="tbar-label">Fotos</span><span class="tbar-val" id="t-fotos" style="color:var(--amber)">00:00:00</span></div>
   </div>
   <div class="scroll"><div class="scroll-narrow">
-    <!-- Sección Prueba de crosshatch: 1 foto obligatoria, junto con las
-         fotos de aprobación. Es un test de adhesión y sirve para probar
-         que la impresión resistió (ASTM D3359). -->
-    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
-      <span>Prueba de crosshatch</span>
-      <span style="font-size:10px;color:#dc2626;font-weight:600;background:#fef2f2;border:1px solid #fecaca;padding:2px 8px;border-radius:5px;text-transform:none;letter-spacing:0">Obligatoria</span>
-    </div>
-    <div class="foto-grid" style="grid-template-columns:1fr">
-      <div class="foto-slot" id="foto-crosshatch"
-        onclick="openCrosshatchMenu()"
-        ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'"
-        ondragleave="this.style.borderColor='';this.style.background='';"
-        ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoCrosshatchDrop(event)">
-        <div class="foto-icon">🧪</div><div class="foto-label">Crosshatch</div>
-      </div>
-    </div>
-    <input type="file" id="fi-crosshatch" accept="image/*" style="display:none" onchange="handleFotoCrosshatch(this)">
-    <input type="file" id="fc-crosshatch" accept="image/*" capture="environment" style="display:none" onchange="handleFotoCrosshatch(this)">
     <!-- Sección Fotos de aprobación (movida arriba: se toman primero) -->
-    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:22px 0 10px">Fotos de aprobación</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Fotos de aprobación</div>
     <div class="foto-grid">
       <div class="foto-slot" id="foto-0" onclick="openFotoMenu(0)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(0,event)"><div class="foto-icon">📷</div><div class="foto-label">Frente</div></div>
       <div class="foto-slot" id="foto-1" onclick="openFotoMenu(1)" ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoDrop(1,event)"><div class="foto-icon">📷</div><div class="foto-label">Reverso</div></div>
@@ -529,6 +511,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
       <input type="file" id="fcc1" accept="image/*" capture="environment" style="display:none" onchange="handleFotoColor(1,this)">
       <input type="file" id="fcc2" accept="image/*" capture="environment" style="display:none" onchange="handleFotoColor(2,this)">
       <input type="file" id="fcc3" accept="image/*" capture="environment" style="display:none" onchange="handleFotoColor(3,this)">
+    </div>
+    <!-- Sección Prueba de crosshatch: 1 foto obligatoria, va al final de
+         todas las fotos porque el test de adhesión se hace al final del
+         proceso de ajuste (ASTM D3359). -->
+    <div style="margin:20px 0 18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Prueba de crosshatch</div>
+        <span style="font-size:10px;color:#dc2626;font-weight:600;background:#fef2f2;border:1px solid #fecaca;padding:2px 8px;border-radius:5px">Obligatoria</span>
+      </div>
+      <div class="foto-grid" style="grid-template-columns:1fr">
+        <div class="foto-slot" id="foto-crosshatch"
+          onclick="openCrosshatchMenu()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--amber)';this.style.background='var(--amber-bg)'"
+          ondragleave="this.style.borderColor='';this.style.background='';"
+          ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleFotoCrosshatchDrop(event)">
+          <div class="foto-icon">🧪</div><div class="foto-label">Crosshatch</div>
+        </div>
+      </div>
+      <input type="file" id="fi-crosshatch" accept="image/*" style="display:none" onchange="handleFotoCrosshatch(this)">
+      <input type="file" id="fc-crosshatch" accept="image/*" capture="environment" style="display:none" onchange="handleFotoCrosshatch(this)">
     </div>
     <div id="fotos-upload-status" style="display:none;margin:0 0 12px">
       <div style="background:var(--bg3);border-radius:10px;padding:12px 16px">
