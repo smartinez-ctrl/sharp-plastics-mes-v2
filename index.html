@@ -3322,6 +3322,9 @@ async function verPDFCompletado(pipelineId, tipo){
     const setCheck=(id,val)=>{const el=document.getElementById(id);if(el)el.checked=!!val;};
     setInput('buenas-input', orden?.piezas_buenas||0);
     setInput('cierre-firma', orden?.firma_cierre||'');
+    // Re-poblar el select con el usuario logueado (setInput lo dejó en '').
+    // El operador solo puede firmar como él mismo (el div está display:none).
+    if(typeof populateFirmaCierreLocked==='function') populateFirmaCierreLocked();
     setInput('cierre-obs', orden?.observaciones||'');
     // selects need special handling
     const setSelect=(id,val)=>{
@@ -3731,6 +3734,7 @@ function resetOrden(){
   var cx=document.getElementById('cierreXhatch');if(cx)cx.value='';
   var ca=document.getElementById('cierreAgua');if(ca)ca.value='';
   var cf=document.getElementById('cierre-firma');if(cf)cf.value='';
+  if(typeof populateFirmaCierreLocked==='function') populateFirmaCierreLocked();
   var co=document.getElementById('cierre-obs');if(co)co.value='';
   var cr=document.getElementById('cierre-resumen');if(cr)cr.innerHTML='';
   var cs=document.getElementById('cierre-stats');if(cs)cs.innerHTML='';
@@ -5554,7 +5558,11 @@ async function enviarEmailCierre(){
       tiempos_muertos:Object.entries({...S.tm.ajuste||{},...S.tm.prod||{}}).filter(([,v])=>v>0).map(([k,v])=>[tipos[k]||k,fmt(v)]),
       crosshatch:document.getElementById('cierreXhatch')?.value||'—',
       prueba_agua:document.getElementById('cierreAgua')?.value||'—',
-      firma:document.getElementById('cierre-firma')?.value||'—',
+      // Firma: primero intentamos el select 'cierre-firma' (que se autocompleta),
+      // pero si viniera vacio por lo que sea, caemos a S.user.name directo.
+      // Este orden importa por si el select nunca se pobló (ej. sesión
+      // recuperada desde sessionStorage sin pasar por updateUserChips).
+      firma:document.getElementById('cierre-firma')?.value || (S.user&&S.user.name) || '—',
       observaciones:document.getElementById('cierre-obs')?.value||'',
       foto_urls:S.fotos||[],
       qa_secciones,
