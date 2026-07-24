@@ -15,12 +15,13 @@ export default async function handler(req, res) {
   const {
     orden_id, orden_op, cliente, sub_cliente, piezas, colores,
     color_botella, color_tapa, po,
-    foto_urls = [], foto_color_urls = [], observaciones, diseno_url
+    foto_urls = [], foto_color_urls = [], foto_crosshatch_url = null,
+    observaciones, diseno_url
   } = req.body;
 
   if (!orden_id) return res.status(400).json({ error: 'orden_id requerido' });
 
-  console.log('send-approval: orden_id=', orden_id, 'foto_urls:', foto_urls.length, 'foto_color_urls:', foto_color_urls.length);
+  console.log('send-approval: orden_id=', orden_id, 'foto_urls:', foto_urls.length, 'foto_color_urls:', foto_color_urls.length, 'crosshatch:', !!foto_crosshatch_url);
 
   // Token de aprobación + guardar foto_urls
   const token = Buffer.from(`${orden_id}:${Date.now()}:approve`).toString('base64url');
@@ -33,6 +34,7 @@ export default async function handler(req, res) {
       aprobacion_enviada_at: new Date().toISOString(),
       foto_urls: foto_urls.filter(u => u && typeof u === 'string' && u.startsWith('http')),
       foto_color_urls: foto_color_urls.filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      foto_crosshatch_url: (foto_crosshatch_url && typeof foto_crosshatch_url === 'string' && foto_crosshatch_url.startsWith('http')) ? foto_crosshatch_url : null,
     }),
   });
 
@@ -47,6 +49,7 @@ export default async function handler(req, res) {
         color_botella, color_tapa,
         foto_urls: foto_urls.filter(Boolean),
         foto_color_urls: foto_color_urls.filter(Boolean),
+        foto_crosshatch_url,
         diseno_url,
       }),
     });

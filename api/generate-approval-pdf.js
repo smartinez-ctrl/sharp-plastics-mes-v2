@@ -91,6 +91,7 @@ export default async function handler(req, res) {
     color_tapa,
     foto_urls = [],
     foto_color_urls = [],
+    foto_crosshatch_url,
     diseno_url,
   } = req.body;
 
@@ -130,6 +131,7 @@ export default async function handler(req, res) {
       '1. Diseño del cliente',
       '2. Fotos de aprobación (Frente, Reverso, Lado izquierdo, Lado derecho)',
       '3. Fotos de validación de color / pantones',
+      '4. Prueba de adhesión — Crosshatch (ASTM D3359)',
     ];
     for (const line of contenido) {
       cover.drawText('• ' + line, { x: 50, y: yy, size: 11, font, color: rgb(0.25, 0.25, 0.25) });
@@ -178,6 +180,16 @@ export default async function handler(req, res) {
         await agregarPaginaImagen(pdfDoc, bytes, `Color ${i + 1}`, font);
       } catch (e) {
         console.warn(`Foto color ${i} falló:`, e.message);
+      }
+    }
+
+    // ─── PRUEBA DE CROSSHATCH (adhesión, obligatoria) ───────────────────
+    if (foto_crosshatch_url) {
+      try {
+        const bytes = await fetchBytes(foto_crosshatch_url);
+        await agregarPaginaImagen(pdfDoc, bytes, 'Prueba de adhesión — Crosshatch (ASTM D3359)', font);
+      } catch (e) {
+        console.warn('Foto crosshatch falló:', e.message);
       }
     }
 

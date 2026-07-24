@@ -4916,6 +4916,7 @@ async function enviarAprobacion(){
         color_tapa: S.orden.color_tapa || pickFresh('color_tapa') || '',
         foto_urls: fotoUrls,
         foto_color_urls: fotoColorUrls,
+        foto_crosshatch_url: S.fotoCrosshatch || null,
         observaciones: obs,
         diseno_url: pickFresh('pdf_diseno_url'),
       })
