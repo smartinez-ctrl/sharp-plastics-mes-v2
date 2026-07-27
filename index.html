@@ -3535,6 +3535,15 @@ async function verPDFCompletado(pipelineId, tipo, opts={}){
       fotosEmpaqueAbiertas: sinEmpaque ? [] : (Array.isArray(pipe.fotos_empaque_abiertas) ? pipe.fotos_empaque_abiertas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
       fotosEmpaqueCerradas: sinEmpaque ? [] : (Array.isArray(pipe.fotos_empaque_cerradas) ? pipe.fotos_empaque_cerradas : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
       fotosFedex:           sinEmpaque ? [] : (Array.isArray(pipe.fotos_fedex) ? pipe.fotos_fedex : []).filter(u => u && typeof u === 'string' && u.startsWith('http')),
+      fotoCrosshatch: orden?.foto_crosshatch_url || null,
+      // Firma canvas del cierre (viene del QA de empaque en la cajita)
+      firmaEmpaque: {
+        nombre: orden?.qa_empaque_firma_nombre || null,
+        canvas: orden?.qa_empaque_firma_canvas || null,
+        pin_mask: orden?.qa_empaque_firma_pin_mask || null,
+        firmado_at: orden?.qa_empaque_firmado_at || null,
+        participantes: orden?.qa_empaque_participantes || null,
+      },
       consumoReal:orden?.consumo_real_tintas||[],
       reajustes:orden?.reajustes||0,
       aprobacion:{
@@ -6531,6 +6540,50 @@ function generarPDF(){
     }
     if(tieneFedex){
       html+=buildRowsCompacto(S.fotosFedex,autoLabels('FedEx',S.fotosFedex),'Shipping — FedEx Handoff');
+    }
+    // Página de firma canvas: la firma del líder de empaque que cerró
+    // el pedido, con nombre, participantes y timestamp. Solo se incluye
+    // si hay firma canvas guardada (pedidos cerrados con QA de empaque).
+    const fe = S.firmaEmpaque || {};
+    if(fe.canvas){
+      const fecha = fe.firmado_at
+        ? new Date(fe.firmado_at).toLocaleString('en-US',{dateStyle:'long',timeStyle:'short'})
+        : '';
+      const participantes = (fe.participantes||'').split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+      html+=`<div style="page-break-after:always;break-after:page;padding-top:6mm">
+        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;font-weight:600">Order Closeout</div>
+        <div style="font-size:16px;font-weight:700;color:#111;margin-top:2px;margin-bottom:14px;border-bottom:2px solid #e5e7eb;padding-bottom:6px">Signature — Packaging Lead</div>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11px">
+          <tr>
+            <td style="padding:4px 8px;background:#f9fafb;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;font-size:9px;width:32%;border:1px solid #e5e7eb">Signed by</td>
+            <td style="padding:4px 8px;color:#111;font-weight:600;border:1px solid #e5e7eb">${fe.nombre || '—'}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 8px;background:#f9fafb;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;font-size:9px;border:1px solid #e5e7eb">Signed at</td>
+            <td style="padding:4px 8px;color:#111;border:1px solid #e5e7eb">${fecha||'—'}</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 8px;background:#f9fafb;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;font-size:9px;border:1px solid #e5e7eb">PIN confirmed</td>
+            <td style="padding:4px 8px;color:#111;font-family:monospace;letter-spacing:4px;border:1px solid #e5e7eb">${fe.pin_mask||'—'}</td>
+          </tr>
+        </table>
+
+        ${participantes.length ? `
+          <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:6px">Packaging team</div>
+          <div style="font-size:12px;color:#111;padding:8px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:16px">
+            ${participantes.join(' · ')}
+          </div>
+        ` : ''}
+
+        <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:6px">Handwritten signature</div>
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#fff;text-align:center">
+          <img src="${fe.canvas}" style="max-width:100%;max-height:60mm;object-fit:contain">
+        </div>
+        <div style="font-size:9px;color:#9ca3af;margin-top:8px;text-align:center">
+          Digital signature captured on-device. This document constitutes formal signoff of the packaging and closeout QA.
+        </div>
+      </div>`;
     }
     return html;
   })()}
