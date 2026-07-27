@@ -3525,7 +3525,11 @@ async function verPDFCompletado(pipelineId, tipo, opts={}){
         ajuste:orden?.tm_ajuste||{},
         prod:orden?.tm_produccion||{}
       },
-      qa:orden?.qa_resultados||{},
+      // qa_resultados guarda Soplado + Impresión (llenados al cerrar producción).
+      // qa_empaque_resultados guarda Ensamble + Empaque (llenados en la cajita
+      // al firmar). Se hace merge para que el PDF cliente muestre TODOS los
+      // resultados en una sola vista, no huecos con '--' en Assembly.
+      qa: Object.assign({}, orden?.qa_resultados||{}, orden?.qa_empaque_resultados||{}),
       tintas:pipe.formula_tintas||[],
       fotos:fotos,
       fotosColor:fotosColor,
