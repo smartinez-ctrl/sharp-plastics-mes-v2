@@ -112,9 +112,11 @@ function drawTable(page, title, headers, rows, x, y, cols, fonts) {
 // ─────────────────────────────────────────────────────────────
 // PDF INTERNO — explosión completa
 // ─────────────────────────────────────────────────────────────
+// Función buildPDFInterno completamente reescrita
 async function buildPDFInterno(cot, doc, fonts) {
   const inputs = cot.inputs_json || {};
   const res = cot.resultados_json || {};
+  const st = res.subtotales || {};
   let page = doc.addPage([595, 842]);  // A4
   const W = page.getWidth();
 
@@ -124,168 +126,135 @@ async function buildPDFInterno(cot, doc, fonts) {
   y = drawDatosPedido(page, cot, fonts, y);
 
   // Bloque grande de resumen
-  drawRect(page, 40, y - 60, W - 80, 56, rgb(0.98, 0.94, 0.85));
-  drawText(page, 'COSTO TOTAL', 50, y - 18, {size: 8, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
-  drawText(page, money(res.costo_total), 50, y - 36, {size: 18, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
-  drawText(page, 'Costo por pieza: ' + money(res.costo_unitario), 50, y - 52, {size: 9, font: fonts.reg, color: rgb(0.4, 0.2, 0.03)});
+  drawRect(page, 40, y - 68, W - 80, 64, rgb(0.98, 0.94, 0.85));
+  drawText(page, 'COSTO', 50, y - 18, {size: 8, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
+  drawText(page, money(res.costo_total), 50, y - 36, {size: 15, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
+  drawText(page, 'Costo/pza: ' + money(res.costo_unitario), 50, y - 54, {size: 8, font: fonts.reg, color: rgb(0.4, 0.2, 0.03)});
 
-  drawText(page, 'PRECIO AL CLIENTE', W - 250, y - 18, {size: 8, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
-  drawText(page, money(res.precio_total), W - 250, y - 36, {size: 18, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
-  drawText(page, `Utilidad: ${money(res.utilidad)}   ·   Margen: ${(res.margen_pct||0).toFixed(1)}%`, W - 250, y - 52, {size: 9, font: fonts.reg, color: rgb(0.4, 0.2, 0.03)});
+  drawText(page, 'VENTA', 210, y - 18, {size: 8, font: fonts.bold, color: rgb(0.05, 0.45, 0.15)});
+  drawText(page, money(res.venta_total), 210, y - 36, {size: 15, font: fonts.bold, color: rgb(0.05, 0.45, 0.15)});
+  drawText(page, 'Precio/pza: ' + money(res.precio_unitario), 210, y - 54, {size: 8, font: fonts.reg, color: rgb(0.05, 0.45, 0.15)});
 
-  y -= 76;
+  drawText(page, 'UTILIDAD', 380, y - 18, {size: 8, font: fonts.bold, color: rgb(0.05, 0.45, 0.15)});
+  drawText(page, money(res.utilidad), 380, y - 36, {size: 15, font: fonts.bold, color: rgb(0.05, 0.45, 0.15)});
+  drawText(page, `Margen: ${(res.margen_pct||0).toFixed(1)}%`, 380, y - 54, {size: 8, font: fonts.reg, color: rgb(0.05, 0.45, 0.15)});
 
-  // Tabla 1 — Materiales del cliente (sin costo, referencia)
+  y -= 84;
+
+  // Materiales del cliente (referencia sin costo)
   const mc = inputs.materiales_cliente || {};
   const rowsMC = [
-    ['Resina botella', kg(mc.botella?.kg_total), int(mc.botella?.pzas), '(cliente aporta)'],
-    ['Resina tapa', kg(mc.tapa?.kg_total), int(mc.tapa?.pzas), '(cliente aporta)'],
-    ['Chupones', '—', int(mc.chupon?.pzas), '(cliente aporta)'],
-    ['Liners', '—', int(mc.liner?.pzas), '(cliente aporta)'],
-    ['Cajas empaque', '—', int(mc.cajas?.total) + ' cajas', '(cliente aporta)'],
+    ['Resina botella', kg(mc.botella?.kg_total), int(mc.botella?.pzas)],
+    ['Resina tapa', kg(mc.tapa?.kg_total), int(mc.tapa?.pzas)],
+    ['Chupones', '—', int(mc.chupon?.pzas)],
+    ['Liners', '—', int(mc.liner?.pzas)],
+    ['Cajas empaque', '—', int(mc.cajas?.total) + ' cajas'],
   ];
   const colsMC = [
     {x: 46, align: 'left'},
-    {x: 260, align: 'right'},
-    {x: 380, align: 'right'},
+    {x: 300, align: 'right'},
     {x: W - 46, align: 'right'},
   ];
-  y = drawTable(page, '1 · MATERIALES QUE APORTA EL CLIENTE', ['Componente', 'Kg totales', 'Piezas', ''], rowsMC, 40, y, colsMC, fonts);
+  y = drawTable(page, '1 · MATERIALES QUE APORTA EL CLIENTE (referencia, sin costo)', ['Componente', 'Kg totales', 'Piezas'], rowsMC, 40, y, colsMC, fonts);
 
-  // Tabla 2 — Master batch
+  // Master batch
   const mb = inputs.master_batch || {};
   const rowsMB = [
-    ['Botella', `${mb.botella?.pct||0}%`, kg(mb.botella?.kg), money(mb.botella?.precio_kg), money(mb.botella?.costo)],
-    ['Tapa', `${mb.tapa?.pct||0}%`, kg(mb.tapa?.kg), money(mb.tapa?.precio_kg), money(mb.tapa?.costo)],
-    ['Subtotal', '', '', '', money(res.subtotales?.master_batch)],
+    ['Botella', `${mb.botella?.pct||0}%`, kg(mb.botella?.kg), money(mb.botella?.precio_kg), money(mb.botella?.costo), money(mb.botella?.venta), money(mb.botella?.utilidad)],
+    ['Tapa', `${mb.tapa?.pct||0}%`, kg(mb.tapa?.kg), money(mb.tapa?.precio_kg), money(mb.tapa?.costo), money(mb.tapa?.venta), money(mb.tapa?.utilidad)],
+    ['Subtotal', '', '', '', money(st.master_batch?.costo), money(st.master_batch?.venta), money(st.master_batch?.utilidad)],
   ];
-  const colsMB = [
+  const cols7 = [
     {x: 46, align: 'left'},
-    {x: 220, align: 'right'},
-    {x: 310, align: 'right'},
-    {x: 410, align: 'right'},
+    {x: 180, align: 'right'},
+    {x: 245, align: 'right'},
+    {x: 315, align: 'right'},
+    {x: 390, align: 'right'},
+    {x: 470, align: 'right'},
     {x: W - 46, align: 'right'},
   ];
-  y = drawTable(page, '2 · MASTER BATCH (SHARP APORTA)', ['Aplica a', '% peso', 'Kg de MB', '$/kg', 'Costo'], rowsMB, 40, y, colsMB, fonts);
+  y = drawTable(page, '2 · MASTER BATCH', ['Aplica a', '% peso', 'Kg MB', '$/kg', 'Costo', 'Venta', 'Utilidad'], rowsMB, 40, y, cols7, fonts);
 
-  // Tabla 3 — Fabricación
+  // Fabricación
   const fab = inputs.fabricacion || {};
   const rowsFab = [
-    ['Soplado botella', money(fab.botella?.precio_pza), int(fab.botella?.pzas), money(fab.botella?.costo)],
-    ['Inyección tapa', money(fab.tapa?.precio_pza), int(fab.tapa?.pzas), money(fab.tapa?.costo)],
-    ['Subtotal', '', '', money(res.subtotales?.fabricacion)],
+    ['Soplado botella', money(fab.botella?.precio_pza), int(fab.botella?.pzas), money(fab.botella?.costo), money(fab.botella?.venta_pza), money(fab.botella?.venta), money(fab.botella?.utilidad)],
+    ['Inyección tapa', money(fab.tapa?.precio_pza), int(fab.tapa?.pzas), money(fab.tapa?.costo), money(fab.tapa?.venta_pza), money(fab.tapa?.venta), money(fab.tapa?.utilidad)],
+    ['Subtotal', '', '', money(st.fabricacion?.costo), '', money(st.fabricacion?.venta), money(st.fabricacion?.utilidad)],
   ];
-  const colsFab = [
-    {x: 46, align: 'left'},
-    {x: 260, align: 'right'},
-    {x: 380, align: 'right'},
-    {x: W - 46, align: 'right'},
-  ];
-  y = drawTable(page, '3 · FABRICACIÓN', ['Concepto', '$/pza', 'Piezas', 'Costo'], rowsFab, 40, y, colsFab, fonts);
+  y = drawTable(page, '3 · FABRICACIÓN', ['Concepto', '$ costo/pza', 'Piezas', 'Costo', '$ venta/pza', 'Venta', 'Utilidad'], rowsFab, 40, y, cols7, fonts);
 
-  // Nueva página si queda poco espacio
-  if (y < 200) {
-    page = doc.addPage([595, 842]);
-    drawHeader(page, cot, 'interno', fonts);
-    y = page.getHeight() - 80;
-  }
+  if (y < 220) { page = doc.addPage([595, 842]); drawHeader(page, cot, 'interno', fonts); y = page.getHeight() - 80; }
 
-  // Tabla 4 — Tintas (componentes + aditivos)
+  // Tintas
   const tintas = inputs.tintas || [];
   const rowsTin = [];
   tintas.forEach(t => {
     const grTotal = (t.g_pza || 0) * (cot.piezas || 0);
     const kgTotal = grTotal / 1000;
-    // Encabezado del color con gramaje total
-    rowsTin.push([
-      t.nombre || 'Color',
-      (t.g_pza || 0).toFixed(2) + ' g/pza',
-      kg(kgTotal) + ' total',
-      '', '', '',
-    ]);
-    // Componentes con % de mezcla
+    let costoColor = 0;
+    rowsTin.push([t.nombre || 'Color', (t.g_pza || 0).toFixed(2) + ' g/pza', kg(kgTotal), '', '', '', money(t.venta || 0)]);
     (t.componentes || []).forEach(c => {
       const kgComp = kgTotal * ((c.pct || 0) / 100);
       const kgConMerma = kgComp / (1 - Math.min(0.99, (c.merma || 0) / 100));
       const costoComp = kgConMerma * (c.precio_kg || 0);
-      rowsTin.push([
-        '  · ' + (c.nombre || 'Tinta'),
-        (c.pct || 0).toFixed(1) + '%',
-        (c.merma || 0).toFixed(1) + '%',
-        money(c.precio_kg),
-        kg(kgConMerma),
-        money(costoComp),
-      ]);
+      costoColor += costoComp;
+      rowsTin.push(['  · ' + (c.nombre || 'Tinta'), (c.pct || 0).toFixed(1) + '%', kg(kgConMerma), money(c.precio_kg), '', money(costoComp), '']);
     });
-    // Aditivos
     (t.aditivos || []).forEach(a => {
       const kgAdit = kgTotal * ((a.pct || 0) / 100);
       const kgAditMerma = kgAdit / (1 - Math.min(0.99, (a.merma || 0) / 100));
       const costoAdit = kgAditMerma * (a.precio_kg || 0);
-      rowsTin.push([
-        '  ↳ ' + (a.nombre || 'Aditivo'),
-        (a.pct || 0).toFixed(1) + '%',
-        (a.merma || 0).toFixed(1) + '%',
-        money(a.precio_kg),
-        kg(kgAditMerma),
-        money(costoAdit),
-      ]);
+      costoColor += costoAdit;
+      rowsTin.push(['  ↳ ' + (a.nombre || 'Aditivo'), (a.pct || 0).toFixed(1) + '%', kg(kgAditMerma), money(a.precio_kg), '', money(costoAdit), '']);
     });
+    // Fila de utilidad del color
+    rowsTin.push([`  → utilidad ${t.nombre}`, '', '', '', money(costoColor), '', money((t.venta || 0) - costoColor)]);
   });
-  rowsTin.push(['Subtotal tintas', '', '', '', '', money(res.subtotales?.tintas)]);
+  rowsTin.push(['Subtotal tintas', '', '', '', money(st.tintas?.costo), money(st.tintas?.venta), money(st.tintas?.utilidad)]);
   const colsTin = [
     {x: 46, align: 'left'},
-    {x: 220, align: 'right'},
-    {x: 290, align: 'right'},
-    {x: 360, align: 'right'},
-    {x: 440, align: 'right'},
+    {x: 180, align: 'right'},
+    {x: 245, align: 'right'},
+    {x: 315, align: 'right'},
+    {x: 390, align: 'right'},
+    {x: 470, align: 'right'},
     {x: W - 46, align: 'right'},
   ];
-  y = drawTable(page, '4 · TINTAS (componentes + aditivos)', ['Color / componente', '% o gramaje', 'Merma', '$/kg', 'Kg total', 'Costo'], rowsTin, 40, y, colsTin, fonts);
+  y = drawTable(page, '4 · TINTAS (componentes + aditivos)', ['Color / componente', '% o g/pza', 'Kg', '$/kg', 'Costo', 'Costo/venta', 'Utilidad'], rowsTin, 40, y, colsTin, fonts);
 
-  // Tabla 5 — Pantallas y positivos
+  if (y < 200) { page = doc.addPage([595, 842]); drawHeader(page, cot, 'interno', fonts); y = page.getHeight() - 80; }
+
+  // Pantallas + positivos
   const rowsPP = [
-    ['Pantallas', String(inputs.pantallas?.num||0), money(inputs.pantallas?.precio_unitario), money(inputs.pantallas?.costo)],
-    ['Positivos', String(inputs.positivos?.num||0), money(inputs.positivos?.precio_unitario), money(inputs.positivos?.costo)],
-    ['Subtotal', '', '', money(res.subtotales?.pantallas_positivos)],
+    ['Pantallas', String(inputs.pantallas?.num||0), money(inputs.pantallas?.precio_unitario), money(inputs.pantallas?.costo), money(inputs.pantallas?.venta_unitario), money(inputs.pantallas?.venta), money(inputs.pantallas?.utilidad)],
+    ['Positivos', String(inputs.positivos?.num||0), money(inputs.positivos?.precio_unitario), money(inputs.positivos?.costo), money(inputs.positivos?.venta_unitario), money(inputs.positivos?.venta), money(inputs.positivos?.utilidad)],
+    ['Subtotal', '', '', money(st.pantallas_positivos?.costo), '', money(st.pantallas_positivos?.venta), money(st.pantallas_positivos?.utilidad)],
   ];
-  y = drawTable(page, '5 · PANTALLAS Y POSITIVOS', ['Concepto', 'Cantidad', '$/unidad', 'Costo'], rowsPP, 40, y, colsFab, fonts);
+  y = drawTable(page, '5 · PANTALLAS Y POSITIVOS', ['Concepto', 'Cant.', '$ costo/u', 'Costo', '$ venta/u', 'Venta', 'Utilidad'], rowsPP, 40, y, cols7, fonts);
 
-  // Nueva página si queda poco espacio
-  if (y < 200) {
-    page = doc.addPage([595, 842]);
-    drawHeader(page, cot, 'interno', fonts);
-    y = page.getHeight() - 80;
-  }
-
-  // Tabla 6 — MO impresión + Empaque
+  // MO impresión + Empaque
   const rowsMOEMP = [
-    ['MO impresión', money(inputs.mo_impresion?.precio_pza_por_tinta) + ' × ' + (inputs.mo_impresion?.tintas||0) + ' tintas × ' + int(inputs.mo_impresion?.pzas) + ' pzas', money(res.subtotales?.mo_impresion)],
-    ['Empaque (papel + tag)', money(inputs.empaque?.precio_pza) + ' × ' + int(inputs.empaque?.pzas) + ' pzas', money(res.subtotales?.empaque)],
+    ['MO impresión', money(inputs.mo_impresion?.precio_pza_por_tinta) + '/pza·tinta', String((inputs.mo_impresion?.tintas||0)) + ' × ' + int(inputs.mo_impresion?.pzas), money(st.mo_impresion?.costo), money(inputs.mo_impresion?.venta_pza_por_tinta) + '/pza·tinta', money(st.mo_impresion?.venta), money(st.mo_impresion?.utilidad)],
+    ['Empaque (papel+tag)', money(inputs.empaque?.precio_pza) + '/pza', int(inputs.empaque?.pzas) + ' pzas', money(st.empaque?.costo), money(inputs.empaque?.venta_pza) + '/pza', money(st.empaque?.venta), money(st.empaque?.utilidad)],
   ];
-  const colsMOEMP = [
-    {x: 46, align: 'left'},
-    {x: 250, align: 'left'},
-    {x: W - 46, align: 'right'},
-  ];
-  y = drawTable(page, '6 · MANO DE OBRA + EMPAQUE', ['Concepto', 'Fórmula', 'Costo'], rowsMOEMP, 40, y, colsMOEMP, fonts);
+  y = drawTable(page, '6 · MANO DE OBRA + EMPAQUE', ['Concepto', '$ costo', 'Cantidad', 'Costo', '$ venta', 'Venta', 'Utilidad'], rowsMOEMP, 40, y, cols7, fonts);
 
-  // Tabla 7 — Tiempos estimados
+  // Tiempos (paralelo)
   const tp = inputs.tiempos || {};
   const rowsTp = [
     ['Soplado botella', (tp.botella_seg||0).toFixed(1) + ' s', (tp.botella_h||0).toFixed(1) + ' h'],
     ['Inyección tapa', (tp.tapa_seg||0).toFixed(1) + ' s', (tp.tapa_h||0).toFixed(1) + ' h'],
     ['Impresión', (tp.impresion_seg||0).toFixed(1) + ' s', (tp.impresion_h||0).toFixed(1) + ' h'],
-    ['TOTAL', '', (tp.total_h||0).toFixed(1) + ' h · ' + (tp.total_dias||0) + ' días'],
+    ['MÁX (paralelo)', '', (tp.total_h||0).toFixed(1) + ' h · ' + (tp.total_dias||0) + ' días'],
   ];
   const colsTp = [
     {x: 46, align: 'left'},
     {x: 300, align: 'right'},
     {x: W - 46, align: 'right'},
   ];
-  y = drawTable(page, '7 · TIEMPOS ESTIMADOS', ['Operación', 'Seg/pza', 'Horas'], rowsTp, 40, y, colsTp, fonts);
+  y = drawTable(page, '7 · TIEMPOS (procesos en paralelo)', ['Operación', 'Seg/pza', 'Horas'], rowsTp, 40, y, colsTp, fonts);
 
-  // Footer
   drawText(page, 'Documento interno — no compartir con el cliente', W/2, 30, {size: 7, font: fonts.reg, color: rgb(0.55, 0.55, 0.55), align: 'center'});
 }
 
@@ -344,11 +313,11 @@ async function buildPDFCliente(cot, doc, fonts) {
   y -= 24;
   drawRect(page, 40, y - 90, W - 80, 100, rgb(0.98, 0.94, 0.85));
   drawText(page, 'PRECIO UNITARIO', 60, y - 16, {size: 9, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
-  drawText(page, money(inputs.precio_unitario_cliente), 60, y - 45, {size: 26, font: fonts.bold, color: rgb(0.29, 0.14, 0.03)});
+  drawText(page, money(res.precio_unitario), 60, y - 45, {size: 26, font: fonts.bold, color: rgb(0.29, 0.14, 0.03)});
   drawText(page, 'por pieza · MXN', 60, y - 62, {size: 9, font: fonts.reg, color: rgb(0.4, 0.2, 0.03)});
 
   drawText(page, 'PRECIO TOTAL', W - 250, y - 16, {size: 9, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
-  drawText(page, money(res.precio_total), W - 250, y - 45, {size: 26, font: fonts.bold, color: rgb(0.29, 0.14, 0.03)});
+  drawText(page, money(res.venta_total), W - 250, y - 45, {size: 26, font: fonts.bold, color: rgb(0.29, 0.14, 0.03)});
   drawText(page, `${int(cot.piezas)} piezas · MXN`, W - 250, y - 62, {size: 9, font: fonts.reg, color: rgb(0.4, 0.2, 0.03)});
 
   y -= 110;
