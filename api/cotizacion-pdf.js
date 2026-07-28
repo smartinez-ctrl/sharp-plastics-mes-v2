@@ -21,13 +21,31 @@ const kg = n => (n||0).toFixed(2) + ' kg';
 // ─────────────────────────────────────────────────────────────
 // Helpers para escribir texto y tablas
 // ─────────────────────────────────────────────────────────────
+// WinAnsi (encoding de fuentes standard de pdf-lib) solo soporta latin1.
+// Reemplaza caracteres unicode conocidos por equivalentes ASCII para evitar
+// crashes tipo "WinAnsi cannot encode X". Si aparece un caracter nuevo, se
+// mantiene tal cual y pdf-lib avisará.
+const WIN_ANSI_MAP = {
+  '↳': '+', '↰': '+', '↱': '+', '→': '>', '←': '<', '↑': '^', '↓': 'v',
+  '✓': 'OK', '✗': 'X', '⚠': '!', '⚠️': '!',
+  '★': '*', '☆': '*',
+  '—': '-', '–': '-', // en-dash / em-dash a ASCII dash
+  '\u200B': '', '\u200C': '', '\u200D': '', // zero-width
+  '\uFE0F': '', // variation selector (emoji)
+};
+function safe(s) {
+  if (s == null) return '';
+  return String(s).replace(/[\u2000-\u3000\uFE0F]/g, ch => WIN_ANSI_MAP[ch] || '?');
+}
+
 function drawText(page, txt, x, y, opts = {}) {
   const {size = 9, font, color = rgb(0.15, 0.15, 0.15), align = 'left'} = opts;
-  const w = font.widthOfTextAtSize(String(txt||''), size);
+  const clean = safe(txt);
+  const w = font.widthOfTextAtSize(clean, size);
   let xPos = x;
   if (align === 'right') xPos = x - w;
   else if (align === 'center') xPos = x - w/2;
-  page.drawText(String(txt||''), {x: xPos, y, size, font, color});
+  page.drawText(clean, {x: xPos, y, size, font, color});
   return w;
 }
 
@@ -197,10 +215,10 @@ async function buildPDFInterno(cot, doc, fonts) {
       const kgAditMerma = kgAdit / (1 - Math.min(0.99, (a.merma || 0) / 100));
       const costoAdit = kgAditMerma * (a.precio_kg || 0);
       costoColor += costoAdit;
-      rowsTin.push(['  ↳ ' + (a.nombre || 'Aditivo'), (a.pct || 0).toFixed(1) + '%', kg(kgAditMerma), money(a.precio_kg), '', money(costoAdit), '']);
+      rowsTin.push(['  + ' + (a.nombre || 'Aditivo'), (a.pct || 0).toFixed(1) + '%', kg(kgAditMerma), money(a.precio_kg), '', money(costoAdit), '']);
     });
     // Fila de utilidad del color
-    rowsTin.push([`  → utilidad ${t.nombre}`, '', '', '', money(costoColor), '', money((t.venta || 0) - costoColor)]);
+    rowsTin.push([`  = utilidad ${t.nombre}`, '', '', '', money(costoColor), '', money((t.venta || 0) - costoColor)]);
   });
   rowsTin.push(['Subtotal tintas', '', '', '', money(st.tintas?.costo), money(st.tintas?.venta), money(st.tintas?.utilidad)]);
   const colsTin = [
