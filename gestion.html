@@ -280,74 +280,372 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
 
 <div id="page-cotizador" class="page">
   <div class="ph-row">
-    <div><div class="page-title">Cotizador</div><div class="page-sub">Costo interno y precio de venta</div></div>
+    <div><div class="page-title">Cotizador</div><div class="page-sub">Pedidos especiales — explosión de materiales y costo unitario</div></div>
     <div class="page-actions">
-      <button class="btn btn-ghost btn-sm" onclick="limpiarCotizador()">🗑 Limpiar</button>
-      <button class="btn btn-secondary btn-sm" onclick="openModal('modal-import')">📄 Importar PDFs</button>
+      <button class="btn btn-ghost btn-sm" onclick="cotV2Nueva()">🆕 Nueva</button>
+      <button class="btn btn-ghost btn-sm" onclick="cotV2AbrirListado()" id="cot-v2-abrir-btn">📂 Cotizaciones</button>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start">
-    <div>
-      <div class="card" style="border-color:var(--blue-border)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div>
-          <div style="font-size:12px;font-weight:700">Jalar pedido del pipeline (opcional)</div>
-        </div>
-        <div class="field"><label>Seleccionar pedido existente</label>
-          <select id="cot-pipeline-select" onchange="jalarPedidoPipeline(this.value)"><option value="">— Nuevo / manual —</option></select>
-        </div>
+
+  <!-- HEADER: datos del pedido -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Cotización</div>
+        <div style="font-size:16px;font-weight:600;margin-top:2px" id="cot-v2-folio-titulo">— Nueva —</div>
       </div>
+      <div style="background:#f59e0b;color:#78350f;font-size:10px;padding:3px 9px;border-radius:5px;font-weight:600">Pedido especial</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.4fr 1.4fr 1fr 1fr 0.7fr 0.7fr 1fr;gap:6px">
+      <div class="field"><label>Cliente</label><select id="cotv2-cliente"><option value="">Seleccionar...</option></select></div>
+      <div class="field"><label>Sub-cliente</label><input type="text" id="cotv2-subcli" placeholder="Ej: Strictly E-Bikes"></div>
+      <div class="field"><label>Producto</label><input type="text" id="cotv2-producto" placeholder="MF 700ml"></div>
+      <div class="field"><label>Capacidad (ml)</label><input type="number" id="cotv2-cap" value="700"></div>
+      <div class="field"><label>Piezas</label><input type="number" id="cotv2-piezas" value="10000" oninput="cotV2Recalc()"></div>
+      <div class="field"><label>Colores</label><input type="number" id="cotv2-colores" min="0" max="6" value="3" oninput="cotV2Recalc();cotV2RenderTintas()"></div>
+      <div class="field"><label>Merma global %</label><input type="number" id="cotv2-merma" value="3" step="0.1" oninput="cotV2Recalc()"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">
+      ℹ️ Con merma del <span id="cotv2-merma-lbl">3</span>%, se producirán <strong id="cotv2-pzas-prod-lbl" style="color:var(--text)">10,300 pzas</strong> para entregar <strong id="cotv2-pzas-base-lbl" style="color:var(--text)">10,000</strong>.
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:12px;align-items:start;margin-top:8px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+
+      <!-- 1. Materiales del cliente (SIN COSTO) -->
+      <div class="card" style="border-color:#3b82f6;border-left:3px solid #3b82f6;border-radius:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">1 · Materiales que aporta el cliente</div>
+          <span style="background:#dbeafe;color:#1e40af;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600">Solo explosión — no cuesta</span>
+        </div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
+          <thead>
+            <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
+              <th style="text-align:left;padding:4px;font-weight:600;width:25%">Componente</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Peso (g)</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Colada (g)</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Merma %</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Kg totales</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Piezas / cantidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Resina botella</td>
+              <td><input type="number" id="cotv2-cli-bot-peso" value="52" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td><input type="number" id="cotv2-cli-bot-colada" value="8" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td><input type="number" id="cotv2-cli-bot-merma" value="3" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-cli-bot-kg" style="text-align:right;color:var(--text2);padding-right:6px">618.0</td>
+              <td id="cotv2-cli-bot-pzas" style="text-align:right;color:var(--text2);padding-right:6px">10,300</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Resina tapa</td>
+              <td><input type="number" id="cotv2-cli-tap-peso" value="9" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td><input type="number" id="cotv2-cli-tap-colada" value="1" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td><input type="number" id="cotv2-cli-tap-merma" value="2" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-cli-tap-kg" style="text-align:right;color:var(--text2);padding-right:6px">102.0</td>
+              <td id="cotv2-cli-tap-pzas" style="text-align:right;color:var(--text2);padding-right:6px">10,200</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Chupones</td>
+              <td colspan="2" style="text-align:right;color:var(--text3);padding-right:6px;font-size:10.5px">— piezas terminadas —</td>
+              <td><input type="number" id="cotv2-cli-chu-merma" value="2" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td style="text-align:right;color:var(--text3);padding-right:6px">—</td>
+              <td id="cotv2-cli-chu-pzas" style="text-align:right;color:var(--text2);padding-right:6px">10,200</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Liners</td>
+              <td colspan="2" style="text-align:right;color:var(--text3);padding-right:6px;font-size:10.5px">— piezas terminadas —</td>
+              <td><input type="number" id="cotv2-cli-lin-merma" value="1" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td style="text-align:right;color:var(--text3);padding-right:6px">—</td>
+              <td id="cotv2-cli-lin-pzas" style="text-align:right;color:var(--text2);padding-right:6px">10,100</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Cajas de empaque</td>
+              <td colspan="2" style="text-align:right;color:var(--text3);padding-right:6px;font-size:10.5px">Pzas / caja</td>
+              <td><input type="number" id="cotv2-cli-caj-porcaja" value="40" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td style="text-align:right;color:var(--text3);padding-right:6px">—</td>
+              <td id="cotv2-cli-caj-total" style="text-align:right;color:var(--text2);padding-right:6px">250 cajas</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 2. Master batch (Sharp) -->
       <div class="card">
-        <div class="card-title">Datos del pedido</div>
-        <div class="field-row">
-          <div class="field"><label>Cliente</label><select id="cot-cliente"><option value="">Seleccionar...</option></select></div>
-          <div class="field"><label>Sub-cliente</label><input type="text" id="cot-subcli" placeholder="Ej: Strictly E-Bikes"></div>
-        </div>
-        <div class="field-row-3">
-          <div class="field"><label>PO #</label><input type="text" id="cot-po"></div>
-          <div class="field"><label>Capacidad</label><select id="cot-cap" onchange="calcCotizador()"><option value="">—</option><option value="500">500ml</option><option value="600">600ml</option><option value="700">750ml</option></select></div>
-          <div class="field"><label>Piezas</label><input type="number" id="cot-piezas" oninput="calcCotizador()"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Colores</label><input type="number" id="cot-colores" min="1" max="4" oninput="calcCotizador();renderColorBlocks()"></div>
-          <div class="field"><label>Fecha de entrega</label><input type="date" id="cot-fecha"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Color botella</label><input type="text" id="cot-col-bot" placeholder="Black"></div>
-          <div class="field"><label>Color tapa</label><input type="text" id="cot-col-tap" placeholder="348 C"></div>
-        </div>
-        <div class="field"><label>Dirección de envío</label><input type="text" id="cot-envio"></div>
-        <div class="field"><label>Notas / Packaging</label><textarea id="cot-notas" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none"></textarea></div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">2 · Master batch (lo aporta Sharp)</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
+          <thead>
+            <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
+              <th style="text-align:left;padding:4px;font-weight:600;width:20%">Aplica a</th>
+              <th style="text-align:right;padding:4px;font-weight:600">% del peso</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Merma %</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Kg base</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Kg de MB</th>
+              <th style="text-align:right;padding:4px;font-weight:600">$ / kg</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Costo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Botella</td>
+              <td><input type="number" id="cotv2-mb-bot-pct" value="3" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td><input type="number" id="cotv2-mb-bot-merma" value="2" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-mb-bot-kgbase" style="text-align:right;color:var(--text2);padding-right:6px">618.0</td>
+              <td id="cotv2-mb-bot-kgmb" style="text-align:right;color:var(--text2);padding-right:6px">18.9</td>
+              <td><input type="number" id="cotv2-mb-bot-pk" value="185" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-mb-bot-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$3,499</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Tapa</td>
+              <td><input type="number" id="cotv2-mb-tap-pct" value="4" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td><input type="number" id="cotv2-mb-tap-merma" value="2" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-mb-tap-kgbase" style="text-align:right;color:var(--text2);padding-right:6px">102.0</td>
+              <td id="cotv2-mb-tap-kgmb" style="text-align:right;color:var(--text2);padding-right:6px">4.16</td>
+              <td><input type="number" id="cotv2-mb-tap-pk" value="215" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-mb-tap-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$895</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border2);font-weight:600">
+              <td colspan="6" style="padding:6px;color:var(--text2)">Subtotal master batch</td>
+              <td id="cotv2-mb-subtotal" style="text-align:right;padding:6px 4px;color:var(--amber)">$4,394</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div class="card" style="border-color:var(--red-border)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-          <div style="width:8px;height:8px;border-radius:50%;background:var(--red)"></div>
-          <div style="font-size:12px;font-weight:700">Costo interno — Fórmula de tintas</div>
-        </div>
-        <div id="color-blocks"><div style="font-size:12px;color:var(--text3);padding:10px">Especifica el número de colores arriba</div></div>
-        <div id="mdo-interno" style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:4px"></div>
-        <div id="pant-interno" style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:8px"></div>
+
+      <!-- 3. Fabricación (soplado + inyección) -->
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">3 · Fabricación (soplado e inyección)</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
+          <thead>
+            <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
+              <th style="text-align:left;padding:4px;font-weight:600;width:35%">Concepto</th>
+              <th style="text-align:right;padding:4px;font-weight:600">$ / pza</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Piezas producidas</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Costo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Soplado de botella</td>
+              <td><input type="number" id="cotv2-fab-bot-pza" value="1.20" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-fab-bot-pzas" style="text-align:right;color:var(--text2);padding-right:6px">10,300</td>
+              <td id="cotv2-fab-bot-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$12,360</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Inyección de tapa</td>
+              <td><input type="number" id="cotv2-fab-tap-pza" value="0.65" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-fab-tap-pzas" style="text-align:right;color:var(--text2);padding-right:6px">10,200</td>
+              <td id="cotv2-fab-tap-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$6,630</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border2);font-weight:600">
+              <td colspan="3" style="padding:6px;color:var(--text2)">Subtotal fabricación</td>
+              <td id="cotv2-fab-subtotal" style="text-align:right;padding:6px 4px;color:var(--amber)">$18,990</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div class="card" style="border-color:var(--green-border)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-          <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
-          <div style="font-size:12px;font-weight:700">Precio de venta al cliente</div>
+
+      <!-- 4. Tintas -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">4 · Tintas de impresión</div>
+          <div style="font-size:11px;color:var(--text3)">
+            Fórmula: g/pza × <strong id="cotv2-tin-pzas-lbl" style="color:var(--text2)">10,000</strong> pzas × (1 + merma%)
+          </div>
         </div>
-        <div class="field-row">
-          <div class="field"><label>Corrida botellas</label><select id="cot-corrida-bot" onchange="calcCotizador()"><option value="">Seleccionar...</option><option value="run500">Run 500 pzas</option><option value="stock2500">Stock / +2500 pzas</option></select></div>
-          <div class="field"><label>¿Con color?</label><select id="cot-color-bot" onchange="calcCotizador()"><option value="true">Con color</option><option value="false">Sin color</option></select></div>
+        <div id="cotv2-tintas-container"></div>
+        <div style="border-top:1px solid var(--border2);padding-top:6px;margin-top:6px;display:flex;justify-content:space-between;font-weight:600;font-size:12px">
+          <span style="color:var(--text2)">Subtotal tintas</span>
+          <span id="cotv2-tin-subtotal" style="color:var(--amber)">$4,605</span>
         </div>
-        <div class="field-row">
-          <div class="field"><label>Corrida tapas</label><select id="cot-corrida-tap" onchange="calcCotizador()"><option value="">Seleccionar...</option><option value="500">500 pzas</option><option value="1000">1,000 pzas</option><option value="2500">2,500 pzas</option><option value="5000">5,000 pzas</option></select></div>
-          <div class="field"><label>¿Tapa con color?</label><select id="cot-color-tap" onchange="calcCotizador()"><option value="true">Con color</option><option value="false">Sin color</option></select></div>
-        </div>
-        <div id="venta-desglose" style="background:var(--bg3);border-radius:10px;padding:14px;margin-top:4px"></div>
       </div>
+
+      <!-- 5. Pantallas y positivos -->
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">5 · Pantallas y positivos</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
+          <thead>
+            <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
+              <th style="text-align:left;padding:4px;font-weight:600;width:30%">Concepto</th>
+              <th style="text-align:right;padding:4px;font-weight:600"># colores</th>
+              <th style="text-align:right;padding:4px;font-weight:600">$ / color</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Costo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Pantallas</td>
+              <td><input type="number" id="cotv2-pant-num" value="3" min="0" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td><input type="number" id="cotv2-pant-pu" value="500" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-pant-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$1,500</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Positivos</td>
+              <td><input type="number" id="cotv2-pos-num" value="3" min="0" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td><input type="number" id="cotv2-pos-pu" value="230" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-pos-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$690</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border2);font-weight:600">
+              <td colspan="3" style="padding:6px;color:var(--text2)">Subtotal pantallas + positivos</td>
+              <td id="cotv2-pantpos-subtotal" style="text-align:right;padding:6px 4px;color:var(--amber)">$2,190</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 6. MO de impresión -->
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">6 · Mano de obra de impresión</div>
+        <div style="background:var(--bg3);border-radius:8px;padding:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text2);white-space:nowrap">$ / pza por tinta</span>
+            <input type="number" id="cotv2-mo-imp-pza" value="0.35" step="0.01" oninput="cotV2Recalc()" style="width:90px;text-align:right">
+            <span style="font-size:11px;color:var(--text3)">× <span id="cotv2-mo-imp-colores">3</span> tintas × <span id="cotv2-mo-imp-pzas">10,000</span> pzas</span>
+            <span id="cotv2-mo-imp-costo" style="margin-left:auto;font-weight:600;color:var(--amber)">$10,500</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Ensamble -->
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">7 · Ensamble (tapa + chupón + liner)</div>
+        <div style="background:var(--bg3);border-radius:8px;padding:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text2);white-space:nowrap">$ / pza ensamblada</span>
+            <input type="number" id="cotv2-ens-pza" value="0.85" step="0.01" oninput="cotV2Recalc()" style="width:90px;text-align:right">
+            <span style="font-size:11px;color:var(--text3)">× <span id="cotv2-ens-pzas">10,000</span> pzas</span>
+            <span id="cotv2-ens-costo" style="margin-left:auto;font-weight:600;color:var(--amber)">$8,500</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Empaque (papel + tag) -->
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">8 · Empaque (papel + tag)</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
+          <thead>
+            <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
+              <th style="text-align:left;padding:4px;font-weight:600;width:30%">Concepto</th>
+              <th style="text-align:right;padding:4px;font-weight:600">$ / pza</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Piezas</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Costo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Papel</td>
+              <td><input type="number" id="cotv2-emp-papel-pza" value="0.15" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-emp-papel-pzas" style="text-align:right;color:var(--text2);padding-right:6px">10,000</td>
+              <td id="cotv2-emp-papel-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$1,500</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Tag / etiqueta</td>
+              <td><input type="number" id="cotv2-emp-tag-pza" value="0.15" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-emp-tag-pzas" style="text-align:right;color:var(--text2);padding-right:6px">10,000</td>
+              <td id="cotv2-emp-tag-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$1,500</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border2);font-weight:600">
+              <td colspan="3" style="padding:6px;color:var(--text2)">Subtotal empaque</td>
+              <td id="cotv2-emp-subtotal" style="text-align:right;padding:6px 4px;color:var(--amber)">$3,000</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 9. Tiempos estimados (informativo) -->
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">9 · Tiempos estimados (para fecha de entrega)</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
+          <thead>
+            <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
+              <th style="text-align:left;padding:4px;font-weight:600;width:30%">Operación</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Seg / pza</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Horas</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Turnos (8h)</th>
+              <th style="text-align:right;padding:4px;font-weight:600">Días laborales</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Soplado botella</td>
+              <td><input type="number" id="cotv2-tp-bot-seg" value="12" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-tp-bot-h" style="text-align:right;color:var(--text2);padding-right:6px">33.3</td>
+              <td id="cotv2-tp-bot-t" style="text-align:right;color:var(--text2);padding-right:6px">4.2</td>
+              <td id="cotv2-tp-bot-d" style="text-align:right;color:var(--text2);padding-right:6px">4</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Inyección tapa</td>
+              <td><input type="number" id="cotv2-tp-tap-seg" value="4" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-tp-tap-h" style="text-align:right;color:var(--text2);padding-right:6px">11.1</td>
+              <td id="cotv2-tp-tap-t" style="text-align:right;color:var(--text2);padding-right:6px">1.4</td>
+              <td id="cotv2-tp-tap-d" style="text-align:right;color:var(--text2);padding-right:6px">1</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:5px">Impresión</td>
+              <td><input type="number" id="cotv2-tp-imp-seg" value="18" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
+              <td id="cotv2-tp-imp-h" style="text-align:right;color:var(--text2);padding-right:6px">50.0</td>
+              <td id="cotv2-tp-imp-t" style="text-align:right;color:var(--text2);padding-right:6px">6.3</td>
+              <td id="cotv2-tp-imp-d" style="text-align:right;color:var(--text2);padding-right:6px">6</td>
+            </tr>
+            <tr style="border-top:1px solid var(--border2);font-weight:600">
+              <td colspan="2" style="padding:6px">Total secuencial</td>
+              <td id="cotv2-tp-total-h" style="text-align:right;padding-right:6px">94.4 h</td>
+              <td id="cotv2-tp-total-t" style="text-align:right;padding-right:6px">11.8</td>
+              <td id="cotv2-tp-total-d" style="text-align:right;padding-right:6px">11 días</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
     </div>
-    <div style="position:sticky;top:70px"><div class="card" id="panel-resumen"><div style="text-align:center;padding:20px;color:var(--text3)">Llena los datos para ver el resumen</div></div></div>
+
+    <!-- SIDEBAR sticky -->
+    <div style="position:sticky;top:70px;display:flex;flex-direction:column;gap:10px">
+      <div class="card">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700">Costos Sharp</div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px"><span style="color:var(--text2)">Master batch</span><span id="cotv2-sum-mb">$4,394</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px"><span style="color:var(--text2)">Fabricación</span><span id="cotv2-sum-fab">$18,990</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px"><span style="color:var(--text2)">Tintas</span><span id="cotv2-sum-tin">$4,605</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px"><span style="color:var(--text2)">Pantallas+pos</span><span id="cotv2-sum-pp">$2,190</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px"><span style="color:var(--text2)">MO impresión</span><span id="cotv2-sum-mo">$10,500</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px"><span style="color:var(--text2)">Ensamble</span><span id="cotv2-sum-ens">$8,500</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:4px"><span style="color:var(--text2)">Empaque</span><span id="cotv2-sum-emp">$3,000</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13.5px;font-weight:700"><span>Costo total</span><span id="cotv2-sum-total">$52,179</span></div>
+        <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11.5px;color:var(--text2)"><span>Costo unitario</span><span id="cotv2-sum-unit" style="font-weight:600;color:var(--text)">$5.22</span></div>
+      </div>
+
+      <div class="card" style="background:#fef3c7;border-color:#f59e0b">
+        <div style="font-size:10px;color:#78350f;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;font-weight:700">Precio al cliente</div>
+        <div style="font-size:10px;color:#92400e;margin-bottom:4px">Precio unitario ($ MXN)</div>
+        <input type="number" id="cotv2-precio-unit" value="7.50" step="0.01" oninput="cotV2Recalc()" style="width:100%;height:32px;font-size:15px;text-align:right;background:#fff;color:#78350f;font-weight:700">
+        <div style="display:flex;justify-content:space-between;padding:6px 0 3px;font-size:11px;color:#78350f"><span>Precio total</span><span id="cotv2-precio-total" style="font-weight:600">$75,000</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:#78350f"><span>Utilidad</span><span id="cotv2-precio-util" style="font-weight:600">$22,821</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;color:#78350f"><span>Margen</span><span id="cotv2-precio-margen" style="font-weight:600">30.4%</span></div>
+      </div>
+
+      <div style="background:var(--bg3);border-radius:8px;padding:10px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Fecha entrega estimada</div>
+        <div id="cotv2-fecha-lbl" style="font-size:13px;font-weight:600">— calculando —</div>
+        <div id="cotv2-fecha-sub" style="font-size:10px;color:var(--text3);margin-top:2px">11 días laborales</div>
+      </div>
+
+      <button class="btn btn-primary" onclick="cotV2Guardar()" style="width:100%">💾 Guardar cotización</button>
+      <button class="btn btn-ghost btn-sm" onclick="cotV2PDF('interno')" style="width:100%">📊 PDF interno (costos)</button>
+      <button class="btn btn-secondary btn-sm" onclick="cotV2PDF('cliente')" style="width:100%">📤 PDF cliente (precio)</button>
+    </div>
   </div>
-  <div style="display:flex;justify-content:flex-end;padding:0 0 24px">
-    <button class="btn btn-primary" onclick="guardarCotizacion()">💾 Guardar cotización al pipeline</button>
+</div>
+
+<!-- Modal: Listado de cotizaciones guardadas -->
+<div class="modal-overlay" id="modal-cotv2-listado">
+  <div style="background:var(--bg2);border-radius:16px;padding:20px;width:94%;max-width:800px;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700">📂 Cotizaciones guardadas</div>
+      <button onclick="closeModal('modal-cotv2-listado')" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer">×</button>
+    </div>
+    <div id="cotv2-listado-body"><div class="loading"><div class="loading-spinner"></div></div></div>
   </div>
 </div>
 
@@ -734,6 +1032,7 @@ function showPage(id,el){
   if(id==='catalogos')loadCatalogTab('ct-tintas');
   if(id==='usuarios')loadUsuarios();
   if(id==='pantones')loadPantonesG();
+  if(id==='cotizador' && typeof cotV2Init==='function') cotV2Init();
 }
 
 function switchCatTab(id,el){
@@ -2112,49 +2411,28 @@ function addAditivoComp(ci){if(COT_COLORES[ci])COT_COLORES[ci].aditivos.push({ad
 function remAditivoComp(ci,ai){if(COT_COLORES[ci])COT_COLORES[ci].aditivos.splice(ai,1);renderColorBlocks();}
 
 function abrirCotizadorConPedido(id){
-  const p=PIPELINE.find(x=>x.id===id);if(!p)return;
-  limpiarCotizador();
-  const flds={'cot-subcli':p.sub_cliente,'cot-po':p.po,'cot-cap':p.capacidad,'cot-piezas':p.piezas,'cot-colores':p.colores,'cot-col-bot':p.color_botella,'cot-col-tap':p.color_tapa,'cot-envio':p.direccion_envio,'cot-fecha':p.fecha_entrega,'cot-notas':p.notas};
-  Object.entries(flds).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v||'';});
-  document.getElementById('cot-corrida-bot').value='stock2500';
-  document.getElementById('cot-color-bot').value='true';
-  document.getElementById('cot-corrida-tap').value='2500';
-  document.getElementById('cot-color-tap').value='true';
-  document.getElementById('page-cotizador').dataset.pipelineId=id;
-  const sel=document.getElementById('cot-pipeline-select');if(sel)sel.value=id;
-  // Cargar cliente - intentar ahora y con timeout como fallback
-  const setCotCliente=()=>{
-    const cliSel=document.getElementById('cot-cliente');
-    if(!cliSel)return;
-    const opt=Array.from(cliSel.options).find(o=>o.text===p.cliente||o.text.toLowerCase().includes('mountainflow'));
-    if(opt)cliSel.value=opt.value;
-  };
-  setCotCliente();
-  setTimeout(setCotCliente,500);
-  // Cargar fórmula existente o crear colores vacíos con nombres de tintas_info
-  const ti=p.tintas_info||[];
-  if(p.formula_tintas&&Array.isArray(p.formula_tintas)&&p.formula_tintas.length){
-    COT_COLORES=JSON.parse(JSON.stringify(p.formula_tintas));
-    // Solo completar nombre/pantone si faltan
-    COT_COLORES.forEach(function(col,ci){
-      if(!col.nombre&&ti[ci])col.nombre=ti[ci].nombre||'Color '+(ci+1);
-      if(!col.pantone&&ti[ci])col.pantone=ti[ci].pantone||'';
-    });
-  } else {
-    // Sin fórmula: crear N colores vacíos con nombres de tintas_info
-    const n=p.colores||0;
-    COT_COLORES=[];
-    for(var i=0;i<n;i++){
-      COT_COLORES.push({
-        nombre:ti[i]?ti[i].nombre:'Color '+(i+1),
-        pantone:ti[i]?ti[i].pantone:'',
-        componentes:[],
-        aditivos:[]
-      });
-    }
-  }
-  renderColorBlocks();calcCotizador();
-  toast('Pedido cargado: '+(p.sub_cliente||p.po),'ok');
+  // Rewired para el cotizador v2: jala datos básicos del pedido del pipeline.
+  const p = PIPELINE.find(x => x.id === id);
+  if (!p) return;
+  setTimeout(() => {
+    if (typeof cotV2Nueva !== 'function') return;
+    cotV2Nueva();
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+    set('cotv2-subcli', p.sub_cliente);
+    set('cotv2-producto', p.capacidad ? 'MF ' + p.capacidad + 'ml' : '');
+    set('cotv2-cap', p.capacidad || 700);
+    set('cotv2-piezas', p.piezas || 10000);
+    set('cotv2-colores', p.colores || 3);
+    // Cliente en select
+    setTimeout(() => {
+      const cliSel = document.getElementById('cotv2-cliente');
+      if (cliSel) {
+        const opt = Array.from(cliSel.options).find(o => o.value === p.cliente || o.text === p.cliente);
+        if (opt) cliSel.value = opt.value;
+      }
+    }, 500);
+    if (typeof cotV2RenderTintas === 'function') cotV2RenderTintas();
+  }, 300);
 }
 
 function calcCotizador(){
@@ -5294,6 +5572,511 @@ async function init(){
   catch(e){console.error('Init error:',e);}
 }
 init();
+
+
+// ══════════════════════════════════════════════════════
+// COTIZADOR V2
+// ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// COTIZADOR V2 — pedidos especiales con explosión de materiales
+// Modelo: cliente aporta resinas/chupones/liners/cajas; Sharp aporta y
+// cobra: master batch, tintas, fabricación (soplado/inyección), pantallas,
+// positivos, MO impresión, ensamble, empaque (papel+tag).
+// ══════════════════════════════════════════════════════
+const COTV2 = {
+  editingId: null,
+  folio: null,
+  tintas: [
+    {nombre:'Pantone 286 C', color:'#1e40af', g_pza:0.35, merma:12, precio_kg:420},
+    {nombre:'Pantone 185 C', color:'#dc2626', g_pza:0.28, merma:15, precio_kg:510},
+    {nombre:'Blanco',        color:'#fafafa', g_pza:0.42, merma:10, precio_kg:285},
+  ],
+};
+
+// Formato $ MXN (short)
+const $$ = n => '$' + Math.round(n||0).toLocaleString('en-US');
+const num = id => parseFloat(document.getElementById(id)?.value)||0;
+const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+// ────────────────────────────────────────────────────────────────
+// Render dinámico de tintas
+// ────────────────────────────────────────────────────────────────
+function cotV2RenderTintas(){
+  const cont = document.getElementById('cotv2-tintas-container');
+  if (!cont) return;
+  const colores = parseInt(document.getElementById('cotv2-colores')?.value)||0;
+  // Ajustar el array COTV2.tintas al número de colores
+  while (COTV2.tintas.length < colores) {
+    COTV2.tintas.push({nombre:'Color '+(COTV2.tintas.length+1), color:'#9ca3af', g_pza:0.3, merma:12, precio_kg:400});
+  }
+  while (COTV2.tintas.length > colores) COTV2.tintas.pop();
+
+  if (colores === 0) {
+    cont.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px">Especifica el número de colores arriba</div>';
+    return;
+  }
+
+  let html = `<table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
+    <thead><tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
+      <th style="text-align:left;padding:4px;font-weight:600;width:32%">Color / Pantone</th>
+      <th style="text-align:right;padding:4px;font-weight:600">g / pza</th>
+      <th style="text-align:right;padding:4px;font-weight:600">Merma %</th>
+      <th style="text-align:right;padding:4px;font-weight:600">$ / kg</th>
+      <th style="text-align:right;padding:4px;font-weight:600">Kg totales</th>
+      <th style="text-align:right;padding:4px;font-weight:600">Costo</th>
+    </tr></thead><tbody>`;
+  COTV2.tintas.forEach((t, i) => {
+    html += `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:5px">
+        <span style="display:inline-block;width:10px;height:10px;background:${t.color};border-radius:2px;margin-right:6px;vertical-align:-1px;${t.color==='#fafafa'?'border:1px solid #d4d4d8':''}"></span>
+        <input type="text" value="${t.nombre.replace(/"/g,'&quot;')}" onchange="COTV2.tintas[${i}].nombre=this.value" style="width:calc(100% - 22px);background:transparent;border:none;color:var(--text);font-size:12px;padding:2px 4px">
+      </td>
+      <td><input type="number" value="${t.g_pza}" step="0.01" oninput="COTV2.tintas[${i}].g_pza=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
+      <td><input type="number" value="${t.merma}" step="0.1" oninput="COTV2.tintas[${i}].merma=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
+      <td><input type="number" value="${t.precio_kg}" step="0.01" oninput="COTV2.tintas[${i}].precio_kg=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
+      <td id="cotv2-tin-kg-${i}" style="text-align:right;color:var(--text2);padding-right:6px">—</td>
+      <td id="cotv2-tin-costo-${i}" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">—</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  cont.innerHTML = html;
+  cotV2Recalc();
+}
+
+// ────────────────────────────────────────────────────────────────
+// Motor de cálculo — se llama en cada oninput
+// ────────────────────────────────────────────────────────────────
+function cotV2Recalc(){
+  const piezas = Math.max(0, num('cotv2-piezas'));
+  const colores = Math.max(0, parseInt(document.getElementById('cotv2-colores')?.value)||0);
+  const mermaGlobal = num('cotv2-merma');
+  // Piezas producidas con merma global (para labels informativos)
+  const pzasProd = Math.round(piezas * (1 + mermaGlobal/100));
+  setTxt('cotv2-merma-lbl', mermaGlobal.toFixed(1).replace(/\.0$/,''));
+  setTxt('cotv2-pzas-prod-lbl', pzasProd.toLocaleString('en-US') + ' pzas');
+  setTxt('cotv2-pzas-base-lbl', piezas.toLocaleString('en-US'));
+
+  // ── 1. Materiales del cliente (piezas + kg totales, SIN COSTO) ────────
+  // Botella: (peso + colada)/1000 × piezas × (1 + merma%)
+  const botPeso = num('cotv2-cli-bot-peso'), botCol = num('cotv2-cli-bot-colada'), botMerma = num('cotv2-cli-bot-merma');
+  const botPzas = Math.round(piezas * (1 + botMerma/100));
+  const botKg = ((botPeso + botCol) / 1000) * botPzas;
+  setTxt('cotv2-cli-bot-kg', botKg.toFixed(1));
+  setTxt('cotv2-cli-bot-pzas', botPzas.toLocaleString('en-US'));
+
+  const tapPeso = num('cotv2-cli-tap-peso'), tapCol = num('cotv2-cli-tap-colada'), tapMerma = num('cotv2-cli-tap-merma');
+  const tapPzas = Math.round(piezas * (1 + tapMerma/100));
+  const tapKg = ((tapPeso + tapCol) / 1000) * tapPzas;
+  setTxt('cotv2-cli-tap-kg', tapKg.toFixed(1));
+  setTxt('cotv2-cli-tap-pzas', tapPzas.toLocaleString('en-US'));
+
+  const chuMerma = num('cotv2-cli-chu-merma');
+  const chuPzas = Math.round(piezas * (1 + chuMerma/100));
+  setTxt('cotv2-cli-chu-pzas', chuPzas.toLocaleString('en-US'));
+
+  const linMerma = num('cotv2-cli-lin-merma');
+  const linPzas = Math.round(piezas * (1 + linMerma/100));
+  setTxt('cotv2-cli-lin-pzas', linPzas.toLocaleString('en-US'));
+
+  const cajaPor = Math.max(1, num('cotv2-cli-caj-porcaja'));
+  const cajas = Math.ceil(piezas / cajaPor);
+  setTxt('cotv2-cli-caj-total', cajas.toLocaleString('en-US') + ' cajas');
+
+  // ── 2. Master batch (SÍ cuesta) ────────────────────────────────────────
+  const mbBotPct = num('cotv2-mb-bot-pct'), mbBotMerma = num('cotv2-mb-bot-merma'), mbBotPk = num('cotv2-mb-bot-pk');
+  const mbBotKgMb = botKg * (mbBotPct/100) * (1 + mbBotMerma/100);
+  const mbBotCosto = mbBotKgMb * mbBotPk;
+  setTxt('cotv2-mb-bot-kgbase', botKg.toFixed(1));
+  setTxt('cotv2-mb-bot-kgmb', mbBotKgMb.toFixed(2));
+  setTxt('cotv2-mb-bot-costo', $$(mbBotCosto));
+
+  const mbTapPct = num('cotv2-mb-tap-pct'), mbTapMerma = num('cotv2-mb-tap-merma'), mbTapPk = num('cotv2-mb-tap-pk');
+  const mbTapKgMb = tapKg * (mbTapPct/100) * (1 + mbTapMerma/100);
+  const mbTapCosto = mbTapKgMb * mbTapPk;
+  setTxt('cotv2-mb-tap-kgbase', tapKg.toFixed(1));
+  setTxt('cotv2-mb-tap-kgmb', mbTapKgMb.toFixed(2));
+  setTxt('cotv2-mb-tap-costo', $$(mbTapCosto));
+
+  const mbSub = mbBotCosto + mbTapCosto;
+  setTxt('cotv2-mb-subtotal', $$(mbSub));
+
+  // ── 3. Fabricación (soplado + inyección) ───────────────────────────────
+  const fabBotPza = num('cotv2-fab-bot-pza'), fabTapPza = num('cotv2-fab-tap-pza');
+  const fabBotCosto = fabBotPza * botPzas;
+  const fabTapCosto = fabTapPza * tapPzas;
+  setTxt('cotv2-fab-bot-pzas', botPzas.toLocaleString('en-US'));
+  setTxt('cotv2-fab-tap-pzas', tapPzas.toLocaleString('en-US'));
+  setTxt('cotv2-fab-bot-costo', $$(fabBotCosto));
+  setTxt('cotv2-fab-tap-costo', $$(fabTapCosto));
+  const fabSub = fabBotCosto + fabTapCosto;
+  setTxt('cotv2-fab-subtotal', $$(fabSub));
+
+  // ── 4. Tintas ──────────────────────────────────────────────────────────
+  setTxt('cotv2-tin-pzas-lbl', piezas.toLocaleString('en-US'));
+  let tinSub = 0;
+  COTV2.tintas.forEach((t, i) => {
+    const kg = (t.g_pza * piezas * (1 + t.merma/100)) / 1000;
+    const costo = kg * t.precio_kg;
+    tinSub += costo;
+    setTxt('cotv2-tin-kg-' + i, kg.toFixed(2));
+    setTxt('cotv2-tin-costo-' + i, $$(costo));
+  });
+  setTxt('cotv2-tin-subtotal', $$(tinSub));
+
+  // ── 5. Pantallas + positivos ───────────────────────────────────────────
+  const pantN = num('cotv2-pant-num'), pantPu = num('cotv2-pant-pu');
+  const posN = num('cotv2-pos-num'), posPu = num('cotv2-pos-pu');
+  const pantCosto = pantN * pantPu, posCosto = posN * posPu;
+  setTxt('cotv2-pant-costo', $$(pantCosto));
+  setTxt('cotv2-pos-costo', $$(posCosto));
+  setTxt('cotv2-pantpos-subtotal', $$(pantCosto + posCosto));
+
+  // ── 6. MO impresión ────────────────────────────────────────────────────
+  const moPza = num('cotv2-mo-imp-pza');
+  const moCosto = moPza * colores * piezas;
+  setTxt('cotv2-mo-imp-colores', colores);
+  setTxt('cotv2-mo-imp-pzas', piezas.toLocaleString('en-US'));
+  setTxt('cotv2-mo-imp-costo', $$(moCosto));
+
+  // ── 7. Ensamble ────────────────────────────────────────────────────────
+  const ensPza = num('cotv2-ens-pza');
+  const ensCosto = ensPza * piezas;
+  setTxt('cotv2-ens-pzas', piezas.toLocaleString('en-US'));
+  setTxt('cotv2-ens-costo', $$(ensCosto));
+
+  // ── 8. Empaque (papel + tag) ──────────────────────────────────────────
+  const empPapel = num('cotv2-emp-papel-pza');
+  const empTag = num('cotv2-emp-tag-pza');
+  const empPapelCosto = empPapel * piezas;
+  const empTagCosto = empTag * piezas;
+  setTxt('cotv2-emp-papel-pzas', piezas.toLocaleString('en-US'));
+  setTxt('cotv2-emp-tag-pzas', piezas.toLocaleString('en-US'));
+  setTxt('cotv2-emp-papel-costo', $$(empPapelCosto));
+  setTxt('cotv2-emp-tag-costo', $$(empTagCosto));
+  setTxt('cotv2-emp-subtotal', $$(empPapelCosto + empTagCosto));
+  const empSub = empPapelCosto + empTagCosto;
+
+  // ── 9. Tiempos estimados ──────────────────────────────────────────────
+  const tpBotSeg = num('cotv2-tp-bot-seg');
+  const tpTapSeg = num('cotv2-tp-tap-seg');
+  const tpImpSeg = num('cotv2-tp-imp-seg');
+  const tpBotH = (tpBotSeg * botPzas) / 3600;
+  const tpTapH = (tpTapSeg * tapPzas) / 3600;
+  const tpImpH = (tpImpSeg * piezas * colores) / 3600; // impresión: cada tinta requiere una pasada
+  setTxt('cotv2-tp-bot-h', tpBotH.toFixed(1));
+  setTxt('cotv2-tp-tap-h', tpTapH.toFixed(1));
+  setTxt('cotv2-tp-imp-h', tpImpH.toFixed(1));
+  setTxt('cotv2-tp-bot-t', (tpBotH/8).toFixed(1));
+  setTxt('cotv2-tp-tap-t', (tpTapH/8).toFixed(1));
+  setTxt('cotv2-tp-imp-t', (tpImpH/8).toFixed(1));
+  setTxt('cotv2-tp-bot-d', Math.ceil(tpBotH/8) + '');
+  setTxt('cotv2-tp-tap-d', Math.ceil(tpTapH/8) + '');
+  setTxt('cotv2-tp-imp-d', Math.ceil(tpImpH/8) + '');
+  const tpTotalH = tpBotH + tpTapH + tpImpH;
+  const tpTotalT = tpTotalH / 8;
+  const tpTotalDias = Math.ceil(tpTotalT);
+  setTxt('cotv2-tp-total-h', tpTotalH.toFixed(1) + ' h');
+  setTxt('cotv2-tp-total-t', tpTotalT.toFixed(1));
+  setTxt('cotv2-tp-total-d', tpTotalDias + ' días');
+
+  // Fecha de entrega estimada = hoy + días laborales (L-V)
+  const hoy = new Date();
+  let fecha = new Date(hoy);
+  let laborales = 0;
+  while (laborales < tpTotalDias) {
+    fecha.setDate(fecha.getDate() + 1);
+    const dow = fecha.getDay();
+    if (dow >= 1 && dow <= 5) laborales++;
+  }
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  setTxt('cotv2-fecha-lbl', fecha.getDate() + ' ' + meses[fecha.getMonth()] + ' ' + fecha.getFullYear());
+  setTxt('cotv2-fecha-sub', tpTotalDias + ' días laborales');
+
+  // ── SIDEBAR: totales ──────────────────────────────────────────────────
+  setTxt('cotv2-sum-mb', $$(mbSub));
+  setTxt('cotv2-sum-fab', $$(fabSub));
+  setTxt('cotv2-sum-tin', $$(tinSub));
+  setTxt('cotv2-sum-pp', $$(pantCosto + posCosto));
+  setTxt('cotv2-sum-mo', $$(moCosto));
+  setTxt('cotv2-sum-ens', $$(ensCosto));
+  setTxt('cotv2-sum-emp', $$(empSub));
+
+  const costoTotal = mbSub + fabSub + tinSub + pantCosto + posCosto + moCosto + ensCosto + empSub;
+  const costoUnit = piezas > 0 ? costoTotal / piezas : 0;
+  setTxt('cotv2-sum-total', $$(costoTotal));
+  setTxt('cotv2-sum-unit', '$' + costoUnit.toFixed(2));
+
+  // Precio al cliente (input manual)
+  const precioUnit = num('cotv2-precio-unit');
+  const precioTotal = precioUnit * piezas;
+  const utilidad = precioTotal - costoTotal;
+  const margen = precioTotal > 0 ? (utilidad / precioTotal) * 100 : 0;
+  setTxt('cotv2-precio-total', $$(precioTotal));
+  setTxt('cotv2-precio-util', $$(utilidad));
+  setTxt('cotv2-precio-margen', margen.toFixed(1) + '%');
+
+  // Guardar snapshot en memoria para el guardar / PDF
+  COTV2._snapshot = {
+    inputs: {
+      cliente: document.getElementById('cotv2-cliente')?.value||null,
+      sub_cliente: document.getElementById('cotv2-subcli')?.value||null,
+      producto: document.getElementById('cotv2-producto')?.value||null,
+      capacidad_ml: parseInt(document.getElementById('cotv2-cap')?.value)||null,
+      piezas, colores, merma_global: mermaGlobal,
+      materiales_cliente: {
+        botella: {peso: botPeso, colada: botCol, merma: botMerma, kg_total: botKg, pzas: botPzas},
+        tapa:    {peso: tapPeso, colada: tapCol, merma: tapMerma, kg_total: tapKg, pzas: tapPzas},
+        chupon:  {merma: chuMerma, pzas: chuPzas},
+        liner:   {merma: linMerma, pzas: linPzas},
+        cajas:   {pzas_por_caja: cajaPor, total: cajas},
+      },
+      master_batch: {
+        botella: {pct: mbBotPct, merma: mbBotMerma, precio_kg: mbBotPk, kg: mbBotKgMb, costo: mbBotCosto},
+        tapa:    {pct: mbTapPct, merma: mbTapMerma, precio_kg: mbTapPk, kg: mbTapKgMb, costo: mbTapCosto},
+      },
+      fabricacion: {
+        botella: {precio_pza: fabBotPza, pzas: botPzas, costo: fabBotCosto},
+        tapa:    {precio_pza: fabTapPza, pzas: tapPzas, costo: fabTapCosto},
+      },
+      tintas: COTV2.tintas.map(t => ({...t, kg: (t.g_pza*piezas*(1+t.merma/100))/1000, costo: (t.g_pza*piezas*(1+t.merma/100))/1000 * t.precio_kg})),
+      pantallas: {num: pantN, precio_unitario: pantPu, costo: pantCosto},
+      positivos: {num: posN, precio_unitario: posPu, costo: posCosto},
+      mo_impresion: {precio_pza_por_tinta: moPza, tintas: colores, pzas: piezas, costo: moCosto},
+      ensamble: {precio_pza: ensPza, pzas: piezas, costo: ensCosto},
+      empaque: {papel_pza: empPapel, tag_pza: empTag, pzas: piezas, costo_papel: empPapelCosto, costo_tag: empTagCosto, costo: empSub},
+      tiempos: {
+        botella_seg: tpBotSeg, tapa_seg: tpTapSeg, impresion_seg: tpImpSeg,
+        botella_h: tpBotH, tapa_h: tpTapH, impresion_h: tpImpH,
+        total_h: tpTotalH, total_dias: tpTotalDias,
+      },
+      precio_unitario_cliente: precioUnit,
+    },
+    resultados: {
+      costo_total: costoTotal, costo_unitario: costoUnit,
+      precio_total: precioTotal, utilidad, margen_pct: margen,
+      fecha_entrega: fecha.toISOString().slice(0,10),
+      subtotales: {master_batch: mbSub, fabricacion: fabSub, tintas: tinSub, pantallas_positivos: pantCosto+posCosto, mo_impresion: moCosto, ensamble: ensCosto, empaque: empSub},
+    },
+  };
+}
+
+// ────────────────────────────────────────────────────────────────
+// Cargar catálogo de clientes al abrir la página
+// ────────────────────────────────────────────────────────────────
+async function cotV2CargarClientes(){
+  const sel = document.getElementById('cotv2-cliente');
+  if (!sel) return;
+  try {
+    const rows = await sbGet('core_clientes', 'select=id,nombre&activo=eq.true&order=nombre.asc');
+    sel.innerHTML = '<option value="">Seleccionar...</option>' + rows.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
+  } catch(e) { console.warn('Error cargando clientes:', e); }
+}
+
+// ────────────────────────────────────────────────────────────────
+// Nueva cotización (limpia el formulario)
+// ────────────────────────────────────────────────────────────────
+function cotV2Nueva(){
+  COTV2.editingId = null;
+  COTV2.folio = null;
+  setTxt('cotv2-folio-titulo', '— Nueva —');
+  // Reset a defaults
+  document.getElementById('cotv2-cliente').value = '';
+  document.getElementById('cotv2-subcli').value = '';
+  document.getElementById('cotv2-producto').value = '';
+  document.getElementById('cotv2-piezas').value = '10000';
+  document.getElementById('cotv2-colores').value = '3';
+  COTV2.tintas = [
+    {nombre:'Pantone 286 C', color:'#1e40af', g_pza:0.35, merma:12, precio_kg:420},
+    {nombre:'Pantone 185 C', color:'#dc2626', g_pza:0.28, merma:15, precio_kg:510},
+    {nombre:'Blanco',        color:'#fafafa', g_pza:0.42, merma:10, precio_kg:285},
+  ];
+  cotV2RenderTintas();
+}
+
+// ────────────────────────────────────────────────────────────────
+// Guardar cotización
+// ────────────────────────────────────────────────────────────────
+async function cotV2Guardar(){
+  if (!COTV2._snapshot) cotV2Recalc();
+  const s = COTV2._snapshot;
+  if (!s || !s.inputs.piezas) { toast('Especifica piezas primero', 'err'); return; }
+  try {
+    let folio = COTV2.folio;
+    if (!folio) {
+      // Pedir siguiente folio del año
+      const rF = await fetch(SB_URL + '/rest/v1/rpc/next_cotizacion_v2_folio', {
+        method: 'POST',
+        headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json'},
+        body: '{}',
+      });
+      folio = await rF.json();
+    }
+    const payload = {
+      folio,
+      cliente: s.inputs.cliente, sub_cliente: s.inputs.sub_cliente,
+      producto: s.inputs.producto, capacidad_ml: s.inputs.capacidad_ml,
+      piezas: s.inputs.piezas, colores: s.inputs.colores,
+      merma_pct: s.inputs.merma_global,
+      fecha_entrega_estimada: s.resultados.fecha_entrega,
+      precio_unitario: s.inputs.precio_unitario_cliente,
+      inputs_json: s.inputs,
+      resultados_json: s.resultados,
+      creado_por: (USER && USER.nombre) || null,
+    };
+    if (COTV2.editingId) {
+      await sbPatch('cotizaciones_v2', payload, 'id=eq.' + COTV2.editingId);
+      toast('Cotización actualizada ✓', 'ok');
+    } else {
+      const r = await fetch(SB_URL + '/rest/v1/cotizaciones_v2', {
+        method: 'POST',
+        headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation'},
+        body: JSON.stringify(payload),
+      });
+      const rows = await r.json();
+      if (rows && rows[0]) {
+        COTV2.editingId = rows[0].id;
+        COTV2.folio = folio;
+        setTxt('cotv2-folio-titulo', folio);
+      }
+      toast('Cotización guardada ✓', 'ok');
+    }
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// Listado de cotizaciones guardadas
+// ────────────────────────────────────────────────────────────────
+async function cotV2AbrirListado(){
+  openModal('modal-cotv2-listado');
+  const body = document.getElementById('cotv2-listado-body');
+  body.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
+  try {
+    const rows = await sbGet('cotizaciones_v2', 'select=id,folio,cliente,sub_cliente,producto,piezas,resultados_json,estado,creado_at&order=creado_at.desc&limit=50');
+    if (!rows.length) {
+      body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)">No hay cotizaciones guardadas todavía</div>';
+      return;
+    }
+    let html = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+      <thead><tr style="color:var(--text3);text-transform:uppercase;font-size:10px;letter-spacing:.05em">
+        <th style="text-align:left;padding:8px 4px">Folio</th>
+        <th style="text-align:left;padding:8px 4px">Cliente</th>
+        <th style="text-align:left;padding:8px 4px">Producto</th>
+        <th style="text-align:right;padding:8px 4px">Piezas</th>
+        <th style="text-align:right;padding:8px 4px">Costo unit</th>
+        <th style="text-align:right;padding:8px 4px">Fecha</th>
+        <th style="text-align:center;padding:8px 4px">Estado</th>
+        <th></th>
+      </tr></thead><tbody>`;
+    rows.forEach(r => {
+      const costoU = r.resultados_json?.costo_unitario;
+      const fecha = new Date(r.creado_at).toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'});
+      const estadoColor = {borrador:'#6b7280', enviada:'#3b82f6', aprobada:'#16a34a', rechazada:'#dc2626', cancelada:'#6b7280'}[r.estado] || '#6b7280';
+      html += `<tr style="border-top:1px solid var(--border)">
+        <td style="padding:8px 4px;font-family:'Space Mono',monospace;font-weight:600">${r.folio}</td>
+        <td style="padding:8px 4px">${r.cliente||'—'}${r.sub_cliente?'<div style=\"font-size:10px;color:var(--text3)\">'+r.sub_cliente+'</div>':''}</td>
+        <td style="padding:8px 4px;color:var(--text2)">${r.producto||'—'}</td>
+        <td style="text-align:right;padding:8px 4px;color:var(--text2)">${(r.piezas||0).toLocaleString('en-US')}</td>
+        <td style="text-align:right;padding:8px 4px;font-weight:600">${costoU?'$'+costoU.toFixed(2):'—'}</td>
+        <td style="text-align:right;padding:8px 4px;color:var(--text3);font-size:11px">${fecha}</td>
+        <td style="text-align:center;padding:8px 4px"><span style="background:${estadoColor}22;color:${estadoColor};font-size:9px;padding:2px 6px;border-radius:4px;text-transform:uppercase;font-weight:600">${r.estado}</span></td>
+        <td style="text-align:right;padding:8px 4px"><button class="btn btn-ghost btn-xs" onclick="cotV2Abrir('${r.id}')">📂 Abrir</button></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--red)">Error: ' + e.message + '</div>';
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// Abrir cotización existente
+// ────────────────────────────────────────────────────────────────
+async function cotV2Abrir(id){
+  try {
+    const rows = await sbGet('cotizaciones_v2', 'id=eq.' + id + '&select=*');
+    if (!rows.length) { toast('No encontrada', 'err'); return; }
+    const c = rows[0];
+    COTV2.editingId = c.id;
+    COTV2.folio = c.folio;
+    setTxt('cotv2-folio-titulo', c.folio);
+    // Cargar inputs
+    const i = c.inputs_json || {};
+    document.getElementById('cotv2-cliente').value = i.cliente || '';
+    document.getElementById('cotv2-subcli').value = i.sub_cliente || '';
+    document.getElementById('cotv2-producto').value = i.producto || '';
+    document.getElementById('cotv2-cap').value = i.capacidad_ml || 700;
+    document.getElementById('cotv2-piezas').value = i.piezas || 0;
+    document.getElementById('cotv2-colores').value = i.colores || 0;
+    document.getElementById('cotv2-merma').value = i.merma_global ?? 3;
+    // Materiales cliente
+    const mc = i.materiales_cliente || {};
+    document.getElementById('cotv2-cli-bot-peso').value = mc.botella?.peso ?? 52;
+    document.getElementById('cotv2-cli-bot-colada').value = mc.botella?.colada ?? 8;
+    document.getElementById('cotv2-cli-bot-merma').value = mc.botella?.merma ?? 3;
+    document.getElementById('cotv2-cli-tap-peso').value = mc.tapa?.peso ?? 9;
+    document.getElementById('cotv2-cli-tap-colada').value = mc.tapa?.colada ?? 1;
+    document.getElementById('cotv2-cli-tap-merma').value = mc.tapa?.merma ?? 2;
+    document.getElementById('cotv2-cli-chu-merma').value = mc.chupon?.merma ?? 2;
+    document.getElementById('cotv2-cli-lin-merma').value = mc.liner?.merma ?? 1;
+    document.getElementById('cotv2-cli-caj-porcaja').value = mc.cajas?.pzas_por_caja ?? 40;
+    // Master batch
+    const mb = i.master_batch || {};
+    document.getElementById('cotv2-mb-bot-pct').value = mb.botella?.pct ?? 3;
+    document.getElementById('cotv2-mb-bot-merma').value = mb.botella?.merma ?? 2;
+    document.getElementById('cotv2-mb-bot-pk').value = mb.botella?.precio_kg ?? 185;
+    document.getElementById('cotv2-mb-tap-pct').value = mb.tapa?.pct ?? 4;
+    document.getElementById('cotv2-mb-tap-merma').value = mb.tapa?.merma ?? 2;
+    document.getElementById('cotv2-mb-tap-pk').value = mb.tapa?.precio_kg ?? 215;
+    // Fabricación
+    const fab = i.fabricacion || {};
+    document.getElementById('cotv2-fab-bot-pza').value = fab.botella?.precio_pza ?? 1.2;
+    document.getElementById('cotv2-fab-tap-pza').value = fab.tapa?.precio_pza ?? 0.65;
+    // Tintas
+    COTV2.tintas = i.tintas && i.tintas.length ? i.tintas.map(t=>({nombre:t.nombre, color:t.color||'#9ca3af', g_pza:t.g_pza||0, merma:t.merma||0, precio_kg:t.precio_kg||0})) : [];
+    // Pantallas + positivos
+    document.getElementById('cotv2-pant-num').value = i.pantallas?.num ?? i.colores ?? 3;
+    document.getElementById('cotv2-pant-pu').value = i.pantallas?.precio_unitario ?? 500;
+    document.getElementById('cotv2-pos-num').value = i.positivos?.num ?? i.colores ?? 3;
+    document.getElementById('cotv2-pos-pu').value = i.positivos?.precio_unitario ?? 230;
+    // MO impresión
+    document.getElementById('cotv2-mo-imp-pza').value = i.mo_impresion?.precio_pza_por_tinta ?? 0.35;
+    // Ensamble
+    document.getElementById('cotv2-ens-pza').value = i.ensamble?.precio_pza ?? 0.85;
+    // Empaque
+    document.getElementById('cotv2-emp-papel-pza').value = i.empaque?.papel_pza ?? 0.15;
+    document.getElementById('cotv2-emp-tag-pza').value = i.empaque?.tag_pza ?? 0.15;
+    // Tiempos
+    document.getElementById('cotv2-tp-bot-seg').value = i.tiempos?.botella_seg ?? 12;
+    document.getElementById('cotv2-tp-tap-seg').value = i.tiempos?.tapa_seg ?? 4;
+    document.getElementById('cotv2-tp-imp-seg').value = i.tiempos?.impresion_seg ?? 18;
+    // Precio
+    document.getElementById('cotv2-precio-unit').value = i.precio_unitario_cliente ?? 7.5;
+
+    cotV2RenderTintas();  // ya llama a Recalc
+    closeModal('modal-cotv2-listado');
+    toast('Cotización cargada', 'ok');
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// Generar PDFs (interno / cliente) — placeholder por ahora
+// ────────────────────────────────────────────────────────────────
+function cotV2PDF(tipo){
+  if (!COTV2.editingId) { toast('Guarda la cotización primero', 'err'); return; }
+  toast('PDF ' + tipo + ' — próximo commit', 'ok');
+  // TODO: endpoint /api/generate-cotizacion-pdf?id=&tipo=
+}
+
+// Init cuando entra a la página del cotizador
+function cotV2Init(){
+  cotV2CargarClientes();
+  cotV2RenderTintas();  // hace Recalc dentro
+}
 
 </script>
 </body>
