@@ -157,12 +157,12 @@ async function buildPDFInterno(cot, doc, fonts) {
   ];
   y = drawTable(page, '1 · MATERIALES QUE APORTA EL CLIENTE (referencia, sin costo)', ['Componente', 'Kg totales', 'Piezas'], rowsMC, 40, y, colsMC, fonts);
 
-  // Master batch
-  const mb = inputs.master_batch || {};
-  const rowsMB = [
-    ['Botella', `${mb.botella?.pct||0}%`, kg(mb.botella?.kg), money(mb.botella?.precio_kg), money(mb.botella?.costo), money(mb.botella?.venta), money(mb.botella?.utilidad)],
-    ['Tapa', `${mb.tapa?.pct||0}%`, kg(mb.tapa?.kg), money(mb.tapa?.precio_kg), money(mb.tapa?.costo), money(mb.tapa?.venta), money(mb.tapa?.utilidad)],
-    ['Subtotal', '', '', '', money(st.master_batch?.costo), money(st.master_batch?.venta), money(st.master_batch?.utilidad)],
+  // Fabricación
+  const fab = inputs.fabricacion || {};
+  const rowsFab = [
+    ['Soplado botella', money(fab.botella?.precio_pza), int(fab.botella?.pzas), money(fab.botella?.costo), money(fab.botella?.venta_pza), money(fab.botella?.venta), money(fab.botella?.utilidad)],
+    ['Inyección tapa', money(fab.tapa?.precio_pza), int(fab.tapa?.pzas), money(fab.tapa?.costo), money(fab.tapa?.venta_pza), money(fab.tapa?.venta), money(fab.tapa?.utilidad)],
+    ['Subtotal', '', '', money(st.fabricacion?.costo), '', money(st.fabricacion?.venta), money(st.fabricacion?.utilidad)],
   ];
   const cols7 = [
     {x: 46, align: 'left'},
@@ -173,16 +173,7 @@ async function buildPDFInterno(cot, doc, fonts) {
     {x: 470, align: 'right'},
     {x: W - 46, align: 'right'},
   ];
-  y = drawTable(page, '2 · MASTER BATCH', ['Aplica a', '% peso', 'Kg MB', '$/kg', 'Costo', 'Venta', 'Utilidad'], rowsMB, 40, y, cols7, fonts);
-
-  // Fabricación
-  const fab = inputs.fabricacion || {};
-  const rowsFab = [
-    ['Soplado botella', money(fab.botella?.precio_pza), int(fab.botella?.pzas), money(fab.botella?.costo), money(fab.botella?.venta_pza), money(fab.botella?.venta), money(fab.botella?.utilidad)],
-    ['Inyección tapa', money(fab.tapa?.precio_pza), int(fab.tapa?.pzas), money(fab.tapa?.costo), money(fab.tapa?.venta_pza), money(fab.tapa?.venta), money(fab.tapa?.utilidad)],
-    ['Subtotal', '', '', money(st.fabricacion?.costo), '', money(st.fabricacion?.venta), money(st.fabricacion?.utilidad)],
-  ];
-  y = drawTable(page, '3 · FABRICACIÓN', ['Concepto', '$ costo/pza', 'Piezas', 'Costo', '$ venta/pza', 'Venta', 'Utilidad'], rowsFab, 40, y, cols7, fonts);
+  y = drawTable(page, '2 · FABRICACIÓN', ['Concepto', '$ costo/pza', 'Piezas', 'Costo', '$ venta/pza', 'Venta', 'Utilidad'], rowsFab, 40, y, cols7, fonts);
 
   if (y < 220) { page = doc.addPage([595, 842]); drawHeader(page, cot, 'interno', fonts); y = page.getHeight() - 80; }
 
@@ -221,7 +212,7 @@ async function buildPDFInterno(cot, doc, fonts) {
     {x: 470, align: 'right'},
     {x: W - 46, align: 'right'},
   ];
-  y = drawTable(page, '4 · TINTAS (componentes + aditivos)', ['Color / componente', '% o g/pza', 'Kg', '$/kg', 'Costo', 'Costo/venta', 'Utilidad'], rowsTin, 40, y, colsTin, fonts);
+  y = drawTable(page, '3 · TINTAS (componentes + aditivos)', ['Color / componente', '% o g/pza', 'Kg', '$/kg', 'Costo', 'Costo/venta', 'Utilidad'], rowsTin, 40, y, colsTin, fonts);
 
   if (y < 200) { page = doc.addPage([595, 842]); drawHeader(page, cot, 'interno', fonts); y = page.getHeight() - 80; }
 
@@ -231,14 +222,14 @@ async function buildPDFInterno(cot, doc, fonts) {
     ['Positivos', String(inputs.positivos?.num||0), money(inputs.positivos?.precio_unitario), money(inputs.positivos?.costo), money(inputs.positivos?.venta_unitario), money(inputs.positivos?.venta), money(inputs.positivos?.utilidad)],
     ['Subtotal', '', '', money(st.pantallas_positivos?.costo), '', money(st.pantallas_positivos?.venta), money(st.pantallas_positivos?.utilidad)],
   ];
-  y = drawTable(page, '5 · PANTALLAS Y POSITIVOS', ['Concepto', 'Cant.', '$ costo/u', 'Costo', '$ venta/u', 'Venta', 'Utilidad'], rowsPP, 40, y, cols7, fonts);
+  y = drawTable(page, '4 · PANTALLAS Y POSITIVOS', ['Concepto', 'Cant.', '$ costo/u', 'Costo', '$ venta/u', 'Venta', 'Utilidad'], rowsPP, 40, y, cols7, fonts);
 
   // MO impresión + Empaque
   const rowsMOEMP = [
     ['MO impresión', money(inputs.mo_impresion?.precio_pza_por_tinta) + '/pza·tinta', String((inputs.mo_impresion?.tintas||0)) + ' × ' + int(inputs.mo_impresion?.pzas), money(st.mo_impresion?.costo), money(inputs.mo_impresion?.venta_pza_por_tinta) + '/pza·tinta', money(st.mo_impresion?.venta), money(st.mo_impresion?.utilidad)],
     ['Empaque (papel+tag)', money(inputs.empaque?.precio_pza) + '/pza', int(inputs.empaque?.pzas) + ' pzas', money(st.empaque?.costo), money(inputs.empaque?.venta_pza) + '/pza', money(st.empaque?.venta), money(st.empaque?.utilidad)],
   ];
-  y = drawTable(page, '6 · MANO DE OBRA + EMPAQUE', ['Concepto', '$ costo', 'Cantidad', 'Costo', '$ venta', 'Venta', 'Utilidad'], rowsMOEMP, 40, y, cols7, fonts);
+  y = drawTable(page, '5 · MANO DE OBRA + EMPAQUE', ['Concepto', '$ costo', 'Cantidad', 'Costo', '$ venta', 'Venta', 'Utilidad'], rowsMOEMP, 40, y, cols7, fonts);
 
   // Tiempos (paralelo)
   const tp = inputs.tiempos || {};
@@ -253,7 +244,7 @@ async function buildPDFInterno(cot, doc, fonts) {
     {x: 300, align: 'right'},
     {x: W - 46, align: 'right'},
   ];
-  y = drawTable(page, '7 · TIEMPOS (procesos en paralelo)', ['Operación', 'Seg/pza', 'Horas'], rowsTp, 40, y, colsTp, fonts);
+  y = drawTable(page, '6 · TIEMPOS (procesos en paralelo)', ['Operación', 'Seg/pza', 'Horas'], rowsTp, 40, y, colsTp, fonts);
 
   drawText(page, 'Documento interno — no compartir con el cliente', W/2, 30, {size: 7, font: fonts.reg, color: rgb(0.55, 0.55, 0.55), align: 'center'});
 }

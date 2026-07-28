@@ -376,60 +376,9 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
           </tbody>
         </table>
       </div>
-
-      <!-- 2. Master batch (Sharp) -->
+      <!-- 2. Fabricación (soplado + inyección) -->
       <div class="card">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">2 · Master batch (lo aporta Sharp)</div>
-        <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
-          <thead>
-            <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
-              <th style="text-align:left;padding:4px;font-weight:600;width:16%">Aplica a</th>
-              <th style="text-align:right;padding:4px;font-weight:600">% peso</th>
-              <th style="text-align:right;padding:4px;font-weight:600">Merma %</th>
-              <th style="text-align:right;padding:4px;font-weight:600">Kg base</th>
-              <th style="text-align:right;padding:4px;font-weight:600">Kg MB</th>
-              <th style="text-align:right;padding:4px;font-weight:600">$ / kg</th>
-              <th style="text-align:right;padding:4px;font-weight:600">Costo</th>
-              <th style="text-align:right;padding:4px;font-weight:600;color:var(--green)">$ venta</th>
-              <th style="text-align:right;padding:4px;font-weight:600;color:var(--green)">Utilidad</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-top:1px solid var(--border)">
-              <td style="padding:5px">Botella</td>
-              <td><input type="number" id="cotv2-mb-bot-pct" value="3" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
-              <td><input type="number" id="cotv2-mb-bot-merma" value="2" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
-              <td id="cotv2-mb-bot-kgbase" style="text-align:right;color:var(--text2);padding-right:6px">618.0</td>
-              <td id="cotv2-mb-bot-kgmb" style="text-align:right;color:var(--text2);padding-right:6px">18.9</td>
-              <td><input type="number" id="cotv2-mb-bot-pk" value="185" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
-              <td id="cotv2-mb-bot-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$3,499</td>
-              <td><input type="number" id="cotv2-mb-bot-venta" value="5000" step="1" oninput="cotV2Recalc()" style="width:100%;text-align:right;color:var(--green)"></td>
-              <td id="cotv2-mb-bot-util" style="text-align:right;padding-right:4px;font-weight:600;color:var(--green)">$1,501</td>
-            </tr>
-            <tr style="border-top:1px solid var(--border)">
-              <td style="padding:5px">Tapa</td>
-              <td><input type="number" id="cotv2-mb-tap-pct" value="4" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
-              <td><input type="number" id="cotv2-mb-tap-merma" value="2" step="0.1" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
-              <td id="cotv2-mb-tap-kgbase" style="text-align:right;color:var(--text2);padding-right:6px">102.0</td>
-              <td id="cotv2-mb-tap-kgmb" style="text-align:right;color:var(--text2);padding-right:6px">4.16</td>
-              <td><input type="number" id="cotv2-mb-tap-pk" value="215" step="0.01" oninput="cotV2Recalc()" style="width:100%;text-align:right"></td>
-              <td id="cotv2-mb-tap-costo" style="text-align:right;padding-right:4px;font-weight:600;color:var(--amber)">$895</td>
-              <td><input type="number" id="cotv2-mb-tap-venta" value="1200" step="1" oninput="cotV2Recalc()" style="width:100%;text-align:right;color:var(--green)"></td>
-              <td id="cotv2-mb-tap-util" style="text-align:right;padding-right:4px;font-weight:600;color:var(--green)">$305</td>
-            </tr>
-            <tr style="border-top:1px solid var(--border2);font-weight:600">
-              <td colspan="6" style="padding:6px;color:var(--text2)">Subtotal master batch</td>
-              <td id="cotv2-mb-subtotal" style="text-align:right;padding:6px 4px;color:var(--amber)">$4,394</td>
-              <td id="cotv2-mb-venta-sub" style="text-align:right;padding:6px 4px;color:var(--green)">$6,200</td>
-              <td id="cotv2-mb-util-sub" style="text-align:right;padding:6px 4px;color:var(--green)">$1,806</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- 3. Fabricación (soplado + inyección) -->
-      <div class="card">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">3 · Fabricación (soplado e inyección)</div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">2 · Fabricación (soplado e inyección)</div>
         <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
           <thead>
             <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
@@ -472,10 +421,10 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
         </table>
       </div>
 
-      <!-- 4. Tintas -->
+      <!-- 3. Tintas -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">4 · Tintas de impresión</div>
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">3 · Tintas de impresión</div>
           <div style="font-size:11px;color:var(--text3)">
             Fórmula: g/pza × <strong id="cotv2-tin-pzas-lbl" style="color:var(--text2)">10,000</strong> pzas × (1 + merma%)
           </div>
@@ -487,9 +436,9 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
         </div>
       </div>
 
-      <!-- 5. Pantallas y positivos -->
+      <!-- 4. Pantallas y positivos -->
       <div class="card">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">5 · Pantallas y positivos</div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">4 · Pantallas y positivos</div>
         <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
           <thead>
             <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
@@ -532,9 +481,9 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
         </table>
       </div>
 
-      <!-- 6. MO de impresión -->
+      <!-- 5. MO de impresión -->
       <div class="card">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">6 · Mano de obra de impresión</div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">5 · Mano de obra de impresión</div>
         <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
           <thead>
             <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
@@ -559,9 +508,9 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
         </table>
       </div>
 
-      <!-- 7. Empaque -->
+      <!-- 6. Empaque -->
       <div class="card">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">7 · Empaque (papel + tag)</div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">6 · Empaque (papel + tag)</div>
         <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
           <thead>
             <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
@@ -586,9 +535,9 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
         </table>
       </div>
 
-      <!-- 8. Tiempos estimados (informativo) -->
+      <!-- 7. Tiempos estimados (informativo) -->
       <div class="card">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">8 · Tiempos estimados (para fecha de entrega)</div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">7 · Tiempos estimados (para fecha de entrega)</div>
         <table style="width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed">
           <thead>
             <tr style="color:var(--text3);font-size:10px;letter-spacing:.04em;text-transform:uppercase">
@@ -647,7 +596,6 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
             </tr>
           </thead>
           <tbody>
-            <tr><td style="padding:2px 0;color:var(--text2)">MB</td><td id="cotv2-sum-mb" style="text-align:right;padding:2px 0">$0</td><td id="cotv2-sumv-mb" style="text-align:right;padding:2px 0;color:var(--green)">$0</td><td id="cotv2-sumu-mb" style="text-align:right;padding:2px 0;color:var(--green)">$0</td></tr>
             <tr><td style="padding:2px 0;color:var(--text2)">Fabricación</td><td id="cotv2-sum-fab" style="text-align:right;padding:2px 0">$0</td><td id="cotv2-sumv-fab" style="text-align:right;padding:2px 0;color:var(--green)">$0</td><td id="cotv2-sumu-fab" style="text-align:right;padding:2px 0;color:var(--green)">$0</td></tr>
             <tr><td style="padding:2px 0;color:var(--text2)">Tintas</td><td id="cotv2-sum-tin" style="text-align:right;padding:2px 0">$0</td><td id="cotv2-sumv-tin" style="text-align:right;padding:2px 0;color:var(--green)">$0</td><td id="cotv2-sumu-tin" style="text-align:right;padding:2px 0;color:var(--green)">$0</td></tr>
             <tr><td style="padding:2px 0;color:var(--text2)">Pant+pos</td><td id="cotv2-sum-pp" style="text-align:right;padding:2px 0">$0</td><td id="cotv2-sumv-pp" style="text-align:right;padding:2px 0;color:var(--green)">$0</td><td id="cotv2-sumu-pp" style="text-align:right;padding:2px 0;color:var(--green)">$0</td></tr>
@@ -5960,35 +5908,7 @@ function cotV2Recalc(){
   const cajas = Math.ceil(piezas / cajaPor);
   setTxt('cotv2-cli-caj-total', cajas.toLocaleString('en-US') + ' cajas');
 
-  // ── 2. Master batch: costo + venta + utilidad ────────────────────────
-  const mbBotPct = num('cotv2-mb-bot-pct'), mbBotMerma = num('cotv2-mb-bot-merma'), mbBotPk = num('cotv2-mb-bot-pk');
-  const mbBotKgMb = (botKg * (mbBotPct/100)) / (1 - Math.min(0.99, mbBotMerma/100));
-  const mbBotCosto = mbBotKgMb * mbBotPk;
-  const mbBotVenta = num('cotv2-mb-bot-venta');
-  const mbBotUtil = mbBotVenta - mbBotCosto;
-  setTxt('cotv2-mb-bot-kgbase', botKg.toFixed(1));
-  setTxt('cotv2-mb-bot-kgmb', mbBotKgMb.toFixed(2));
-  setTxt('cotv2-mb-bot-costo', $$(mbBotCosto));
-  setTxt('cotv2-mb-bot-util', $$(mbBotUtil));
-
-  const mbTapPct = num('cotv2-mb-tap-pct'), mbTapMerma = num('cotv2-mb-tap-merma'), mbTapPk = num('cotv2-mb-tap-pk');
-  const mbTapKgMb = (tapKg * (mbTapPct/100)) / (1 - Math.min(0.99, mbTapMerma/100));
-  const mbTapCosto = mbTapKgMb * mbTapPk;
-  const mbTapVenta = num('cotv2-mb-tap-venta');
-  const mbTapUtil = mbTapVenta - mbTapCosto;
-  setTxt('cotv2-mb-tap-kgbase', tapKg.toFixed(1));
-  setTxt('cotv2-mb-tap-kgmb', mbTapKgMb.toFixed(2));
-  setTxt('cotv2-mb-tap-costo', $$(mbTapCosto));
-  setTxt('cotv2-mb-tap-util', $$(mbTapUtil));
-
-  const mbSub = mbBotCosto + mbTapCosto;
-  const mbVentaSub = mbBotVenta + mbTapVenta;
-  const mbUtilSub = mbVentaSub - mbSub;
-  setTxt('cotv2-mb-subtotal', $$(mbSub));
-  setTxt('cotv2-mb-venta-sub', $$(mbVentaSub));
-  setTxt('cotv2-mb-util-sub', $$(mbUtilSub));
-
-  // ── 3. Fabricación: costo/pza + venta/pza ─────────────────────────────
+  // ── 2. Fabricación: costo/pza + venta/pza ─────────────────────────────
   const fabBotPza = num('cotv2-fab-bot-pza');
   const fabBotVpza = num('cotv2-fab-bot-vpza');
   const fabBotCosto = fabBotPza * botPzas;
@@ -6130,9 +6050,6 @@ function cotV2Recalc(){
   setTxt('cotv2-fecha-sub', tpTotalDias + ' días laborales (procesos en paralelo)');
 
   // ── SIDEBAR resumen del proyecto ──────────────────────────────────────
-  setTxt('cotv2-sum-mb', $$(mbSub));
-  setTxt('cotv2-sumv-mb', $$(mbVentaSub));
-  setTxt('cotv2-sumu-mb', $$(mbUtilSub));
   setTxt('cotv2-sum-fab', $$(fabSub));
   setTxt('cotv2-sumv-fab', $$(fabVentaSub));
   setTxt('cotv2-sumu-fab', $$(fabUtilSub));
@@ -6149,8 +6066,8 @@ function cotV2Recalc(){
   setTxt('cotv2-sumv-emp', $$(empVenta));
   setTxt('cotv2-sumu-emp', $$(empUtil));
 
-  const costoTotal = mbSub + fabSub + tinSub + ppSub + moCosto + empSub;
-  const ventaTotal = mbVentaSub + fabVentaSub + tinVentaSub + ppVentaSub + moVenta + empVenta;
+  const costoTotal = fabSub + tinSub + ppSub + moCosto + empSub;
+  const ventaTotal = fabVentaSub + tinVentaSub + ppVentaSub + moVenta + empVenta;
   const utilTotal = ventaTotal - costoTotal;
   const costoUnit = piezas > 0 ? costoTotal / piezas : 0;
   const precioUnit = piezas > 0 ? ventaTotal / piezas : 0;
@@ -6178,10 +6095,6 @@ function cotV2Recalc(){
         liner:   {merma: linMerma, pzas: linPzas},
         cajas:   {pzas_por_caja: cajaPor, total: cajas},
       },
-      master_batch: {
-        botella: {pct: mbBotPct, merma: mbBotMerma, precio_kg: mbBotPk, kg: mbBotKgMb, costo: mbBotCosto, venta: mbBotVenta, utilidad: mbBotUtil},
-        tapa:    {pct: mbTapPct, merma: mbTapMerma, precio_kg: mbTapPk, kg: mbTapKgMb, costo: mbTapCosto, venta: mbTapVenta, utilidad: mbTapUtil},
-      },
       fabricacion: {
         botella: {precio_pza: fabBotPza, venta_pza: fabBotVpza, pzas: botPzas, costo: fabBotCosto, venta: fabBotVenta, utilidad: fabBotUtil},
         tapa:    {precio_pza: fabTapPza, venta_pza: fabTapVpza, pzas: tapPzas, costo: fabTapCosto, venta: fabTapVenta, utilidad: fabTapUtil},
@@ -6203,7 +6116,6 @@ function cotV2Recalc(){
       utilidad: utilTotal, margen_pct: margen,
       fecha_entrega: fecha.toISOString().slice(0,10),
       subtotales: {
-        master_batch: {costo: mbSub, venta: mbVentaSub, utilidad: mbUtilSub},
         fabricacion:  {costo: fabSub, venta: fabVentaSub, utilidad: fabUtilSub},
         tintas:       {costo: tinSub, venta: tinVentaSub, utilidad: tinUtilSub},
         pantallas_positivos: {costo: ppSub, venta: ppVentaSub, utilidad: ppUtilSub},
@@ -6375,17 +6287,6 @@ async function cotV2Abrir(id){
     setVal('cotv2-cli-chu-merma', mc.chupon?.merma ?? 2);
     setVal('cotv2-cli-lin-merma', mc.liner?.merma ?? 1);
     setVal('cotv2-cli-caj-porcaja', mc.cajas?.pzas_por_caja ?? 40);
-
-    // Master batch (costo + venta)
-    const mb = i.master_batch || {};
-    setVal('cotv2-mb-bot-pct', mb.botella?.pct ?? 3);
-    setVal('cotv2-mb-bot-merma', mb.botella?.merma ?? 2);
-    setVal('cotv2-mb-bot-pk', mb.botella?.precio_kg ?? 185);
-    setVal('cotv2-mb-bot-venta', mb.botella?.venta ?? 5000);
-    setVal('cotv2-mb-tap-pct', mb.tapa?.pct ?? 4);
-    setVal('cotv2-mb-tap-merma', mb.tapa?.merma ?? 2);
-    setVal('cotv2-mb-tap-pk', mb.tapa?.precio_kg ?? 215);
-    setVal('cotv2-mb-tap-venta', mb.tapa?.venta ?? 1200);
 
     // Fabricación (costo + venta $/pza)
     const fab = i.fabricacion || {};
