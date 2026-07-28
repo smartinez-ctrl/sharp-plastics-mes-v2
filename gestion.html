@@ -5582,9 +5582,9 @@ const COTV2 = {
   editingId: null,
   folio: null,
   tintas: [
-    {nombre:'Pantone 286 C', color:'#1e40af', g_pza:0.35, merma:12, precio_kg:420},
-    {nombre:'Pantone 185 C', color:'#dc2626', g_pza:0.28, merma:15, precio_kg:510},
-    {nombre:'Blanco',        color:'#fafafa', g_pza:0.42, merma:10, precio_kg:285},
+    {nombre:'Pantone 286 C', color:'#1e40af', g_pza:0.35, componentes:[{nombre:'Azul base',pct:100,merma:12,precio_kg:420}], aditivos:[]},
+    {nombre:'Pantone 185 C', color:'#dc2626', g_pza:0.28, componentes:[{nombre:'Rojo base',pct:100,merma:15,precio_kg:510}], aditivos:[]},
+    {nombre:'Blanco',        color:'#fafafa', g_pza:0.42, componentes:[{nombre:'Blanco',pct:100,merma:10,precio_kg:285}], aditivos:[]},
   ],
 };
 
@@ -5594,7 +5594,10 @@ const num = id => parseFloat(document.getElementById(id)?.value)||0;
 const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
 
 // ────────────────────────────────────────────────────────────────
-// Render dinámico de tintas (con aditivos y selector de catálogo)
+// Render dinámico de tintas
+// Modelo: cada color final tiene un gramaje total por pieza, se
+// compone de 1+ tintas base con % de mezcla (que suman 100%), y
+// puede tener 0+ aditivos que se aplican sobre el gramaje total.
 // ────────────────────────────────────────────────────────────────
 function cotV2RenderTintas(){
   const cont = document.getElementById('cotv2-tintas-container');
@@ -5602,72 +5605,144 @@ function cotV2RenderTintas(){
   const colores = parseInt(document.getElementById('cotv2-colores')?.value)||0;
   // Ajustar el array COTV2.tintas al número de colores
   while (COTV2.tintas.length < colores) {
-    COTV2.tintas.push({nombre:'Color '+(COTV2.tintas.length+1), color:'#9ca3af', g_pza:0.3, merma:12, precio_kg:400, aditivos:[]});
+    COTV2.tintas.push({
+      nombre: 'Color ' + (COTV2.tintas.length + 1),
+      color: '#9ca3af',
+      g_pza: 0.35,          // gramaje total del color final por pieza
+      componentes: [{nombre: 'Tinta base', pct: 100, merma: 12, precio_kg: 400}],
+      aditivos: [],
+    });
   }
   while (COTV2.tintas.length > colores) COTV2.tintas.pop();
+
+  // Migración desde el modelo viejo: si algún color tenía g_pza+merma+precio_kg
+  // directamente (sin componentes), lo convertimos en un solo componente al 100%
+  COTV2.tintas.forEach(t => {
+    if (!Array.isArray(t.componentes)) {
+      t.componentes = [{
+        nombre: 'Tinta base',
+        pct: 100,
+        merma: t.merma || 12,
+        precio_kg: t.precio_kg || 400,
+      }];
+      if (t.g_pza == null) t.g_pza = 0.35;
+    }
+    if (!Array.isArray(t.aditivos)) t.aditivos = [];
+  });
 
   if (colores === 0) {
     cont.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px">Especifica el número de colores arriba</div>';
     return;
   }
 
-  const cardsHtml = COTV2.tintas.map((t, i) => {
-    const aditivosHtml = (t.aditivos||[]).map((a, ai) => `
-      <tr style="border-top:1px solid var(--border)">
-        <td style="padding:4px 6px;color:var(--text2);font-size:11.5px">↳ ${a.nombre||'Aditivo'}</td>
-        <td style="padding:4px"><input type="number" value="${a.pct||0}" step="0.1" min="0" oninput="COTV2.tintas[${i}].aditivos[${ai}].pct=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right" title="% del gramaje de la tinta"></td>
-        <td style="padding:4px"><input type="number" value="${a.merma||0}" step="0.1" min="0" oninput="COTV2.tintas[${i}].aditivos[${ai}].merma=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
-        <td style="padding:4px"><input type="number" value="${a.precio_kg||0}" step="0.01" min="0" oninput="COTV2.tintas[${i}].aditivos[${ai}].precio_kg=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
-        <td colspan="2" style="text-align:right;padding:4px 6px;color:var(--text3);font-size:11px">
-          <button onclick="COTV2.tintas[${i}].aditivos.splice(${ai},1);cotV2RenderTintas()" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0 4px">×</button>
-        </td>
-      </tr>
-    `).join('');
-
-    return `
-      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:8px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <span style="display:inline-block;width:12px;height:12px;background:${t.color};border-radius:3px;${t.color==='#fafafa'||t.color==='#ffffff'?'border:1px solid #d4d4d8':''}"></span>
-          <input type="text" value="${(t.nombre||'').replace(/"/g,'&quot;')}" placeholder="Pantone 286 C" onchange="COTV2.tintas[${i}].nombre=this.value" style="flex:1;background:transparent;border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px">
-          <button onclick="cotV2AbrirCatalogoTinta(${i})" title="Jalar del catálogo" style="background:var(--bg4);border:1px solid var(--border2);color:var(--amber);font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer">📚 Catálogo</button>
-        </div>
-        <table style="width:100%;font-size:11.5px;border-collapse:collapse;table-layout:fixed">
-          <thead>
-            <tr style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.04em">
-              <th style="text-align:left;padding:2px 6px;font-weight:600;width:32%">Componente</th>
-              <th style="text-align:right;padding:2px 4px;font-weight:600">g/pza <span style="text-transform:none;font-weight:400">o %</span></th>
-              <th style="text-align:right;padding:2px 4px;font-weight:600">Merma %</th>
-              <th style="text-align:right;padding:2px 4px;font-weight:600">$ / kg</th>
-              <th style="text-align:right;padding:2px 4px;font-weight:600">Kg total</th>
-              <th style="text-align:right;padding:2px 6px;font-weight:600">Costo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="padding:4px 6px">Tinta base</td>
-              <td style="padding:4px"><input type="number" value="${t.g_pza}" step="0.01" min="0" oninput="COTV2.tintas[${i}].g_pza=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right" title="Gramos por pieza"></td>
-              <td style="padding:4px"><input type="number" value="${t.merma}" step="0.1" min="0" oninput="COTV2.tintas[${i}].merma=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
-              <td style="padding:4px"><input type="number" value="${t.precio_kg}" step="0.01" min="0" oninput="COTV2.tintas[${i}].precio_kg=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
-              <td id="cotv2-tin-kg-${i}" style="text-align:right;color:var(--text2);padding:4px 6px">—</td>
-              <td id="cotv2-tin-costo-${i}" style="text-align:right;color:var(--amber);font-weight:600;padding:4px 6px">—</td>
-            </tr>
-            ${aditivosHtml}
-          </tbody>
-        </table>
-        <div style="margin-top:6px">
-          <button onclick="cotV2AbrirCatalogoAditivo(${i})" style="background:transparent;border:1px dashed var(--border2);color:var(--text3);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer">+ Aditivo del catálogo</button>
-          <button onclick="COTV2.tintas[${i}].aditivos=COTV2.tintas[${i}].aditivos||[];COTV2.tintas[${i}].aditivos.push({nombre:'Aditivo',pct:0,merma:0,precio_kg:0});cotV2RenderTintas()" style="background:transparent;border:1px dashed var(--border2);color:var(--text3);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:4px">+ Aditivo manual</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-
+  const cardsHtml = COTV2.tintas.map((t, i) => cotV2ColorCardHtml(t, i)).join('');
   cont.innerHTML = cardsHtml;
   cotV2Recalc();
 }
 
+// HTML de un card de color (una tinta final)
+function cotV2ColorCardHtml(t, i){
+  const totalPct = (t.componentes||[]).reduce((s,c)=>s+(parseFloat(c.pct)||0),0);
+  const pctOK = Math.abs(totalPct - 100) < 0.01;
+  const pctColor = pctOK ? 'var(--green)' : 'var(--red)';
+
+  const componentesRows = (t.componentes||[]).map((c, ci) => `
+    <tr style="border-top:1px solid var(--border)">
+      <td style="padding:4px 6px">
+        <input type="text" value="${(c.nombre||'').replace(/"/g,'&quot;')}" placeholder="Nombre" onchange="COTV2.tintas[${i}].componentes[${ci}].nombre=this.value" style="width:100%;font-size:11.5px">
+      </td>
+      <td style="padding:4px"><input type="number" value="${c.pct||0}" step="0.1" min="0" max="100" oninput="COTV2.tintas[${i}].componentes[${ci}].pct=parseFloat(this.value)||0;cotV2RenderTintas()" style="width:100%;text-align:right"></td>
+      <td style="padding:4px"><input type="number" value="${c.merma||0}" step="0.1" min="0" oninput="COTV2.tintas[${i}].componentes[${ci}].merma=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
+      <td style="padding:4px"><input type="number" value="${c.precio_kg||0}" step="0.01" min="0" oninput="COTV2.tintas[${i}].componentes[${ci}].precio_kg=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
+      <td id="cotv2-tin-${i}-comp-${ci}-kg" style="text-align:right;color:var(--text2);padding:4px 6px;font-size:11.5px">—</td>
+      <td id="cotv2-tin-${i}-comp-${ci}-costo" style="text-align:right;color:var(--amber);font-weight:600;padding:4px 6px;font-size:11.5px">—</td>
+      <td style="text-align:right;padding:4px 6px">
+        <button onclick="COTV2.tintas[${i}].componentes.splice(${ci},1);cotV2RenderTintas()" title="Eliminar" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0 4px">×</button>
+      </td>
+    </tr>
+  `).join('');
+
+  const aditivosRows = (t.aditivos||[]).map((a, ai) => `
+    <tr style="border-top:1px solid var(--border)">
+      <td style="padding:4px 6px">
+        <span style="color:var(--text3)">↳ </span><input type="text" value="${(a.nombre||'').replace(/"/g,'&quot;')}" placeholder="Aditivo" onchange="COTV2.tintas[${i}].aditivos[${ai}].nombre=this.value" style="width:calc(100% - 14px);font-size:11.5px">
+      </td>
+      <td style="padding:4px"><input type="number" value="${a.pct||0}" step="0.1" min="0" oninput="COTV2.tintas[${i}].aditivos[${ai}].pct=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right" title="% sobre gramaje total del color"></td>
+      <td style="padding:4px"><input type="number" value="${a.merma||0}" step="0.1" min="0" oninput="COTV2.tintas[${i}].aditivos[${ai}].merma=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
+      <td style="padding:4px"><input type="number" value="${a.precio_kg||0}" step="0.01" min="0" oninput="COTV2.tintas[${i}].aditivos[${ai}].precio_kg=parseFloat(this.value)||0;cotV2Recalc()" style="width:100%;text-align:right"></td>
+      <td id="cotv2-tin-${i}-adit-${ai}-kg" style="text-align:right;color:var(--text2);padding:4px 6px;font-size:11.5px">—</td>
+      <td id="cotv2-tin-${i}-adit-${ai}-costo" style="text-align:right;color:var(--amber);font-weight:600;padding:4px 6px;font-size:11.5px">—</td>
+      <td style="text-align:right;padding:4px 6px">
+        <button onclick="COTV2.tintas[${i}].aditivos.splice(${ai},1);cotV2RenderTintas()" title="Eliminar" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0 4px">×</button>
+      </td>
+    </tr>
+  `).join('');
+
+  return `
+    <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="display:inline-block;width:14px;height:14px;background:${t.color};border-radius:3px;${t.color==='#fafafa'||t.color==='#ffffff'?'border:1px solid #d4d4d8':''}"></span>
+        <input type="text" value="${(t.nombre||'').replace(/"/g,'&quot;')}" placeholder="Nombre del color (ej. Pantone 286 C)" onchange="COTV2.tintas[${i}].nombre=this.value" style="flex:1;padding:5px 8px;font-size:12px;font-weight:600">
+        <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Gramaje total</label>
+        <input type="number" value="${t.g_pza||0}" step="0.01" min="0" oninput="COTV2.tintas[${i}].g_pza=parseFloat(this.value)||0;cotV2Recalc()" style="width:70px;text-align:right" title="Gramos por pieza del color final">
+        <span style="font-size:10px;color:var(--text3)">g/pza</span>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 4px 2px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;font-weight:600">Tintas base (mezcla)</div>
+        <div style="font-size:10.5px;color:${pctColor};font-weight:600">Total: ${totalPct.toFixed(1)}%${!pctOK ? ' ⚠️' : ' ✓'}</div>
+      </div>
+      <table style="width:100%;font-size:11.5px;border-collapse:collapse;table-layout:fixed">
+        <thead>
+          <tr style="color:var(--text3);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em">
+            <th style="text-align:left;padding:2px 6px;font-weight:600;width:28%">Tinta</th>
+            <th style="text-align:right;padding:2px 4px;font-weight:600;width:12%">% mezcla</th>
+            <th style="text-align:right;padding:2px 4px;font-weight:600;width:11%">Merma %</th>
+            <th style="text-align:right;padding:2px 4px;font-weight:600;width:15%">$ / kg</th>
+            <th style="text-align:right;padding:2px 4px;font-weight:600;width:12%">Kg</th>
+            <th style="text-align:right;padding:2px 4px;font-weight:600;width:15%">Costo</th>
+            <th style="width:6%"></th>
+          </tr>
+        </thead>
+        <tbody>${componentesRows}</tbody>
+      </table>
+      <div style="margin-top:6px">
+        <button onclick="cotV2AbrirCatalogoTinta(${i})" style="background:transparent;border:1px dashed var(--border2);color:var(--amber);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer">📚 Del catálogo</button>
+        <button onclick="COTV2.tintas[${i}].componentes.push({nombre:'Tinta',pct:0,merma:12,precio_kg:400});cotV2RenderTintas()" style="background:transparent;border:1px dashed var(--border2);color:var(--text2);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:4px">+ Manual</button>
+      </div>
+
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin:12px 0 4px 2px">Aditivos (sobre el gramaje total del color)</div>
+      ${(t.aditivos||[]).length > 0 ? `
+        <table style="width:100%;font-size:11.5px;border-collapse:collapse;table-layout:fixed">
+          <thead>
+            <tr style="color:var(--text3);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em">
+              <th style="text-align:left;padding:2px 6px;font-weight:600;width:28%">Aditivo</th>
+              <th style="text-align:right;padding:2px 4px;font-weight:600;width:12%">%</th>
+              <th style="text-align:right;padding:2px 4px;font-weight:600;width:11%">Merma %</th>
+              <th style="text-align:right;padding:2px 4px;font-weight:600;width:15%">$ / kg</th>
+              <th style="text-align:right;padding:2px 4px;font-weight:600;width:12%">Kg</th>
+              <th style="text-align:right;padding:2px 4px;font-weight:600;width:15%">Costo</th>
+              <th style="width:6%"></th>
+            </tr>
+          </thead>
+          <tbody>${aditivosRows}</tbody>
+        </table>
+      ` : `<div style="font-size:10.5px;color:var(--text3);padding:4px 2px;font-style:italic">Sin aditivos</div>`}
+      <div style="margin-top:6px">
+        <button onclick="cotV2AbrirCatalogoAditivo(${i})" style="background:transparent;border:1px dashed var(--border2);color:var(--amber);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer">📚 Aditivo del catálogo</button>
+        <button onclick="COTV2.tintas[${i}].aditivos=COTV2.tintas[${i}].aditivos||[];COTV2.tintas[${i}].aditivos.push({nombre:'Aditivo',pct:3,merma:0,precio_kg:0});cotV2RenderTintas()" style="background:transparent;border:1px dashed var(--border2);color:var(--text2);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:4px">+ Manual</button>
+      </div>
+
+      <div style="border-top:1px solid var(--border2);margin-top:8px;padding-top:6px;display:flex;justify-content:space-between;font-size:11.5px;font-weight:600">
+        <span style="color:var(--text2)">Subtotal ${t.nombre}</span>
+        <span id="cotv2-tin-${i}-subtotal" style="color:var(--amber)">$0</span>
+      </div>
+    </div>
+  `;
+}
+
 // ────────────────────────────────────────────────────────────────
-// Modal para elegir tinta del catálogo
+// Modal: seleccionar tinta del catálogo (agregar como componente)
 // ────────────────────────────────────────────────────────────────
 function cotV2AbrirCatalogoTinta(idxColor){
   const tintas = (CAT && Array.isArray(CAT.tintas)) ? CAT.tintas : [];
@@ -5682,13 +5757,13 @@ function cotV2AbrirCatalogoTinta(idxColor){
               <div style="font-size:12px;font-weight:600">${t.nombre||'—'}</div>
               <div style="font-size:10px;color:var(--text3)">${t.pantone||''} · $${(t.precio_kg||0).toFixed(2)}/kg</div>
             </div>
-            <button class="btn btn-ghost btn-xs">Usar →</button>
+            <button class="btn btn-ghost btn-xs">Agregar →</button>
           </div>
         `).join('')}
       </div>
     </div>
   `;
-  cotV2AbrirModalPicker('Elegir tinta del catálogo', html);
+  cotV2AbrirModalPicker('Agregar tinta a la mezcla', html);
 }
 
 function cotV2FiltrarCatTinta(){
@@ -5698,18 +5773,19 @@ function cotV2FiltrarCatTinta(){
   });
 }
 
-function cotV2SelectTinta(idx, t){
-  const cur = COTV2.tintas[idx] || {};
-  COTV2.tintas[idx] = {
-    ...cur,
+// Al seleccionar, AGREGA la tinta como un nuevo componente de la mezcla
+function cotV2SelectTinta(idxColor, t){
+  const color = COTV2.tintas[idxColor];
+  color.componentes = color.componentes || [];
+  const totalPctActual = color.componentes.reduce((s,c)=>s+(parseFloat(c.pct)||0),0);
+  const pctSugerido = Math.max(0, 100 - totalPctActual);
+  color.componentes.push({
     nombre: t.pantone ? (t.nombre + ' · ' + t.pantone) : t.nombre,
-    color: cur.color || '#9ca3af',
-    precio_kg: t.precio_kg || cur.precio_kg || 0,
-    g_pza: cur.g_pza || 0.3,
-    merma: cur.merma || 12,
-    aditivos: cur.aditivos || [],
+    pct: pctSugerido,
+    merma: 12,
+    precio_kg: t.precio_kg || 0,
     _cat_tinta_id: t.id,
-  };
+  });
   closeModal('modal-cotv2-picker');
   cotV2RenderTintas();
 }
@@ -5730,7 +5806,7 @@ function cotV2AbrirCatalogoAditivo(idxColor){
       `).join('')}
     </div>
   `;
-  cotV2AbrirModalPicker('Agregar aditivo del catálogo', html);
+  cotV2AbrirModalPicker('Agregar aditivo al color', html);
 }
 
 function cotV2SelectAditivo(idxColor, a){
@@ -5738,7 +5814,7 @@ function cotV2SelectAditivo(idxColor, a){
   t.aditivos = t.aditivos || [];
   t.aditivos.push({
     nombre: a.nombre,
-    pct: 3,           // default: 3% del gramaje de la tinta
+    pct: 3,       // default: 3% del gramaje total del color
     merma: 0,
     precio_kg: a.precio_kg || 0,
     _cat_aditivo_id: a.id,
@@ -5747,7 +5823,7 @@ function cotV2SelectAditivo(idxColor, a){
   cotV2RenderTintas();
 }
 
-// Modal genérico para pickers (tinta / aditivo)
+// Modal genérico para pickers
 function cotV2AbrirModalPicker(titulo, contenidoHtml){
   let m = document.getElementById('modal-cotv2-picker');
   if (!m) {
@@ -5836,28 +5912,37 @@ function cotV2Recalc(){
   const fabSub = fabBotCosto + fabTapCosto;
   setTxt('cotv2-fab-subtotal', $$(fabSub));
 
-  // ── 4. Tintas + aditivos ──────────────────────────────────────────────
+  // ── 4. Tintas: cada color = gramaje total × (componentes con % + aditivos sobre gramaje total) ──
   setTxt('cotv2-tin-pzas-lbl', piezas.toLocaleString('en-US'));
   let tinSub = 0;
   COTV2.tintas.forEach((t, i) => {
-    // Costo del componente principal (tinta base)
-    const kg = (t.g_pza * piezas / (1 - Math.min(0.99, (t.merma||0)/100))) / 1000;
-    let costo = kg * (t.precio_kg||0);
-    // Aditivos por color
-    const aditivos = t.aditivos || [];
-    let aditKgTotal = 0, aditCostoTotal = 0;
-    aditivos.forEach(a => {
-      // El aditivo se mide como % del gramaje total de la tinta (default),
-      // o como gramos absolutos por pieza si viene marcado 'abs'.
-      const aditGr = (a.tipo==='abs') ? (a.gramos||0)*piezas : (t.g_pza*(a.pct||0)/100)*piezas;
-      const aditKg = aditGr / (1 - Math.min(0.99, (a.merma||0)/100)) / 1000;
-      aditKgTotal += aditKg;
-      aditCostoTotal += aditKg * (a.precio_kg||0);
+    // Gramos totales del color final para todo el pedido
+    const grTotal = (t.g_pza || 0) * piezas;   // en gramos
+    const kgTotal = grTotal / 1000;             // en kg
+    let costoColor = 0;
+
+    // Componentes: cada uno toma un % del gramaje total, con su propia merma
+    (t.componentes || []).forEach((c, ci) => {
+      const kgComp = kgTotal * ((c.pct || 0) / 100);
+      const kgConMerma = kgComp / (1 - Math.min(0.99, (c.merma || 0) / 100));
+      const costoComp = kgConMerma * (c.precio_kg || 0);
+      costoColor += costoComp;
+      setTxt(`cotv2-tin-${i}-comp-${ci}-kg`, kgConMerma.toFixed(2));
+      setTxt(`cotv2-tin-${i}-comp-${ci}-costo`, $$(costoComp));
     });
-    costo += aditCostoTotal;
-    tinSub += costo;
-    setTxt('cotv2-tin-kg-' + i, (kg + aditKgTotal).toFixed(2));
-    setTxt('cotv2-tin-costo-' + i, $$(costo));
+
+    // Aditivos: cada uno es % del gramaje TOTAL del color (no del componente)
+    (t.aditivos || []).forEach((a, ai) => {
+      const kgAdit = kgTotal * ((a.pct || 0) / 100);
+      const kgAditMerma = kgAdit / (1 - Math.min(0.99, (a.merma || 0) / 100));
+      const costoAdit = kgAditMerma * (a.precio_kg || 0);
+      costoColor += costoAdit;
+      setTxt(`cotv2-tin-${i}-adit-${ai}-kg`, kgAditMerma.toFixed(2));
+      setTxt(`cotv2-tin-${i}-adit-${ai}-costo`, $$(costoAdit));
+    });
+
+    tinSub += costoColor;
+    setTxt(`cotv2-tin-${i}-subtotal`, $$(costoColor));
   });
   setTxt('cotv2-tin-subtotal', $$(tinSub));
 
@@ -6006,9 +6091,9 @@ function cotV2Nueva(){
   document.getElementById('cotv2-piezas').value = '10000';
   document.getElementById('cotv2-colores').value = '3';
   COTV2.tintas = [
-    {nombre:'Pantone 286 C', color:'#1e40af', g_pza:0.35, merma:12, precio_kg:420},
-    {nombre:'Pantone 185 C', color:'#dc2626', g_pza:0.28, merma:15, precio_kg:510},
-    {nombre:'Blanco',        color:'#fafafa', g_pza:0.42, merma:10, precio_kg:285},
+    {nombre:'Pantone 286 C', color:'#1e40af', g_pza:0.35, componentes:[{nombre:'Azul base',pct:100,merma:12,precio_kg:420}], aditivos:[]},
+    {nombre:'Pantone 185 C', color:'#dc2626', g_pza:0.28, componentes:[{nombre:'Rojo base',pct:100,merma:15,precio_kg:510}], aditivos:[]},
+    {nombre:'Blanco',        color:'#fafafa', g_pza:0.42, componentes:[{nombre:'Blanco',pct:100,merma:10,precio_kg:285}], aditivos:[]},
   ];
   cotV2RenderTintas();
 }

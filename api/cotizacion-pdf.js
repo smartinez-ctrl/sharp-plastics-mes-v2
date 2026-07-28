@@ -190,35 +190,49 @@ async function buildPDFInterno(cot, doc, fonts) {
     y = page.getHeight() - 80;
   }
 
-  // Tabla 4 — Tintas
+  // Tabla 4 — Tintas (componentes + aditivos)
   const tintas = inputs.tintas || [];
-  const rowsTin = tintas.map(t => {
-    const kgBase = (t.g_pza * (cot.piezas || 0) / (1 - Math.min(0.99, (t.merma||0)/100))) / 1000;
-    const costoBase = kgBase * (t.precio_kg||0);
-    const rows = [[
+  const rowsTin = [];
+  tintas.forEach(t => {
+    const grTotal = (t.g_pza || 0) * (cot.piezas || 0);
+    const kgTotal = grTotal / 1000;
+    // Encabezado del color con gramaje total
+    rowsTin.push([
       t.nombre || 'Color',
-      (t.g_pza||0).toFixed(2) + 'g',
-      `${t.merma||0}%`,
-      money(t.precio_kg),
-      kg(kgBase),
-      money(costoBase),
-    ]];
-    (t.aditivos||[]).forEach(a => {
-      const gr = (t.g_pza * (a.pct||0) / 100) * (cot.piezas || 0);
-      const kgAdit = gr / (1 - Math.min(0.99, (a.merma||0)/100)) / 1000;
-      const costoAdit = kgAdit * (a.precio_kg||0);
-      rows.push([
+      (t.g_pza || 0).toFixed(2) + ' g/pza',
+      kg(kgTotal) + ' total',
+      '', '', '',
+    ]);
+    // Componentes con % de mezcla
+    (t.componentes || []).forEach(c => {
+      const kgComp = kgTotal * ((c.pct || 0) / 100);
+      const kgConMerma = kgComp / (1 - Math.min(0.99, (c.merma || 0) / 100));
+      const costoComp = kgConMerma * (c.precio_kg || 0);
+      rowsTin.push([
+        '  · ' + (c.nombre || 'Tinta'),
+        (c.pct || 0).toFixed(1) + '%',
+        (c.merma || 0).toFixed(1) + '%',
+        money(c.precio_kg),
+        kg(kgConMerma),
+        money(costoComp),
+      ]);
+    });
+    // Aditivos
+    (t.aditivos || []).forEach(a => {
+      const kgAdit = kgTotal * ((a.pct || 0) / 100);
+      const kgAditMerma = kgAdit / (1 - Math.min(0.99, (a.merma || 0) / 100));
+      const costoAdit = kgAditMerma * (a.precio_kg || 0);
+      rowsTin.push([
         '  ↳ ' + (a.nombre || 'Aditivo'),
-        (a.pct||0).toFixed(1) + '%',
-        `${a.merma||0}%`,
+        (a.pct || 0).toFixed(1) + '%',
+        (a.merma || 0).toFixed(1) + '%',
         money(a.precio_kg),
-        kg(kgAdit),
+        kg(kgAditMerma),
         money(costoAdit),
       ]);
     });
-    return rows;
-  }).flat();
-  rowsTin.push(['Subtotal', '', '', '', '', money(res.subtotales?.tintas)]);
+  });
+  rowsTin.push(['Subtotal tintas', '', '', '', '', money(res.subtotales?.tintas)]);
   const colsTin = [
     {x: 46, align: 'left'},
     {x: 220, align: 'right'},
@@ -227,7 +241,7 @@ async function buildPDFInterno(cot, doc, fonts) {
     {x: 440, align: 'right'},
     {x: W - 46, align: 'right'},
   ];
-  y = drawTable(page, '4 · TINTAS + ADITIVOS', ['Color / componente', 'g/pza o %', 'Merma', '$/kg', 'Kg total', 'Costo'], rowsTin, 40, y, colsTin, fonts);
+  y = drawTable(page, '4 · TINTAS (componentes + aditivos)', ['Color / componente', '% o gramaje', 'Merma', '$/kg', 'Kg total', 'Costo'], rowsTin, 40, y, colsTin, fonts);
 
   // Tabla 5 — Pantallas y positivos
   const rowsPP = [
