@@ -258,87 +258,178 @@ async function buildPDFCliente(cot, doc, fonts) {
   const H = page.getHeight();
 
   drawHeader(page, cot, 'cliente', fonts);
-  let y = H - 90;
+  let y = H - 100;
 
-  // Título grande "Cotización"
-  drawText(page, 'Cotización', 40, y, {size: 22, font: fonts.bold});
-  y -= 30;
-
-  // Datos del pedido en 2 columnas
   const inputs = cot.inputs_json || {};
   const res = cot.resultados_json || {};
+  const piezas = cot.piezas || 0;
 
+  // Título grande con nombre del producto/proyecto
+  const proyecto = cot.producto || cot.sub_cliente || 'Cotización';
+  drawText(page, proyecto, 40, y, {size: 22, font: fonts.bold});
+  y -= 28;
+
+  // Datos del pedido en 2 columnas compactas
   const pairs = [
     ['Cliente', cot.cliente || '—'],
-    ['Producto', cot.producto || '—'],
     ['Sub-cliente', cot.sub_cliente || '—'],
-    ['Piezas', int(cot.piezas)],
+    ['Piezas', int(piezas)],
     ['Colores', String(cot.colores || 0)],
-    ['Entrega estimada', cot.fecha_entrega_estimada || '—'],
+    ['Fecha entrega estimada', cot.fecha_entrega_estimada || '—'],
+    ['Folio', cot.folio || '—'],
   ];
   const colX = [40, 300];
   for (let i = 0; i < pairs.length; i++) {
     const col = i % 2;
     const row = Math.floor(i / 2);
     const [k, v] = pairs[i];
-    const yy = y - row * 32;
+    const yy = y - row * 28;
     drawText(page, k.toUpperCase(), colX[col], yy, {size: 7, font: fonts.bold, color: rgb(0.5, 0.5, 0.5)});
-    drawText(page, v, colX[col], yy - 12, {size: 11, font: fonts.reg});
+    drawText(page, v, colX[col], yy - 11, {size: 10.5, font: fonts.reg});
   }
-  y -= 32 * Math.ceil(pairs.length / 2) + 8;
+  y -= 28 * Math.ceil(pairs.length / 2) + 16;
 
-  // Colores usados
+  // ── Tabla de desglose (formato imagen) ──────────────────────────────
+  // Conceptos: Cap, Bottle, Inks (por color), Screens, Positives, Printing, Packing
+  // Cada uno con precio unitario × cantidad = total
+
+  const fab = inputs.fabricacion || {};
   const tintas = inputs.tintas || [];
-  if (tintas.length) {
-    drawText(page, 'COLORES DE IMPRESIÓN', 40, y, {size: 7, font: fonts.bold, color: rgb(0.5, 0.5, 0.5)});
-    y -= 14;
-    tintas.forEach(t => {
-      drawText(page, '· ' + (t.nombre || 'Color'), 46, y, {size: 10, font: fonts.reg});
-      y -= 12;
+  const st = res.subtotales || {};
+
+  // Construir filas del desglose
+  const lineas = [];
+
+  // Tapa (Cap)
+  if ((fab.tapa?.venta || 0) > 0) {
+    lineas.push({
+      concepto: 'Cap',
+      unitario: fab.tapa.venta_pza || 0,
+      cantidad: fab.tapa.pzas || 0,
+      total: fab.tapa.venta || 0,
     });
-    y -= 4;
   }
 
-  // Precio grande
-  drawLine(page, 40, y, W - 40, y);
-  y -= 24;
-  drawRect(page, 40, y - 90, W - 80, 100, rgb(0.98, 0.94, 0.85));
-  drawText(page, 'PRECIO UNITARIO', 60, y - 16, {size: 9, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
-  drawText(page, money(res.precio_unitario), 60, y - 45, {size: 26, font: fonts.bold, color: rgb(0.29, 0.14, 0.03)});
-  drawText(page, 'por pieza · MXN', 60, y - 62, {size: 9, font: fonts.reg, color: rgb(0.4, 0.2, 0.03)});
+  // Botella (Bottle)
+  if ((fab.botella?.venta || 0) > 0) {
+    lineas.push({
+      concepto: 'Bottle',
+      unitario: fab.botella.venta_pza || 0,
+      cantidad: fab.botella.pzas || 0,
+      total: fab.botella.venta || 0,
+    });
+  }
 
-  drawText(page, 'PRECIO TOTAL', W - 250, y - 16, {size: 9, font: fonts.bold, color: rgb(0.55, 0.35, 0.03)});
-  drawText(page, money(res.venta_total), W - 250, y - 45, {size: 26, font: fonts.bold, color: rgb(0.29, 0.14, 0.03)});
-  drawText(page, `${int(cot.piezas)} piezas · MXN`, W - 250, y - 62, {size: 9, font: fonts.reg, color: rgb(0.4, 0.2, 0.03)});
+  // Tintas (Inks) — una línea por color o consolidada
+  // Para el cliente, mejor consolidar: precio_unit = suma_venta / piezas
+  const tintasVentaTotal = tintas.reduce((s, t) => s + (t.venta || 0), 0);
+  if (tintasVentaTotal > 0 && piezas > 0) {
+    lineas.push({
+      concepto: 'Inks',
+      unitario: tintasVentaTotal / piezas,
+      cantidad: piezas,
+      total: tintasVentaTotal,
+    });
+  }
 
-  y -= 110;
+  // Screens (pantallas)
+  const pant = inputs.pantallas || {};
+  if ((pant.venta || 0) > 0) {
+    lineas.push({
+      concepto: 'Screens',
+      unitario: pant.venta_unitario || 0,
+      cantidad: pant.num || 0,
+      total: pant.venta || 0,
+    });
+  }
 
-  // Notas: materiales que aporta el cliente
-  const mc = inputs.materiales_cliente || {};
-  drawText(page, 'MATERIALES QUE EL CLIENTE APORTA', 40, y, {size: 8, font: fonts.bold, color: rgb(0.5, 0.5, 0.5)});
-  y -= 14;
-  const lineas = [
-    `· ${kg(mc.botella?.kg_total)} de resina para botella (${int(mc.botella?.pzas)} pzas)`,
-    `· ${kg(mc.tapa?.kg_total)} de resina para tapa (${int(mc.tapa?.pzas)} pzas)`,
-    `· ${int(mc.chupon?.pzas)} chupones`,
-    `· ${int(mc.liner?.pzas)} liners`,
-    `· ${int(mc.cajas?.total)} cajas de empaque`,
-  ];
-  lineas.forEach(l => { drawText(page, l, 46, y, {size: 9, font: fonts.reg}); y -= 12; });
+  // Positives (positivos)
+  const pos = inputs.positivos || {};
+  if ((pos.venta || 0) > 0) {
+    lineas.push({
+      concepto: 'Positives',
+      unitario: pos.venta_unitario || 0,
+      cantidad: pos.num || 0,
+      total: pos.venta || 0,
+    });
+  }
 
-  y -= 14;
-  drawText(page, 'CONDICIONES', 40, y, {size: 8, font: fonts.bold, color: rgb(0.5, 0.5, 0.5)});
-  y -= 14;
-  const condiciones = [
-    '· Cotización válida por 15 días naturales a partir de la fecha de emisión.',
-    '· Precios en pesos mexicanos (MXN), sin IVA incluido.',
-    '· Tiempo de entrega estimado sujeto a disponibilidad de materiales.',
-    '· La fecha de entrega comienza a partir de la aprobación del arte y recepción de materiales.',
-  ];
-  condiciones.forEach(l => { drawText(page, l, 46, y, {size: 9, font: fonts.reg}); y -= 12; });
+  // Printing (MO impresión) — precio_unit = venta / piezas (independiente del # de colores)
+  const mo = inputs.mo_impresion || {};
+  if ((mo.venta || 0) > 0 && piezas > 0) {
+    lineas.push({
+      concepto: 'Printing',
+      unitario: mo.venta / piezas,
+      cantidad: piezas,
+      total: mo.venta || 0,
+    });
+  }
 
-  // Footer
+  // Packing (empaque)
+  const emp = inputs.empaque || {};
+  if ((emp.venta || 0) > 0) {
+    lineas.push({
+      concepto: 'Packing',
+      unitario: emp.venta_pza || 0,
+      cantidad: emp.pzas || 0,
+      total: emp.venta || 0,
+    });
+  }
+
+  // Dibujar tabla estilo imagen (fondo blanco, líneas suaves)
+  const tblX = 40;
+  const tblW = W - 80;
+  const rowH = 22;
+  const colConcepto = tblX + 12;
+  const colUnitario = tblX + 220;
+  const colCantidad = tblX + 340;
+  const colTotal    = tblX + tblW - 12;
+
+  // Header
+  drawRect(page, tblX, y - rowH + 4, tblW, rowH, rgb(0.15, 0.15, 0.15));
+  drawText(page, 'CONCEPTO', colConcepto, y - 10, {size: 9, font: fonts.bold, color: rgb(1, 1, 1)});
+  drawText(page, 'PRECIO UNITARIO', colUnitario, y - 10, {size: 9, font: fonts.bold, color: rgb(1, 1, 1), align: 'right'});
+  drawText(page, 'CANTIDAD', colCantidad, y - 10, {size: 9, font: fonts.bold, color: rgb(1, 1, 1), align: 'right'});
+  drawText(page, 'TOTAL', colTotal, y - 10, {size: 9, font: fonts.bold, color: rgb(1, 1, 1), align: 'right'});
+  y -= rowH;
+
+  // Filas
+  lineas.forEach((l, idx) => {
+    // Fondo alternado sutil
+    if (idx % 2 === 1) {
+      drawRect(page, tblX, y - rowH + 4, tblW, rowH, rgb(0.97, 0.97, 0.97));
+    }
+    drawText(page, l.concepto, colConcepto, y - 10, {size: 10.5, font: fonts.reg});
+    drawText(page, money(l.unitario), colUnitario, y - 10, {size: 10.5, font: fonts.reg, align: 'right'});
+    drawText(page, int(l.cantidad), colCantidad, y - 10, {size: 10.5, font: fonts.reg, align: 'right'});
+    drawText(page, money(l.total), colTotal, y - 10, {size: 10.5, font: fonts.bold, align: 'right'});
+    drawLine(page, tblX, y - rowH + 4, tblX + tblW, y - rowH + 4, rgb(0.85, 0.85, 0.85));
+    y -= rowH;
+  });
+
+  // Total grande al final
+  const totalCalculado = lineas.reduce((s, l) => s + l.total, 0);
+  const totalFinal = res.venta_total || totalCalculado;
+
+  y -= 8;
+  drawLine(page, tblX, y + 8, tblX + tblW, y + 8, rgb(0.15, 0.15, 0.15), 1);
+  drawRect(page, tblX, y - rowH - 4, tblW, rowH + 8, rgb(0.98, 0.94, 0.85));
+  drawText(page, 'TOTAL', colConcepto, y - 12, {size: 12, font: fonts.bold, color: rgb(0.29, 0.14, 0.03)});
+  drawText(page, `${int(piezas)} pzas · $${(totalFinal/Math.max(1,piezas)).toFixed(2)} / pza`, colUnitario, y - 12, {size: 10, font: fonts.reg, color: rgb(0.4, 0.2, 0.03), align: 'right'});
+  drawText(page, money(totalFinal), colTotal, y - 12, {size: 14, font: fonts.bold, color: rgb(0.29, 0.14, 0.03), align: 'right'});
+  y -= rowH + 12;
+
+  // Si hay override manual (precio ajustado), mostrar nota discreta
+  if (res.precio_override != null && Math.abs(res.venta_total - totalCalculado) > 0.5) {
+    y -= 4;
+    const dif = res.venta_total - totalCalculado;
+    drawText(page, `Ajuste aplicado: ${dif >= 0 ? '+' : ''}${money(dif)}`, colTotal, y, {size: 8, font: fonts.reg, color: rgb(0.55, 0.55, 0.55), align: 'right'});
+    y -= 12;
+  }
+
+  // Footer discreto
   drawText(page, 'Sharp Plastics — San Juan del Río, Querétaro', W/2, 40, {size: 8, font: fonts.reg, color: rgb(0.55, 0.55, 0.55), align: 'center'});
+  drawText(page, cot.folio || '', W/2, 28, {size: 7, font: fonts.reg, color: rgb(0.7, 0.7, 0.7), align: 'center'});
 }
 
 // ─────────────────────────────────────────────────────────────
