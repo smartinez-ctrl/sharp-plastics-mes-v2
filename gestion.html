@@ -583,46 +583,44 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
     </div>
 
     <!-- SIDEBAR sticky -->
-    <div style="position:sticky;top:70px;display:flex;flex-direction:column;gap:10px">
-      <div class="card">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700">Resumen del proyecto</div>
-        <table style="width:100%;font-size:11px;border-collapse:collapse">
-          <thead>
-            <tr style="color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.04em">
-              <th style="text-align:left;padding:2px 0;font-weight:600"></th>
-              <th style="text-align:right;padding:2px 0;font-weight:600">Costo</th>
-              <th style="text-align:right;padding:2px 0;font-weight:600">Venta</th>
-              <th style="text-align:right;padding:2px 0;font-weight:600">Utilidad</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td style="padding:2px 0;color:var(--text2)">Fabricación</td><td id="cotv2-sum-fab" style="text-align:right;padding:2px 0">$0</td><td id="cotv2-sumv-fab" style="text-align:right;padding:2px 0;color:var(--green)">$0</td><td id="cotv2-sumu-fab" style="text-align:right;padding:2px 0;color:var(--green)">$0</td></tr>
-            <tr><td style="padding:2px 0;color:var(--text2)">Tintas</td><td id="cotv2-sum-tin" style="text-align:right;padding:2px 0">$0</td><td id="cotv2-sumv-tin" style="text-align:right;padding:2px 0;color:var(--green)">$0</td><td id="cotv2-sumu-tin" style="text-align:right;padding:2px 0;color:var(--green)">$0</td></tr>
-            <tr><td style="padding:2px 0;color:var(--text2)">Pant+pos</td><td id="cotv2-sum-pp" style="text-align:right;padding:2px 0">$0</td><td id="cotv2-sumv-pp" style="text-align:right;padding:2px 0;color:var(--green)">$0</td><td id="cotv2-sumu-pp" style="text-align:right;padding:2px 0;color:var(--green)">$0</td></tr>
-            <tr><td style="padding:2px 0;color:var(--text2)">MO imp.</td><td id="cotv2-sum-mo" style="text-align:right;padding:2px 0">$0</td><td id="cotv2-sumv-mo" style="text-align:right;padding:2px 0;color:var(--green)">$0</td><td id="cotv2-sumu-mo" style="text-align:right;padding:2px 0;color:var(--green)">$0</td></tr>
-            <tr style="border-bottom:1px solid var(--border)"><td style="padding:2px 0 6px;color:var(--text2)">Empaque</td><td id="cotv2-sum-emp" style="text-align:right;padding:2px 0 6px">$0</td><td id="cotv2-sumv-emp" style="text-align:right;padding:2px 0 6px;color:var(--green)">$0</td><td id="cotv2-sumu-emp" style="text-align:right;padding:2px 0 6px;color:var(--green)">$0</td></tr>
-            <tr style="font-weight:700;font-size:12px"><td style="padding:6px 0">TOTAL</td><td id="cotv2-sum-total" style="text-align:right;padding:6px 0">$0</td><td id="cotv2-sumv-total" style="text-align:right;padding:6px 0;color:var(--green)">$0</td><td id="cotv2-sumu-total" style="text-align:right;padding:6px 0;color:var(--green)">$0</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <div style="position:sticky;top:70px;display:flex;flex-direction:column;gap:12px">
 
+      <!-- Precio al cliente (editable) -->
       <div class="card" style="background:#fef3c7;border-color:#f59e0b">
-        <div style="font-size:10px;color:#78350f;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;font-weight:700">Precio al cliente</div>
-        <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;color:#78350f"><span>Precio unitario</span><span id="cotv2-precio-unit" style="font-weight:600;font-size:14px">$0.00</span></div>
-        <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11px;color:#78350f"><span>Precio total</span><span id="cotv2-precio-total" style="font-weight:600">$0</span></div>
-        <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11px;color:#78350f"><span>Costo unitario</span><span id="cotv2-sum-unit" style="font-weight:600">$0.00</span></div>
-        <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11px;color:#78350f;border-top:1px solid rgba(120,53,15,.2);margin-top:4px;padding-top:6px"><span>Margen total</span><span id="cotv2-precio-margen" style="font-weight:700;font-size:13px">0.0%</span></div>
+        <div style="font-size:10px;color:#78350f;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700">Precio al cliente</div>
+        <div style="font-size:10px;color:#92400e;margin-bottom:4px">Precio total ($ MXN)</div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <input type="number" id="cotv2-precio-total-input" step="1" oninput="cotV2SetPrecioOverride(this.value)" style="flex:1;height:36px;font-size:16px;text-align:right;background:#fff;color:#78350f;font-weight:700;border:1px solid #f59e0b;border-radius:6px;padding:0 10px">
+          <button id="cotv2-btn-reset-precio" onclick="cotV2ResetPrecio()" title="Usar suma automática" style="background:#78350f;color:#fef3c7;border:none;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:11px;display:none">↺</button>
+        </div>
+        <div id="cotv2-precio-hint" style="font-size:10px;color:#92400e;margin-top:4px;font-style:italic">Suma automática de todas las ventas</div>
+        <div style="border-top:1px solid rgba(120,53,15,.2);margin-top:10px;padding-top:8px">
+          <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px;color:#78350f"><span>Precio unitario</span><span id="cotv2-precio-unit" style="font-weight:700">$0.00</span></div>
+          <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px;color:#78350f"><span>Utilidad</span><span id="cotv2-precio-util" style="font-weight:700">$0</span></div>
+          <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px;color:#78350f"><span>Margen</span><span id="cotv2-precio-margen" style="font-weight:700">0.0%</span></div>
+        </div>
       </div>
 
-      <div style="background:var(--bg3);border-radius:8px;padding:10px">
+      <!-- Costos (referencia) -->
+      <div class="card">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700">Costos internos</div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text2)">Costo total</span><span id="cotv2-sum-total" style="font-weight:600">$0</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text2)">Costo unitario</span><span id="cotv2-sum-unit" style="font-weight:600">$0.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-top:1px solid var(--border);margin-top:4px;padding-top:8px"><span style="color:var(--text2)">Venta calculada</span><span id="cotv2-sumv-total" style="color:var(--green);font-weight:600">$0</span></div>
+      </div>
+
+      <!-- Fecha entrega -->
+      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Fecha entrega estimada</div>
-        <div id="cotv2-fecha-lbl" style="font-size:13px;font-weight:600">— calculando —</div>
-        <div id="cotv2-fecha-sub" style="font-size:10px;color:var(--text3);margin-top:2px">— días laborales</div>
+        <div id="cotv2-fecha-lbl" style="font-size:14px;font-weight:600">— calculando —</div>
+        <div id="cotv2-fecha-sub" style="font-size:10.5px;color:var(--text3);margin-top:2px">— días laborales</div>
       </div>
 
-      <button class="btn btn-primary" onclick="cotV2Guardar()" style="width:100%">💾 Guardar cotización</button>
-      <button class="btn btn-ghost btn-sm" onclick="cotV2PDF('interno')" style="width:100%">📊 PDF interno (costos)</button>
-      <button class="btn btn-secondary btn-sm" onclick="cotV2PDF('cliente')" style="width:100%">📤 PDF cliente (precio)</button>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-primary" onclick="cotV2Guardar()" style="width:100%">💾 Guardar cotización</button>
+        <button class="btn btn-ghost btn-sm" onclick="cotV2PDF('interno')" style="width:100%">📊 PDF interno</button>
+        <button class="btn btn-secondary btn-sm" onclick="cotV2PDF('cliente')" style="width:100%">📤 PDF cliente</button>
+      </div>
     </div>
   </div>
 </div>
@@ -5599,6 +5597,7 @@ init();
 const COTV2 = {
   editingId: null,
   folio: null,
+  precioOverride: null,  // Si el usuario editó el precio total manualmente, aquí queda el valor. null = usar suma.
   tintas: [
     {nombre:'Pantone 286 C', color:'#1e40af', g_pza:0.35, componentes:[{nombre:'Azul base',pct:100,merma:12,precio_kg:420}], aditivos:[]},
     {nombre:'Pantone 185 C', color:'#dc2626', g_pza:0.28, componentes:[{nombre:'Rojo base',pct:100,merma:15,precio_kg:510}], aditivos:[]},
@@ -6067,19 +6066,37 @@ function cotV2Recalc(){
   setTxt('cotv2-sumu-emp', $$(empUtil));
 
   const costoTotal = fabSub + tinSub + ppSub + moCosto + empSub;
-  const ventaTotal = fabVentaSub + tinVentaSub + ppVentaSub + moVenta + empVenta;
+  const ventaCalculada = fabVentaSub + tinVentaSub + ppVentaSub + moVenta + empVenta;
+  // Si hay override manual del precio total, ese es el que aplica; si no, la suma.
+  const ventaTotal = (COTV2.precioOverride != null) ? COTV2.precioOverride : ventaCalculada;
   const utilTotal = ventaTotal - costoTotal;
   const costoUnit = piezas > 0 ? costoTotal / piezas : 0;
   const precioUnit = piezas > 0 ? ventaTotal / piezas : 0;
   const margen = ventaTotal > 0 ? (utilTotal / ventaTotal) * 100 : 0;
 
   setTxt('cotv2-sum-total', $$(costoTotal));
-  setTxt('cotv2-sumv-total', $$(ventaTotal));
-  setTxt('cotv2-sumu-total', $$(utilTotal));
+  setTxt('cotv2-sumv-total', $$(ventaCalculada));
   setTxt('cotv2-precio-unit', '$' + precioUnit.toFixed(2));
-  setTxt('cotv2-precio-total', $$(ventaTotal));
+  setTxt('cotv2-precio-util', $$(utilTotal));
   setTxt('cotv2-sum-unit', '$' + costoUnit.toFixed(2));
   setTxt('cotv2-precio-margen', margen.toFixed(1) + '%');
+
+  // Sincronizar el input de precio total (solo si no está enfocado, para no
+  // pisar lo que el usuario está tecleando)
+  const inp = document.getElementById('cotv2-precio-total-input');
+  if (inp && document.activeElement !== inp) {
+    inp.value = ventaTotal.toFixed(0);
+  }
+  // Hint y botón reset dependiendo de si hay override
+  const hint = document.getElementById('cotv2-precio-hint');
+  const btn  = document.getElementById('cotv2-btn-reset-precio');
+  if (COTV2.precioOverride != null) {
+    if (hint) { hint.textContent = 'Precio editado manualmente (suma: ' + $$(ventaCalculada) + ')'; hint.style.color = '#78350f'; hint.style.fontStyle = 'normal'; hint.style.fontWeight = '600'; }
+    if (btn)  btn.style.display = 'block';
+  } else {
+    if (hint) { hint.textContent = 'Suma automática de todas las ventas por línea'; hint.style.color = '#92400e'; hint.style.fontStyle = 'italic'; hint.style.fontWeight = '400'; }
+    if (btn)  btn.style.display = 'none';
+  }
 
   // Snapshot para guardar / PDF
   COTV2._snapshot = {
@@ -6088,6 +6105,7 @@ function cotV2Recalc(){
       sub_cliente: document.getElementById('cotv2-subcli')?.value||null,
       producto: document.getElementById('cotv2-producto')?.value||null,
       piezas, colores,
+      precio_override: COTV2.precioOverride,  // null si es suma automática
       materiales_cliente: {
         botella: {peso: botPeso, colada: botCol, merma: botMerma, kg_total: botKg, pzas: botPzas},
         tapa:    {peso: tapPeso, colada: tapCol, merma: tapMerma, kg_total: tapKg, pzas: tapPzas},
@@ -6112,7 +6130,8 @@ function cotV2Recalc(){
     },
     resultados: {
       costo_total: costoTotal, costo_unitario: costoUnit,
-      venta_total: ventaTotal, precio_unitario: precioUnit,
+      venta_total: ventaTotal, venta_calculada: ventaCalculada,
+      precio_unitario: precioUnit, precio_override: COTV2.precioOverride,
       utilidad: utilTotal, margen_pct: margen,
       fecha_entrega: fecha.toISOString().slice(0,10),
       subtotales: {
@@ -6124,6 +6143,27 @@ function cotV2Recalc(){
       },
     },
   };
+}
+
+// ────────────────────────────────────────────────────────────────
+// Override manual del precio total al cliente
+// ────────────────────────────────────────────────────────────────
+function cotV2SetPrecioOverride(v){
+  const num = parseFloat(v);
+  if (isNaN(num) || num <= 0) {
+    // Vacío o 0: quitar override y usar suma automática
+    COTV2.precioOverride = null;
+  } else {
+    COTV2.precioOverride = num;
+  }
+  cotV2Recalc();
+}
+
+function cotV2ResetPrecio(){
+  COTV2.precioOverride = null;
+  cotV2Recalc();
+  const inp = document.getElementById('cotv2-precio-total-input');
+  if (inp) inp.blur();  // fuerza que Recalc actualice el valor
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -6143,6 +6183,7 @@ function cotV2CargarClientes(){
 function cotV2Nueva(){
   COTV2.editingId = null;
   COTV2.folio = null;
+  COTV2.precioOverride = null;
   setTxt('cotv2-folio-titulo', '— Nueva —');
   // Reset a defaults
   document.getElementById('cotv2-cliente').value = '';
@@ -6266,6 +6307,7 @@ async function cotV2Abrir(id){
     const c = rows[0];
     COTV2.editingId = c.id;
     COTV2.folio = c.folio;
+    COTV2.precioOverride = c.inputs_json?.precio_override ?? null;
     setTxt('cotv2-folio-titulo', c.folio);
     const i = c.inputs_json || {};
     const setVal = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
