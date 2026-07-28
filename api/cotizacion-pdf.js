@@ -427,6 +427,51 @@ async function buildPDFCliente(cot, doc, fonts) {
     y -= 12;
   }
 
+  // ── Materiales que aporta el cliente ────────────────────────────────
+  const mc = inputs.materiales_cliente || {};
+  y -= 16;
+  drawText(page, 'MATERIALES QUE APORTA EL CLIENTE', tblX, y, {size: 8, font: fonts.bold, color: rgb(0.5, 0.5, 0.5)});
+  y -= 14;
+  drawLine(page, tblX, y + 4, tblX + tblW, y + 4, rgb(0.85, 0.85, 0.85));
+  y -= 4;
+
+  const matLineas = [];
+  if (mc.botella?.pzas) matLineas.push([
+    'Resina para botella',
+    int(mc.botella.pzas) + ' pzas',
+    kg(mc.botella.kg_total),
+  ]);
+  if (mc.tapa?.pzas) matLineas.push([
+    'Resina para tapa',
+    int(mc.tapa.pzas) + ' pzas',
+    kg(mc.tapa.kg_total),
+  ]);
+  if (mc.chupon?.pzas) matLineas.push([
+    'Chupones',
+    int(mc.chupon.pzas) + ' pzas',
+    '',
+  ]);
+  if (mc.liner?.pzas) matLineas.push([
+    'Liners',
+    int(mc.liner.pzas) + ' pzas',
+    '',
+  ]);
+  if (mc.cajas?.total) matLineas.push([
+    'Cajas de empaque',
+    int(mc.cajas.total) + ' cajas',
+    `${mc.cajas.pzas_por_caja} pzas/caja`,
+  ]);
+
+  const matColConc = tblX + 12;
+  const matColCant = tblX + 260;
+  const matColDet  = tblX + tblW - 12;
+  matLineas.forEach(([concepto, cantidad, detalle]) => {
+    drawText(page, concepto, matColConc, y - 8, {size: 10, font: fonts.reg});
+    drawText(page, cantidad, matColCant, y - 8, {size: 10, font: fonts.bold, align: 'right'});
+    drawText(page, detalle, matColDet, y - 8, {size: 9.5, font: fonts.reg, color: rgb(0.5, 0.5, 0.5), align: 'right'});
+    y -= 16;
+  });
+
   // Footer discreto
   drawText(page, 'Sharp Plastics — San Juan del Río, Querétaro', W/2, 40, {size: 8, font: fonts.reg, color: rgb(0.55, 0.55, 0.55), align: 'center'});
   drawText(page, cot.folio || '', W/2, 28, {size: 7, font: fonts.reg, color: rgb(0.7, 0.7, 0.7), align: 'center'});
