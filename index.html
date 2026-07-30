@@ -299,6 +299,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <div id="dash-pedidos"></div>
     <div class="divider"></div>
     <button class="btn btn-secondary btn-full" id="btn-nueva-orden" onclick="goNuevaOrden(null)" style="font-size:13px;display:none">+ Nueva orden manual</button>
+    <button class="btn btn-ghost btn-full" id="btn-editar-fotos-cerrados" onclick="abrirListadoCerradosMES()" style="font-size:13px;margin-top:8px;display:none">📷 Editar fotos de pedidos cerrados</button>
   </div></div>
 </div>
 
@@ -1880,7 +1881,8 @@ function updateUserChips(){
 
 function applyRoleRestrictions(){
   const esOperador=S.user&&S.user.role==='operador';
-  const rolePuedeEditarFotos = S.user && (S.user.role==='master' || S.user.role==='supervisor' || S.user.name==='Edgar');
+  const _esEdgar = (S.user && typeof S.user.name === 'string' && S.user.name.trim().toLowerCase().startsWith('edgar'));
+  const rolePuedeEditarFotos = S.user && (S.user.role==='master' || S.user.role==='supervisor' || _esEdgar);
   // Nueva orden manual — solo supervisores
   const btnNueva=document.getElementById('btn-nueva-orden');
   if(btnNueva)btnNueva.style.display=esOperador?'none':'';
@@ -2190,8 +2192,9 @@ const _EDIT_MES_LBL_COLOR = ['Color 1', 'Color 2', 'Color 3', 'Color 4'];
 
 async function abrirListadoCerradosMES(){
   const rol = S.user && S.user.role;
-  const nombre = S.user && S.user.name;
-  if (rol !== 'master' && rol !== 'supervisor' && nombre !== 'Edgar') {
+  const nombre = (S.user && typeof S.user.name === 'string') ? S.user.name.trim().toLowerCase() : '';
+  const esEdgar = nombre.startsWith('edgar');
+  if (rol !== 'master' && rol !== 'supervisor' && !esEdgar) {
     toast('No tienes permiso para editar fotos de pedidos cerrados', 'err');
     return;
   }
