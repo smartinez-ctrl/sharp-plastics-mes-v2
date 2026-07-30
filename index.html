@@ -1880,7 +1880,7 @@ function updateUserChips(){
 
 function applyRoleRestrictions(){
   const esOperador=S.user&&S.user.role==='operador';
-  const rolePuedeEditarFotos = S.user && (S.user.role==='master' || S.user.role==='supervisor');
+  const rolePuedeEditarFotos = S.user && (S.user.role==='master' || S.user.role==='supervisor' || S.user.name==='Edgar');
   // Nueva orden manual — solo supervisores
   const btnNueva=document.getElementById('btn-nueva-orden');
   if(btnNueva)btnNueva.style.display=esOperador?'none':'';
@@ -2190,8 +2190,9 @@ const _EDIT_MES_LBL_COLOR = ['Color 1', 'Color 2', 'Color 3', 'Color 4'];
 
 async function abrirListadoCerradosMES(){
   const rol = S.user && S.user.role;
-  if (rol !== 'master' && rol !== 'supervisor') {
-    toast('Solo master y supervisor pueden editar fotos de pedidos cerrados', 'err');
+  const nombre = S.user && S.user.name;
+  if (rol !== 'master' && rol !== 'supervisor' && nombre !== 'Edgar') {
+    toast('No tienes permiso para editar fotos de pedidos cerrados', 'err');
     return;
   }
   document.getElementById('modal-cerrados-mes').classList.add('open');
