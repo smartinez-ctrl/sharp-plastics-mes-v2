@@ -299,7 +299,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
     <div id="dash-pedidos"></div>
     <div class="divider"></div>
     <button class="btn btn-secondary btn-full" id="btn-nueva-orden" onclick="goNuevaOrden(null)" style="font-size:13px;display:none">+ Nueva orden manual</button>
-    <button class="btn btn-ghost btn-full" id="btn-editar-fotos-cerrados" onclick="abrirListadoCerradosMES()" style="font-size:13px;margin-top:8px;display:none">📷 Editar fotos de pedidos cerrados</button>
   </div></div>
 </div>
 
@@ -1886,9 +1885,6 @@ function applyRoleRestrictions(){
   // Nueva orden manual — solo supervisores
   const btnNueva=document.getElementById('btn-nueva-orden');
   if(btnNueva)btnNueva.style.display=esOperador?'none':'';
-  // Botón "Fotos cerrados" — solo master y supervisor
-  const btnFC=document.getElementById('btn-editar-fotos-cerrados');
-  if(btnFC)btnFC.style.display=rolePuedeEditarFotos?'':'none';
   // Completar producción — solo supervisores
   const btnCompletar=document.getElementById('btn-completar-prod');
   if(btnCompletar){
@@ -2559,6 +2555,7 @@ async function renderDashboard(){
     }catch(e){console.warn('[dashboard] no se pudo cargar edición concurrente:',e);}
     window._edicionPorPipeline=edicionPorPipeline;
     const esOperador=S.user&&S.user.role==='operador';
+    const _esEdgar = (S.user && typeof S.user.name === 'string' && S.user.name.trim().toLowerCase().startsWith('edgar'));
     let html='';
     if(!activos.length&&!completados.length){
       el.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text3)"><div style="font-size:32px;margin-bottom:12px">📋</div><div>Sin pedidos aún</div><div style="font-size:11px;margin-top:4px">Se agregan desde el portal de gestión</div></div>';
@@ -2635,6 +2632,7 @@ async function renderDashboard(){
           <button class="btn btn-ghost btn-sm" style="flex:1;min-width:0" onclick="verPDFCompletado('${p.id}','cliente',{sinEmpaque:true})" title="PDF cliente sin fotos de empaque (más liviano)">🪶 PDF ligero</button>
           <button class="btn btn-ghost btn-sm" style="flex:1;min-width:0" onclick="verPDFCompletado('${p.id}','interno')">📊 PDF interno</button>
           <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEmpaqueProduccion('${p.id}')" title="Fotos empaque">📦</button>
+          ${S.user&&(S.user.role==='master'||S.user.role==='supervisor'||_esEdgar)?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEditFotosMES('${p.id}','${(p.po||'').replace(/'/g,"&apos;")}','${(p.sub_cliente||p.cliente||'').replace(/'/g,"&apos;")}')" title="Editar fotos QA (aprobación + color)">📷</button>`:''}
           ${S.user&&(S.user.role==='master'||(S.user.role==='supervisor'&&S.user.name==='Edgar'))?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEditQAProd('${p.id}')" title="Editar QA checklist">🩺</button>`:''}
           ${S.user&&S.user.role==='master'?`<button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation" onclick="abrirEditarCompletado('${p.id}')" title="Editar">✏️</button>`:''}
           <button class="btn btn-ghost btn-sm" style="flex:0 0 auto;touch-action:manipulation;opacity:0.5" onclick="ocultarCompletadoProd('${p.id}')" title="Ocultar">🙈</button>
