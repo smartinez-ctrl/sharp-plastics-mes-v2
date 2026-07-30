@@ -955,8 +955,11 @@ async function sbPatch(t,d,q){const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,
 async function sbDelete(t,q){const r=await fetch(`${SB_URL}/rest/v1/${t}?${q}`,{method:'DELETE',headers:SB_H});if(!r.ok)throw new Error(await r.text());}
 
 const USER=JSON.parse(sessionStorage.getItem('sp_user')||'null');
-if(!USER||!(USER.rol==='master'||USER.rol==='facturacion')){window.location.href='index.html';}
-window.addEventListener('focus',function(){const u=JSON.parse(sessionStorage.getItem('sp_user')||'null');if(!u||!(u.rol==='master'||u.rol==='facturacion'))window.location.href='index.html';});
+// Acceso a gestion.html: master, facturación, o Edgar (packaging lead) por nombre
+// Edgar tiene acceso limitado — solo para editar fotos/QA de pedidos completados
+function _puedeEntrarGestion(u){return u && (u.rol==='master' || u.rol==='facturacion' || u.nombre==='Edgar');}
+if(!_puedeEntrarGestion(USER)){window.location.href='index.html';}
+window.addEventListener('focus',function(){const u=JSON.parse(sessionStorage.getItem('sp_user')||'null');if(!_puedeEntrarGestion(u))window.location.href='index.html';});
 
 function irAProduccion(){window.open(location.origin+'/?prod=1','_blank');}
 function cerrarSesion(){sessionStorage.removeItem('sp_user');window.location.href='index.html';}
@@ -971,6 +974,15 @@ if(USER){
   if(USER.rol==='facturacion'){
     document.getElementById('nav-admin-section').style.display='none';
     document.getElementById('nav-operacion-section').style.display='none';
+  }
+  if(USER.nombre==='Edgar' && USER.rol!=='master'){
+    // Edgar solo debe ver Pipeline (para editar fotos/QA de pedidos completados)
+    // Ocultar cotizador y admin/operación completo
+    ['nav-cotizador','nav-cotizaciones','nav-proyeccion','nav-cobros'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.style.display='none';
+    });
+    const admin=document.getElementById('nav-admin-section'); if(admin) admin.style.display='none';
+    const oper=document.getElementById('nav-operacion-section'); if(oper) oper.style.display='none';
   }
   // Cargar badge de alertas para master/supervisor
   if(USER.rol==='master' || USER.rol==='supervisor'){
@@ -1573,7 +1585,7 @@ function renderPipeline(){
       <div></div>
       <div style="display:flex;align-items:center;justify-content:flex-end;gap:3px" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-xs" title="Fotos empaque" onclick="abrirFotosEmpaque('${p.id}')">📦</button>
-        ${(USER.rol==='master'||USER.rol==='supervisor')?`<button class="btn btn-ghost btn-xs" title="Editar fotos de QA (aprobación + color)" onclick="abrirEditFotosQA('${p.id}')">📷</button>`:''}
+        ${(USER.rol==='master'||USER.rol==='supervisor'||USER.nombre==='Edgar')?`<button class="btn btn-ghost btn-xs" title="Editar fotos de QA (aprobación + color)" onclick="abrirEditFotosQA('${p.id}')">📷</button>`:''}
         ${(USER.rol==='master'||(USER.rol==='supervisor'&&USER.nombre==='Edgar'))?`<button class="btn btn-ghost btn-xs" title="Editar QA checklist (Soplado / Impresión / Ensamble)" onclick="abrirEditQA('${p.id}')">🩺</button>`:''}
         <button class="btn btn-ghost btn-xs" title="PDF cotización cliente" onclick="abrirPDFClienteCompletado('${p.id}')">📤</button>
         <button class="btn btn-ghost btn-xs" title="PDF cotización interno" onclick="abrirPDFInternoCompletado('${p.id}')">📊</button>
@@ -3747,9 +3759,9 @@ const _EDIT_LABELS_APROB = ['Frente', 'Reverso', 'Lado izq', 'Lado der'];
 const _EDIT_LABELS_COLOR = ['Color 1', 'Color 2', 'Color 3', 'Color 4'];
 
 async function abrirEditFotosQA(pipelineId){
-  // Solo master y supervisor pueden editar fotos de QA
-  if (USER.rol !== 'master' && USER.rol !== 'supervisor') {
-    toast('Solo master y supervisor pueden editar fotos de QA', 'err');
+  // Master, supervisor o Edgar (packaging lead, por nombre) pueden editar fotos de QA
+  if (USER.rol !== 'master' && USER.rol !== 'supervisor' && USER.nombre !== 'Edgar') {
+    toast('No tienes permiso para editar fotos de QA', 'err');
     return;
   }
   try {
