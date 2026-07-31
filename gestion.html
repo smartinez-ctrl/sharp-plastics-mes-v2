@@ -5270,6 +5270,13 @@ async function abrirPDFInterno(p){
   const ventaHTML=ventaFilas.map(function(f){
     return '<tr><td>'+f.c+'</td><td style="text-align:center">'+f.q+'</td><td style="text-align:center">'+mxnPDF(f.u)+'</td><td style="text-align:right;font-weight:600;color:#0a7a5a">'+mxnPDF(f.s)+'</td></tr>';
   }).join('');
+  // FIX: recalcular el total desde los subtotales que efectivamente se muestran
+  // en la tabla, NO usar p.venta_total (cache guardado al crear el pedido).
+  // Si despues del creado se cambian colores/piezas/tarifas, p.venta_total
+  // queda desincronizado y el PDF mostraba desglose y total distintos.
+  const ventaTotalCalc = ventaFilas.reduce(function(s,f){return s+(f.s||0);}, 0);
+  const utilidadCalc = ventaTotalCalc - costoTotal;
+  const margenCalc = ventaTotalCalc > 0 ? (utilidadCalc / ventaTotalCalc) * 100 : 0;
 
   const formulaHTML=formula.length>0?formula.map(function(col,ci){
     // Si hay orden con consumo real, escalar gramos a lo preparado
@@ -5338,10 +5345,10 @@ async function abrirPDFInterno(p){
     +'<h2>Precio de venta al cliente</h2>'
     +'<table><thead><tr><th>Concepto</th><th>Cantidad</th><th>Precio unit.</th><th style="text-align:right">Subtotal</th></tr></thead>'
     +'<tbody>'+ventaHTML+'</tbody>'
-    +'<tfoot><tr class="total-venta"><td colspan="3">TOTAL VENTA</td><td style="text-align:right;color:#0a7a5a">'+mxnPDF(p.venta_total||0)+'</td></tr></tfoot></table>'
-    +'<div class="margen-box"><span style="font-size:13px;font-weight:700">Margen: </span><span style="font-size:20px;font-weight:700;color:#d4880f">'+( p.margen||0).toFixed(1)+'%</span>'
-    +'<span style="margin-left:20px;font-size:13px">  Utilidad: <strong>'+mxnPDF((p.venta_total||0)-costoTotal)+'</strong></span>'
-    +'<span style="margin-left:20px;font-size:13px">  Precio/pieza venta: <strong>'+mxnPDF(piezas?(p.venta_total||0)/piezas:0)+'</strong></span></div>'
+    +'<tfoot><tr class="total-venta"><td colspan="3">TOTAL VENTA</td><td style="text-align:right;color:#0a7a5a">'+mxnPDF(ventaTotalCalc)+'</td></tr></tfoot></table>'
+    +'<div class="margen-box"><span style="font-size:13px;font-weight:700">Margen: </span><span style="font-size:20px;font-weight:700;color:#d4880f">'+margenCalc.toFixed(1)+'%</span>'
+    +'<span style="margin-left:20px;font-size:13px">  Utilidad: <strong>'+mxnPDF(utilidadCalc)+'</strong></span>'
+    +'<span style="margin-left:20px;font-size:13px">  Precio/pieza venta: <strong>'+mxnPDF(piezas?ventaTotalCalc/piezas:0)+'</strong></span></div>'
     +'<h2>Fórmula de tintas'+(orden?' (preparada)':' (estimada)')+'</h2>'
     +'<table><thead><tr><th>Componente</th><th>Gramos</th><th>$/kg</th><th style="text-align:right">Costo</th></tr></thead>'
     +'<tbody>'+formulaHTML+'</tbody></table>'
