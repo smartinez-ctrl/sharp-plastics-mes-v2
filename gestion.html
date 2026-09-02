@@ -1484,21 +1484,19 @@ function renderPipeline(){
   let completados=PIPELINE.filter(p=>{
     if(!(p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado'))return false;
     if(!matchQ(p)||p.oculto)return false;
-    const fecha=p.fecha_entrega||p.updated_at||'';
-    if(compDesde&&fecha&&fecha<compDesde)return false;
-    if(compHasta&&fecha&&fecha>compHasta+'T23:59:59')return false;
+    const fecha=p.fecha_completado||p.fecha_entrega||'';
+    if(compDesde&&fecha&&fecha.substring(0,10)<compDesde)return false;
+    if(compHasta&&fecha&&fecha.substring(0,10)>compHasta)return false;
     return true;
   });
   // Ordenar: más reciente primero — usar fecha_entrega si existe, si no created_at
+  // Ordenar por fecha en que fue completado (más reciente primero)
   completados.sort(function(a,b){
-    const da=a.fecha_entrega?a.fecha_entrega:(a.id||'');
-    const db=b.fecha_entrega?b.fecha_entrega:(b.id||'');
-    // Si ambos tienen fecha_entrega, comparar fechas
-    if(a.fecha_entrega&&b.fecha_entrega)return db.localeCompare(da);
-    // Si solo uno tiene fecha, ese va primero
-    if(a.fecha_entrega&&!b.fecha_entrega)return -1;
-    if(!a.fecha_entrega&&b.fecha_entrega)return 1;
-    // Sin fecha: más reciente por id (UUID v4 no es ordenable) — usar índice en PIPELINE
+    const da=a.fecha_completado||a.fecha_entrega||'';
+    const db=b.fecha_completado||b.fecha_entrega||'';
+    if(da&&db)return db.localeCompare(da);
+    if(da&&!db)return -1;
+    if(!da&&db)return 1;
     return PIPELINE.indexOf(b)-PIPELINE.indexOf(a);
   });
   if(window._pipeSort)completados=[...completados].sort(sortFn);
@@ -1544,7 +1542,8 @@ function renderPipeline(){
     const margenColor=(p.margen||0)>=50?'var(--green)':(p.margen||0)>=35?'var(--amber)':'var(--red)';
     const tintas=p.tintas_info&&p.tintas_info.length?p.tintas_info.map(t=>colorChip(t)).join(' '):'';
     const fPed=p.fecha_pedido?new Date(p.fecha_pedido+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
-    const fEnt=p.fecha_entrega?new Date(p.fecha_entrega+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+    const fechaComp=p.fecha_completado||p.fecha_entrega;
+    const fEnt=fechaComp?new Date(fechaComp.length>10?fechaComp:fechaComp+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
     const cellMap={
       cliente:`<div style="min-width:0;overflow:hidden"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${p.sub_cliente||p.cliente||'—'}</div><div style="margin-top:2px">${tintas}</div></div>`,
       po:`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text)">${p.po||'—'}${p.factura_folio?`<br><a href="${p.factura_pdf_url||p.factura_xml_url||'#'}" target="_blank" onclick="event.stopPropagation()" style="color:var(--green);font-weight:700;text-decoration:none;font-size:10px">📄 ${p.factura_serie||''}-${p.factura_folio} ↗</a>`:''}</div>`,
@@ -1972,9 +1971,16 @@ async function guardarPedido(){
     fecha_inicio:document.getElementById('mp-fecha-inicio').value||null,horas_estimadas:parseFloat(document.getElementById('mp-horas').value)||null,
     color_botella:document.getElementById('mp-col-bot').value||null,color_tapa:document.getElementById('mp-col-tap').value||null,
     color_boquilla:document.getElementById('mp-col-boq').value||null,direccion_envio:document.getElementById('mp-envio').value||null,
-    notas:document.getElementById('mp-notas').value||null,estado:document.getElementById('mp-estado').value,
+    notas:document.getElementById('mp-notas').value||null,
+    estado:document.getElementById('mp-estado').value,
     pdf_diseno_url:document.getElementById('mp-pdf-diseno')?.value||null,
   };
+  // Marcar fecha_completado si se completa ahora
+  const estadoNuevo=document.getElementById('mp-estado').value;
+  const estadoAnterior=pedActual?.estado||'';
+  if((estadoNuevo==='Completado'||estadoNuevo==='Entregado')&&estadoAnterior!=='Completado'&&estadoAnterior!=='Entregado'){
+    data.fecha_completado=new Date().toISOString();
+  }
   // Preservar financieros si existen
   if(pedActual){
     if(pedActual.costo_total)data.costo_total=pedActual.costo_total;
