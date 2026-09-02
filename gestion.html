@@ -1489,11 +1489,17 @@ function renderPipeline(){
     if(compHasta&&fecha&&fecha>compHasta+'T23:59:59')return false;
     return true;
   });
-  // Ordenar por fecha: más reciente primero (fecha_entrega, luego updated_at, luego created_at)
+  // Ordenar: más reciente primero — usar fecha_entrega si existe, si no created_at
   completados.sort(function(a,b){
-    const da=a.fecha_entrega||a.updated_at||a.created_at||'';
-    const db=b.fecha_entrega||b.updated_at||b.created_at||'';
-    return db.localeCompare(da);
+    const da=a.fecha_entrega?a.fecha_entrega:(a.id||'');
+    const db=b.fecha_entrega?b.fecha_entrega:(b.id||'');
+    // Si ambos tienen fecha_entrega, comparar fechas
+    if(a.fecha_entrega&&b.fecha_entrega)return db.localeCompare(da);
+    // Si solo uno tiene fecha, ese va primero
+    if(a.fecha_entrega&&!b.fecha_entrega)return -1;
+    if(!a.fecha_entrega&&b.fecha_entrega)return 1;
+    // Sin fecha: más reciente por id (UUID v4 no es ordenable) — usar índice en PIPELINE
+    return PIPELINE.indexOf(b)-PIPELINE.indexOf(a);
   });
   if(window._pipeSort)completados=[...completados].sort(sortFn);
   document.getElementById('badge-pipeline').textContent=activos.length;
