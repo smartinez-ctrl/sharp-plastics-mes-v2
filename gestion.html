@@ -226,7 +226,17 @@ input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5);cursor:
     </div>
     <div id="pipeline-activos"><div class="loading"><div class="loading-spinner"></div></div></div>
   </div>
-  <div class="card"><div class="card-title">Completados recientes</div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div class="card-title" style="margin:0">Completados</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;color:var(--text2)">Desde</label>
+        <input type="date" id="comp-fecha-desde" style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:4px 8px;color:var(--text);font-size:11px;outline:none" onchange="renderPipeline()">
+        <label style="font-size:11px;color:var(--text2)">Hasta</label>
+        <input type="date" id="comp-fecha-hasta" style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:4px 8px;color:var(--text);font-size:11px;outline:none" onchange="renderPipeline()">
+        <button class="btn btn-ghost btn-xs" onclick="document.getElementById('comp-fecha-desde').value='';document.getElementById('comp-fecha-hasta').value='';renderPipeline()">✕</button>
+      </div>
+    </div>
     <div id="pipeline-completados"><div class="loading">Cargando...</div></div>
   </div>
 </div>
@@ -1469,7 +1479,22 @@ function renderPipeline(){
     return asc?res:-res;
   };  let activos=PIPELINE.filter(p=>(p.estado==='Pendiente'||p.estado==='En ajuste'||p.estado==='En producción')&&matchQ(p));
   if(window._pipeSort)activos=[...activos].sort(sortFn);
-  let completados=PIPELINE.filter(p=>(p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado')&&matchQ(p)&&!p.oculto);
+  const compDesde=document.getElementById('comp-fecha-desde')?.value||'';
+  const compHasta=document.getElementById('comp-fecha-hasta')?.value||'';
+  let completados=PIPELINE.filter(p=>{
+    if(!(p.estado==='Completado'||p.estado==='Entregado'||p.estado==='Cancelado'))return false;
+    if(!matchQ(p)||p.oculto)return false;
+    const fecha=p.fecha_entrega||p.updated_at||'';
+    if(compDesde&&fecha&&fecha<compDesde)return false;
+    if(compHasta&&fecha&&fecha>compHasta+'T23:59:59')return false;
+    return true;
+  });
+  // Ordenar por fecha: más reciente primero (fecha_entrega, luego updated_at, luego created_at)
+  completados.sort(function(a,b){
+    const da=a.fecha_entrega||a.updated_at||a.created_at||'';
+    const db=b.fecha_entrega||b.updated_at||b.created_at||'';
+    return db.localeCompare(da);
+  });
   if(window._pipeSort)completados=[...completados].sort(sortFn);
   document.getElementById('badge-pipeline').textContent=activos.length;
   document.getElementById('pipeline-sub').textContent=`${activos.length} activos · ${completados.length} completados`;
