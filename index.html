@@ -5642,9 +5642,20 @@ async function finalizarYCerrar(){
   const firmaURL=getFirmaCierreDataURL();
   if(firmaURL)S.firma_cierre_url=firmaURL;
 
+  // Verificar que tenemos el contexto necesario
+  if(!S.pipelineId){
+    toast('Error: no hay pedido activo. Sal y vuelve a entrar al pedido.','err');
+    return;
+  }
   const btn=document.querySelector('[onclick="finalizarYCerrar()"]');
   if(btn){btn.disabled=true;btn.textContent='Guardando...';}
-  await guardarOrden('completado');
+  try{
+    await guardarOrden('completado');
+  }catch(e){
+    toast('Error guardando: '+e.message,'err');
+    if(btn){btn.disabled=false;btn.textContent='💾 Guardar y finalizar orden';}
+    return;
+  }
   if(S.pipelineId){
     const tintasInfo=(S.orden.colores||[]).map((col,i)=>{
       const t=(S.tintas||[])[i]||{componentes:[],aditivos:[]};
@@ -5723,6 +5734,14 @@ async function finalizarYCerrar(){
     if(resp.ok)toast('📧 Reporte enviado a producción','ok');
     else console.error('send-cierre error:',data);
   }catch(e){console.error('enviarEmailCierre error:',e);}
+  // Restaurar botón
+  if(btn){btn.disabled=false;btn.textContent='✓ Pedido completado';}
+  toast('Pedido completado y guardado ✓','ok');
+  setTimeout(()=>{
+    S={...S_DEFAULT()};
+    showScreen('dashboard');
+    renderDashboard();
+  },1500);
 }
 
 function renderCierre(){
