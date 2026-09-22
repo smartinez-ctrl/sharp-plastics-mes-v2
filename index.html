@@ -5631,15 +5631,16 @@ async function _guardarOrdenInterno(estado){
 
 
 async function finalizarYCerrar(){
-  // Validar firma y PIN del supervisor
+  // Validar PIN del supervisor si se escribió
   const pin=document.getElementById('cierre-sup-pin')?.value;
-  if(pin){
-    const match=S.allUsers?.find(u=>u.pin===pin&&(u.rol==='supervisor'||u.rol==='master'));
+  if(pin&&pin.length>=4){
+    const allU=window._allUsers||USERS||[];
+    const match=allU.find(u=>u.pin===pin&&(u.rol==='supervisor'||u.rol==='master'));
     if(!match){toast('PIN de supervisor incorrecto','err');return;}
   }
+  // Guardar firma si existe (no obligatoria)
   const firmaURL=getFirmaCierreDataURL();
-  if(!firmaURL){toast('El supervisor debe firmar antes de cerrar','err');return;}
-  S.firma_cierre_url=firmaURL;
+  if(firmaURL)S.firma_cierre_url=firmaURL;
 
   try{
     const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
