@@ -5642,6 +5642,23 @@ async function finalizarYCerrar(){
   const firmaURL=getFirmaCierreDataURL();
   if(firmaURL)S.firma_cierre_url=firmaURL;
 
+  const btn=document.querySelector('[onclick="finalizarYCerrar()"]');
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  await guardarOrden('completado');
+  if(S.pipelineId){
+    const tintasInfo=(S.orden.colores||[]).map((col,i)=>{
+      const t=(S.tintas||[])[i]||{componentes:[],aditivos:[]};
+      const cr=(S.consumoReal||[])[i]||{};
+      return {nombre:col.nombre,pantone:col.pantone,componentes:t.componentes,aditivos:t.aditivos,consumo_real:cr};
+    });
+    await sbPatch('pipeline_mf',{
+      estado:'Completado',
+      fecha_completado:new Date().toISOString(),
+      consumo_real_tintas:S.consumoReal||[],
+      formula_tintas:S.tintas||[],
+      tintas_info:tintasInfo,
+    },'id=eq.'+S.pipelineId);
+  }
   try{
     const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
     const mermaAjuste=Object.entries(S.merma.ajuste||{}).filter(([,v])=>v>0);
