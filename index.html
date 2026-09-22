@@ -5308,7 +5308,9 @@ function goReajuste(){S.reajustes++;toast('Desajuste registrado #'+S.reajustes);
 // ══════════════════════════════════════════════════════
 // CIERRE
 // ══════════════════════════════════════════════════════
-async function pausarYSalir(){
+async function goCierre(){timerStop("prod");guardarOrden("completado");showScreen("cierre");renderCierre();}
+
+function pausarYSalir(){
   // Pausar todos los timers activos
   ['prod','ajuste','global'].forEach(function(name){
     const t=S.timers[name];
