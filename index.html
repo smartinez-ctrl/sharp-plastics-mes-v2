@@ -5310,7 +5310,7 @@ function goReajuste(){S.reajustes++;toast('Desajuste registrado #'+S.reajustes);
 // ══════════════════════════════════════════════════════
 async function goCierre(){timerStop("prod");guardarOrden("completado");showScreen("cierre");renderCierre();}
 
-function pausarYSalir(){
+async function pausarYSalir(){
   // Pausar todos los timers activos
   ['prod','ajuste','global'].forEach(function(name){
     const t=S.timers[name];
