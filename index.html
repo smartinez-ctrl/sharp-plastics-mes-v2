@@ -5796,7 +5796,7 @@ function renderCierre(){
     cc.innerHTML=html;
     actualizarConsumo();
   }
-  renderQA();
+  if(typeof renderQA==='function')renderQA();
 }
 
 // ══════════════════════════════════════════════════════
