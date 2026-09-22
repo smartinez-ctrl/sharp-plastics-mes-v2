@@ -5666,7 +5666,6 @@ async function finalizarYCerrar(){
     });
     await sbPatch('pipeline_mf',{
       estado:'Completado',
-      fecha_completado:new Date().toISOString(),
       consumo_real_tintas:S.consumoReal||[],
       formula_tintas:S.tintas||[],
       tintas_info:tintasInfo,
