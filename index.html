@@ -678,12 +678,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 <!-- fotos empaque movidas al pipeline -->
     <div class="card">
       <div class="card-title">Firma de cierre</div>
-      <!-- El campo 'Aprobado por' se autocompleta con el usuario logueado
-           (populateFirmaCierreLocked). Se mantiene oculto en el DOM porque
-           varios flujos (guardar orden, PDF, email) leen su value. -->
       <div class="field" style="display:none"><label>Aprobado por</label><select id="cierre-firma"><option value="">Seleccionar...</option></select></div>
       <div class="field"><label>Observaciones finales</label>
         <textarea id="cierre-obs" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none" placeholder="Notas..."></textarea>
+      </div>
+      <div class="field">
+        <label style="display:flex;justify-content:space-between;align-items:center">
+          <span>Firma del supervisor</span>
+          <button onclick="limpiarFirmaCierre()" style="background:transparent;border:none;color:var(--text3);font-size:11px;cursor:pointer;padding:0">✕ Limpiar</button>
+        </label>
+        <canvas id="cierre-firma-canvas" width="600" height="140"
+          style="width:100%;height:140px;background:#fff;border:2px dashed var(--border2);border-radius:9px;touch-action:none;cursor:crosshair;display:block"></canvas>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;text-align:center">Firma aquí con el dedo o el mouse</div>
+      </div>
+      <div class="field">
+        <label>Confirma tu PIN</label>
+        <input type="password" inputmode="numeric" maxlength="6" id="cierre-sup-pin"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:10px;color:var(--text);font-size:18px;letter-spacing:8px;text-align:center;outline:none" placeholder="••••">
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
@@ -5620,139 +5631,16 @@ async function _guardarOrdenInterno(estado){
 
 
 async function finalizarYCerrar(){
-  const btn = document.querySelector('[onclick="finalizarYCerrar()"]');
-  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
-  await guardarOrden('completado');
-  if(S.pipelineId){
-    const tintasInfo=S.orden.colores.map((col,i)=>{
-      const t=S.tintas[i]||{componentes:[],aditivos:[]};
-      const cr=S.consumoReal&&S.consumoReal[i]||{};
-      return {nombre:col.nombre,pantone:col.pantone,componentes:t.componentes,aditivos:t.aditivos,consumo_real:cr};
-    });
-    await sbPatch('pipeline_mf',{
-      estado:'Completado',
-      consumo_real_tintas:S.consumoReal||[],
-      formula_tintas:S.tintas||[],
-      tintas_info:tintasInfo,
-    },'id=eq.'+S.pipelineId);
+  // Validar firma y PIN del supervisor
+  const pin=document.getElementById('cierre-sup-pin')?.value;
+  if(pin){
+    const match=S.allUsers?.find(u=>u.pin===pin&&(u.rol==='supervisor'||u.rol==='master'));
+    if(!match){toast('PIN de supervisor incorrecto','err');return;}
   }
-  await enviarEmailCierre();
-  // Adicional: mandar reporte completo con los 4 PDFs + PO + diseño adjuntos
-  if(S.pipelineId){
-    fetch('/api/send-cierre-completo',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({pipeline_id:S.pipelineId})
-    }).then(r=>r.json()).then(d=>{
-      if(d&&d.ok)console.log('[cierre] reporte completo enviado:',d.attachments,'adjuntos');
-      else console.warn('[cierre] reporte completo falló:',d);
-    }).catch(e=>console.warn('[cierre] reporte completo error:',e));
-  }
-  if(btn){btn.disabled=false;btn.textContent='✅ Guardado';}
-  toast('Orden finalizada ✓','ok');
-  setTimeout(()=>{showScreen('dashboard');renderDashboard();},1500);
-}
+  const firmaURL=getFirmaCierreDataURL();
+  if(!firmaURL){toast('El supervisor debe firmar antes de cerrar','err');return;}
+  S.firma_cierre_url=firmaURL;
 
-// ── Fotos de empaque ──────────────────────────────────
-if(!window.S||!S.fotosEmpaque){}  // init guard
-function initFotosEmpaque(){if(!S.fotosEmpaque)S.fotosEmpaque=[null,null,null,null];}
-
-function openEmpaqueMenu(i){
-  initFotosEmpaque();
-  window._empaqueIdx=i;
-  document.getElementById('file-empaque').click();
-}
-function handleEmpaqueFoto(i,input){
-  if(!input.files||!input.files[0])return;
-  initFotosEmpaque();
-  const reader=new FileReader();
-  reader.onload=function(e){
-    S.fotosEmpaque[i]=e.target.result;
-    const slot=document.getElementById('empaque-'+i);
-    if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:contain">';}
-    toast('Foto empaque '+(i+1)+' cargada');
-  };
-  reader.readAsDataURL(input.files[0]);
-  input.value='';
-}
-function handleEmpaquesDrop(i,event){
-  const file=event.dataTransfer&&event.dataTransfer.files&&event.dataTransfer.files[0];
-  if(!file||!file.type.startsWith('image/')){toast('Solo imágenes','err');return;}
-  initFotosEmpaque();
-  const reader=new FileReader();
-  reader.onload=function(e){
-    S.fotosEmpaque[i]=e.target.result;
-    const slot=document.getElementById('empaque-'+i);
-    if(slot){slot.className='foto-slot taken';slot.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:contain">';}
-    toast('Foto empaque '+(i+1)+' cargada');
-  };
-  reader.readAsDataURL(file);
-}
-
-function renderQA(){
-  const el=document.getElementById('qa-checklist');if(!el)return;
-  // El QA que se llena al CERRAR el pedido solo cubre impresión.
-  // La sección "Ensamble" (incluido el liner) se llena aparte en la
-  // cajita de empaque, junto con los items de packaging.
-  const QA_CIERRE=Object.fromEntries(
-    Object.entries(QA_ITEMS).filter(([sec])=>sec!=='Ensamble')
-  );
-  // Pre-llenar: items del QA sin valor → 'NC' (No conforme) por default.
-  // El operador debe marcar activamente cada item como OK — así evita
-  // firmar el QA sin haber revisado. Los inputs de crosshatch y agua
-  // también empiezan vacíos (no "Aprobado ✓" pre-llenado).
-  Object.values(QA_CIERRE).forEach(items=>{
-    items.forEach(item=>{
-      if(!S.qa[item]) S.qa[item]='NC';
-    });
-  });
-  const cx=document.getElementById('cierreXhatch');
-  if(cx && !cx.value) cx.value='';
-  const ca=document.getElementById('cierreAgua');
-  if(ca && !ca.value) ca.value='';
-  let total=0,passed=0,html='';
-  Object.entries(QA_CIERRE).forEach(([section,items])=>{
-    html+=`<div class="qa-section-title">${section}</div>`;
-    items.forEach(item=>{
-      total++;const val=S.qa[item]||'';if(val==='P')passed++;
-      html+=`<div class="qa-item">
-        <div style="font-size:12px;flex:1">${item}</div>
-        <div class="qa-btns">
-          <button class="qa-btn qa-ok ${val==='P'?'sel':''}" data-item="${item}" data-val="P" onclick="setQA(this)">✓ OK</button>
-          <button class="qa-btn qa-nc ${val==='NC'?'sel':''}" data-item="${item}" data-val="NC" onclick="setQA(this)">✗ NC</button>
-          <button class="qa-btn qa-na ${val==='NA'?'sel':''}" data-item="${item}" data-val="NA" onclick="setQA(this)">N/A</button>
-        </div>
-      </div>`;
-    });
-  });
-  el.innerHTML=html;
-  const badge=document.getElementById('qa-badge');if(badge)badge.textContent=passed+'/'+total;
-}
-function setQA(btn){
-  const item=btn.dataset.item,val=btn.dataset.val;
-  S.qa[item]=val;
-  btn.closest('.qa-item').querySelectorAll('.qa-btn').forEach(b=>b.classList.remove('sel'));
-  btn.classList.add('sel');
-  const passed=Object.values(S.qa).filter(v=>v==='P').length;
-  const total=Object.values(QA_ITEMS).reduce((s,items)=>s+items.length,0);
-  const badge=document.getElementById('qa-badge');if(badge)badge.textContent=passed+'/'+total;
-}
-
-function goCierre(){
-  timerStop('prod');
-  // Detener autosave
-  if(window._autosaveIv){clearInterval(window._autosaveIv);window._autosaveIv=null;}
-  guardarOrden('completado');
-  showScreen('cierre');
-  // Solo renderizar la primera vez — al regresar de producción los datos ya están
-  if(!window._cierreInicializado){
-    window._cierreInicializado=true;
-    renderCierre();
-    setTimeout(enviarEmailCierre, 1500);
-  }
-}
-
-async function enviarEmailCierre(){
   try{
     const buenas=parseInt(document.getElementById('buenas-input')?.value)||0;
     const mermaAjuste=Object.entries(S.merma.ajuste||{}).filter(([,v])=>v>0);
@@ -6601,6 +6489,46 @@ function generarPDF(){
   </div>
   </body></html>`;
   abrirVentanaPDF(html);
+}
+
+// ── Firma de cierre canvas ───────────────────────────
+function initFirmaCierrCanvas(){
+  const canvas=document.getElementById('cierre-firma-canvas');
+  if(!canvas||canvas._init)return;
+  canvas._init=true;
+  const ctx=canvas.getContext('2d');
+  ctx.strokeStyle='#111';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+  let drawing=false, lx=0, ly=0;
+  function pos(e){
+    const r=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/r.width, scaleY=canvas.height/r.height;
+    const src=e.touches?e.touches[0]:e;
+    return {x:(src.clientX-r.left)*scaleX, y:(src.clientY-r.top)*scaleY};
+  }
+  canvas.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);lx=p.x;ly=p.y;});
+  canvas.addEventListener('mousemove',e=>{if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y;});
+  canvas.addEventListener('mouseup',()=>drawing=false);
+  canvas.addEventListener('mouseleave',()=>drawing=false);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);lx=p.x;ly=p.y;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y;},{passive:false});
+  canvas.addEventListener('touchend',()=>drawing=false);
+}
+
+function limpiarFirmaCierre(){
+  const canvas=document.getElementById('cierre-firma-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+function getFirmaCierreDataURL(){
+  const canvas=document.getElementById('cierre-firma-canvas');
+  if(!canvas)return null;
+  // Verificar si hay algo dibujado
+  const ctx=canvas.getContext('2d');
+  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  const hasFirma=data.some(v=>v<200);
+  return hasFirma?canvas.toDataURL('image/png'):null;
 }
 
 // ══════════════════════════════════════════════════════
