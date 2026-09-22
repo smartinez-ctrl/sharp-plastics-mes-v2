@@ -5739,7 +5739,11 @@ async function finalizarYCerrar(){
   if(btn){btn.disabled=false;btn.textContent='✓ Pedido completado';}
   toast('Pedido completado y guardado ✓','ok');
   setTimeout(()=>{
-    S={...S_DEFAULT()};
+    S.orden={cliente:'',op:'',producto:'',pzas:0,loteBot:'',loteTap:'',maquina:'Shuttle',ajustadores:[],operadores:[],colores:[]};
+    S.tintas=[];S.fotos=[null,null,null,null];S.fotosColor=[null,null,null,null];S.qa={};
+    S.merma={ajuste:{},prod:{}};S.tm={ajuste:{},prod:{}};S.activeTM={ajuste:null,prod:null};
+    S.timers={global:{s:0,iv:null,running:false},ajuste:{s:0,iv:null,running:false,total:0},fotos:{s:0,iv:null,running:false},prod:{s:0,iv:null,running:false,total:0}};
+    S.reajustes=0;S.pipelineId=null;S.ordenId=null;
     showScreen('dashboard');
     renderDashboard();
   },1500);
