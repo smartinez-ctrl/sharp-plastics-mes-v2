@@ -5297,7 +5297,7 @@ function goReajuste(){S.reajustes++;toast('Desajuste registrado #'+S.reajustes);
 // ══════════════════════════════════════════════════════
 // CIERRE
 // ══════════════════════════════════════════════════════
-async async function pausarYSalir(){
+async function pausarYSalir(){
   // Pausar todos los timers activos
   ['prod','ajuste','global'].forEach(function(name){
     const t=S.timers[name];
