@@ -219,7 +219,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'MES Sharp Plastics <onboarding@resend.dev>',
+        from: 'MES Sharp Plastics <mes@sharpplastics.com>',
         to: DESTINATARIOS,
         subject: `📦 Reporte Semanal Inventario — ${ahora.toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'})}`,
         html,
