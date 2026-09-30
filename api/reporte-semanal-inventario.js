@@ -59,13 +59,13 @@ export default async function handler(req, res) {
 
     // 2. Pedidos cerrados esta semana
     const pedidosCerrados = await sbGet('pipeline_mf',
-      `select=sub_cliente,po,capacidad,piezas,color_botella,color_tapa,updated_at` +
+      `select=sub_cliente,po,capacidad,piezas,color_botella,color_tapa,created_at` +
       `&estado=in.(Completado,Entregado)` +
-      `&updated_at=gte.${hace7dias}` +
-      `&order=updated_at.desc`
+      `&created_at=gte.${hace7dias}` +
+      `&order=created_at.desc`
     );
     // Renombrar updated_at a fecha_completado para el template
-    pedidosCerrados.forEach(p => { p.fecha_completado = p.updated_at; });
+    pedidosCerrados.forEach(p => { p.fecha_completado = p.created_at; });
 
     // 3. Movimientos de consumo esta semana (merma incluida en observaciones)
     const movimientos = await sbGet('inventario_movimientos',
