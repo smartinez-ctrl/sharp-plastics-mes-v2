@@ -1,34 +1,13 @@
 {
   "functions": {
-    "api/extract-pdf.js": {
-      "maxDuration": 30
-    },
-    "api/generate-pdf.js": {
-      "maxDuration": 10
-    },
-    "api/send-approval.js": {
-      "maxDuration": 15
-    },
-    "api/approve-order.js": {
-      "maxDuration": 10
-    },
-    "api/ver-fotos.js": {
-      "maxDuration": 10
-    },
-    "api/send-cierre.js": {
-      "maxDuration": 15
-    },
-    "api/send-cierre-completo.js": {
-      "maxDuration": 60
-    },
-    "api/monitor.js": {
-      "maxDuration": 10
-    },
-    "api/send-monitor.js": {
-      "maxDuration": 10
-    },
-    "api/send-alertas-inventario.js": {
-      "maxDuration": 15
+    "api/extract-pdf.js": { "maxDuration": 30 },
+    "api/generate-pdf.js": { "maxDuration": 10 },
+    "api/reporte-semanal-inventario.js": { "maxDuration": 30 }
+  },
+  "crons": [
+    {
+      "path": "/api/reporte-semanal-inventario",
+      "schedule": "0 15 * * 3"
     }
-  }
+  ]
 }
