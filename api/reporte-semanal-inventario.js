@@ -33,8 +33,7 @@ export default async function handler(req, res) {
       'select=cantidad,ubicacion,producto_id,variante_id,' +
       'inventario_productos(nombre,categoria,capacidad),' +
       'inventario_variantes(nombre,pantone)' +
-      '&inventario_productos.categoria=eq.botella' +
-      '&order=inventario_productos.capacidad.asc,inventario_variantes.nombre.asc'
+      '&order=producto_id.asc,variante_id.asc'
     );
 
     // Filtrar solo botellas
