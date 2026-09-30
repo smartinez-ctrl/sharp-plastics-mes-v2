@@ -5641,6 +5641,19 @@ async function finalizarYCerrar(){
       tintas_info:tintasInfo,
     },'id=eq.'+S.pipelineId);
   }
+  // Descontar inventario automáticamente
+  const buenasInv=parseInt(document.getElementById('buenas-input')?.value)||0;
+  const mermaAjInv=Object.values(S.merma.ajuste||{}).reduce((s,v)=>s+v,0);
+  const mermaPrInv=Object.values(S.merma.prod||{}).reduce((s,v)=>s+v,0);
+  await descontarInventarioPorCierre(S.pipelineId,S.ordenId,buenasInv,mermaAjInv+mermaPrInv,S.user?.nombre||'Sistema');
+
+    // Descontar inventario automáticamente al cerrar
+  try{
+    const buenasInv=parseInt(document.getElementById('buenas-input')?.value)||0;
+    const mermaAjInv=Object.values(S.merma?.ajuste||{}).reduce((s,v)=>s+v,0);
+    const mermaPrInv=Object.values(S.merma?.prod||{}).reduce((s,v)=>s+v,0);
+    if(S.pipelineId)await descontarInventarioPorCierre(S.pipelineId,S.ordenId,buenasInv,mermaAjInv+mermaPrInv,S.user?.nombre||'Sistema');
+  }catch(eInv){console.error('Error inventario:',eInv);}
   await enviarEmailCierre();
   // Adicional: mandar reporte completo con los 4 PDFs + PO + diseño adjuntos
   if(S.pipelineId){
@@ -5875,6 +5888,98 @@ function renderCierre(){
     actualizarConsumo();
   }
   renderQA();
+}
+
+
+// ══════════════════════════════════════════════════════
+// DESCUENTO AUTOMÁTICO DE INVENTARIO AL CERRAR PEDIDO
+// ══════════════════════════════════════════════════════
+async function descontarInventarioPorCierre(pipelineId, ordenId, buenas, mermaTotal, usuario){
+  try {
+    // 1. Obtener datos del pedido del pipeline
+    const pipe = await (await fetch(SB_URL+'/rest/v1/pipeline_mf?id=eq.'+pipelineId+'&select=capacidad,color_botella,color_tapa,piezas', {headers:SB_H})).json();
+    if(!pipe||!pipe[0]) return;
+    const p = pipe[0];
+    const cap = p.capacidad===750?700:p.capacidad; // normalizar 750→700
+
+    // 2. Buscar productos en inventario
+    const prods = await (await fetch(SB_URL+'/rest/v1/inventario_productos?select=id,nombre,categoria,capacidad,tiene_variantes&activo=eq.true', {headers:SB_H})).json();
+
+    const prodBot = prods.find(x=>x.categoria==='botella'&&x.capacidad===cap);
+    const prodTapa = prods.find(x=>x.categoria==='tapa');
+
+    // 3. Buscar variantes por color
+    const totalDescontar = (buenas||0) + (mermaTotal||0);
+
+    // Descontar botellas
+    if(prodBot && totalDescontar > 0) {
+      const colorBot = (p.color_botella||'CLEAR').toUpperCase().replace(/\s+/g,'');
+      const vars = await (await fetch(SB_URL+'/rest/v1/inventario_variantes?producto_id=eq.'+prodBot.id+'&activo=eq.true&select=id,nombre', {headers:SB_H})).json();
+      // Match por color — buscar la variante más parecida
+      let varBot = vars.find(v=>v.nombre.toUpperCase().replace(/\s+/g,'')===colorBot);
+      if(!varBot) varBot = vars.find(v=>colorBot.includes(v.nombre.toUpperCase().replace(/\s+/g,''))||v.nombre.toUpperCase().replace(/\s+/g,'').includes(colorBot));
+      if(!varBot && vars.length>0) varBot = vars[0]; // fallback al primero
+
+      if(varBot) {
+        // Descontar de produccion primero, luego almacen
+        const stockProd = await (await fetch(SB_URL+'/rest/v1/inventario_stock?producto_id=eq.'+prodBot.id+'&variante_id=eq.'+varBot.id+'&ubicacion=eq.produccion&select=id,cantidad', {headers:SB_H})).json();
+        let restante = totalDescontar;
+        if(stockProd&&stockProd[0]&&stockProd[0].cantidad>0){
+          const deProd = Math.min(restante, stockProd[0].cantidad);
+          await fetch(SB_URL+'/rest/v1/inventario_stock?id=eq.'+stockProd[0].id, {method:'PATCH',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify({cantidad:stockProd[0].cantidad-deProd})});
+          restante -= deProd;
+        }
+        if(restante>0){
+          const stockAlm = await (await fetch(SB_URL+'/rest/v1/inventario_stock?producto_id=eq.'+prodBot.id+'&variante_id=eq.'+varBot.id+'&ubicacion=eq.almacen&select=id,cantidad', {headers:SB_H})).json();
+          if(stockAlm&&stockAlm[0]&&stockAlm[0].cantidad>=restante){
+            await fetch(SB_URL+'/rest/v1/inventario_stock?id=eq.'+stockAlm[0].id, {method:'PATCH',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify({cantidad:stockAlm[0].cantidad-restante})});
+            restante = 0;
+          }
+        }
+        // Registrar movimiento
+        await fetch(SB_URL+'/rest/v1/inventario_movimientos', {method:'POST',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify({
+          tipo:'consumo_pedido', producto_id:prodBot.id, variante_id:varBot.id,
+          cantidad:totalDescontar, ubicacion_origen:'produccion', ubicacion_destino:'consumido',
+          pipeline_id:pipelineId, orden_id:ordenId, usuario:usuario||'Sistema',
+          observaciones:'Cierre automático: '+buenas+' buenas + '+mermaTotal+' merma'
+        })});
+      }
+    }
+
+    // Descontar tapas (solo buenas)
+    if(prodTapa && buenas > 0) {
+      const colorTap = (p.color_tapa||'CLEAR').toUpperCase().replace(/\s+/g,'');
+      const varsTap = await (await fetch(SB_URL+'/rest/v1/inventario_variantes?producto_id=eq.'+prodTapa.id+'&activo=eq.true&select=id,nombre', {headers:SB_H})).json();
+      let varTap = varsTap.find(v=>v.nombre.toUpperCase().replace(/\s+/g,'')===colorTap);
+      if(!varTap) varTap = varsTap.find(v=>colorTap.includes(v.nombre.toUpperCase().replace(/\s+/g,''))||v.nombre.toUpperCase().replace(/\s+/g,'').includes(colorTap));
+
+      if(varTap){
+        const stockTapProd = await (await fetch(SB_URL+'/rest/v1/inventario_stock?producto_id=eq.'+prodTapa.id+'&variante_id=eq.'+varTap.id+'&ubicacion=eq.produccion&select=id,cantidad', {headers:SB_H})).json();
+        let rest2 = buenas;
+        if(stockTapProd&&stockTapProd[0]&&stockTapProd[0].cantidad>0){
+          const d=Math.min(rest2,stockTapProd[0].cantidad);
+          await fetch(SB_URL+'/rest/v1/inventario_stock?id=eq.'+stockTapProd[0].id, {method:'PATCH',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify({cantidad:stockTapProd[0].cantidad-d})});
+          rest2-=d;
+        }
+        if(rest2>0){
+          const stockTapAlm = await (await fetch(SB_URL+'/rest/v1/inventario_stock?producto_id=eq.'+prodTapa.id+'&variante_id=eq.'+varTap.id+'&ubicacion=eq.almacen&select=id,cantidad', {headers:SB_H})).json();
+          if(stockTapAlm&&stockTapAlm[0]&&stockTapAlm[0].cantidad>=rest2)
+            await fetch(SB_URL+'/rest/v1/inventario_stock?id=eq.'+stockTapAlm[0].id, {method:'PATCH',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify({cantidad:stockTapAlm[0].cantidad-rest2})});
+        }
+        await fetch(SB_URL+'/rest/v1/inventario_movimientos', {method:'POST',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify({
+          tipo:'consumo_pedido', producto_id:prodTapa.id, variante_id:varTap.id,
+          cantidad:buenas, ubicacion_origen:'produccion', ubicacion_destino:'consumido',
+          pipeline_id:pipelineId, orden_id:ordenId, usuario:usuario||'Sistema',
+          observaciones:'Cierre automático: '+buenas+' tapas'
+        })});
+      }
+    }
+
+    console.log('Inventario descontado correctamente');
+  } catch(e) {
+    console.error('Error descontando inventario:', e);
+    // No bloquear el cierre si falla el inventario
+  }
 }
 
 // ══════════════════════════════════════════════════════
