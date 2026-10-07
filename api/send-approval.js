@@ -4,8 +4,9 @@ const SB_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6Ikp
 // puede aprobar/rechazar. El identificador del que aprueba viaja en el link
 // como parámetro `?as=` para poder registrar quién lo aprobó en el checklist.
 const APPROVERS = [
-  { key: 'samuel', name: 'Samuel Martínez', email: 'smartinez@sharpplastics.com' },
+  { key: 'samuel',  name: 'Samuel Martínez', email: 'smartinez@sharpplastics.com' },
   { key: 'sgc',    name: 'SGC',             email: 'sgc@sharpplastics.com' },
+  { key: 'compras', name: 'Compras',          email: 'compras@sharpplastics.com' },
 ];
 const BASE_URL = 'https://sharp-plastics-mes-v2.vercel.app';
 
